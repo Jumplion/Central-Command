@@ -7,7 +7,7 @@ it up automatically on the next dev/build cycle.
 
 ## Folder layout
 
-```
+```bash
 src/widgets/
 └── <id>/
     ├── index.tsx       # required - default export of type Widget
