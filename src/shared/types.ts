@@ -69,6 +69,12 @@ export interface SqlRunResult {
   lastInsertRowid: number;
 }
 
+export interface DialogOpenPathOptions {
+  title?: string;
+  defaultPath?: string;
+  properties?: ('openFile' | 'openDirectory' | 'multiSelections')[];
+}
+
 export interface CCApi {
   state: {
     load(): Promise<AppState>;
@@ -85,5 +91,13 @@ export interface CCApi {
     all(widgetId: string, sql: string, params?: unknown[]): Promise<unknown[]>;
     get(widgetId: string, sql: string, params?: unknown[]): Promise<unknown>;
     exec(widgetId: string, sql: string): Promise<void>;
+  };
+  shell: {
+    openExternal(url: string): Promise<void>;
+    openPath(path: string): Promise<string>;
+    showItemInFolder(path: string): Promise<void>;
+  };
+  dialog: {
+    openPath(options?: DialogOpenPathOptions): Promise<string[] | null>;
   };
 }

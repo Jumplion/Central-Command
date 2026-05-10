@@ -1,6 +1,6 @@
-import { ipcMain } from 'electron';
+import { ipcMain, shell, dialog } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { AppState } from '@shared/types';
+import type { AppState, DialogOpenPathOptions } from '@shared/types';
 import type { Storage } from './storage';
 
 const isString = (x: unknown): x is string => typeof x === 'string';
@@ -42,5 +42,30 @@ export function registerIpc(storage: Storage): void {
   ipcMain.handle(IPC.SQL_EXEC, (_e, widgetId: unknown, sql: unknown) => {
     if (!isString(widgetId) || !isString(sql)) throw new Error('sql.exec: invalid arguments');
     return storage.sqlite.exec(widgetId, sql);
+  });
+
+  ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, (_e, url: unknown) => {
+    if (!isString(url) || !/^(https?|mailto):/.test(url)) throw new Error('openExternal: url must be http(s) or mailto');
+    return shell.openExternal(url);
+  });
+
+  ipcMain.handle(IPC.SHELL_OPEN_PATH, (_e, path: unknown) => {
+    if (!isString(path)) throw new Error('openPath: invalid argument');
+    return shell.openPath(path);
+  });
+
+  ipcMain.handle(IPC.SHELL_SHOW_IN_FOLDER, (_e, path: unknown) => {
+    if (!isString(path)) throw new Error('showItemInFolder: invalid argument');
+    shell.showItemInFolder(path);
+  });
+
+  ipcMain.handle(IPC.DIALOG_OPEN_PATH, async (_e, options: unknown) => {
+    const opts = options && typeof options === 'object' ? (options as DialogOpenPathOptions) : {};
+    const result = await dialog.showOpenDialog({
+      title: opts.title,
+      defaultPath: opts.defaultPath,
+      properties: opts.properties,
+    });
+    return result.canceled ? null : result.filePaths;
   });
 }

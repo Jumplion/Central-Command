@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipc';
-import type { AppState, CCApi, SqlRunResult } from '../shared/types';
+import type { AppState, CCApi, DialogOpenPathOptions, SqlRunResult } from '../shared/types';
 
 const api: CCApi = {
   state: {
@@ -19,6 +19,15 @@ const api: CCApi = {
     all: (widgetId, sql, params = []) => ipcRenderer.invoke(IPC.SQL_ALL, widgetId, sql, params),
     get: (widgetId, sql, params = []) => ipcRenderer.invoke(IPC.SQL_GET, widgetId, sql, params),
     exec: (widgetId, sql) => ipcRenderer.invoke(IPC.SQL_EXEC, widgetId, sql)
+  },
+  shell: {
+    openExternal: (url: string): Promise<void> => ipcRenderer.invoke(IPC.SHELL_OPEN_EXTERNAL, url),
+    openPath: (path: string): Promise<string> => ipcRenderer.invoke(IPC.SHELL_OPEN_PATH, path),
+    showItemInFolder: (path: string): Promise<void> => ipcRenderer.invoke(IPC.SHELL_SHOW_IN_FOLDER, path)
+  },
+  dialog: {
+    openPath: (options?: DialogOpenPathOptions): Promise<string[] | null> =>
+      ipcRenderer.invoke(IPC.DIALOG_OPEN_PATH, options)
   }
 };
 

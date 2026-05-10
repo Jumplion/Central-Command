@@ -44,7 +44,7 @@ export default widget;
 | `defaultSize`  | `{ w: number; h: number }`                 | Grid cells (12-col layout, 60px rows)   |
 | `minSize`      | `{ w: number; h: number }?`                | Minimum drag/resize size                |
 | `settings`     | `SettingsField[]?`                         | Schema for the per-instance settings UI |
-| `permissions`  | `{ sqlite?: boolean }?`                    | Reserved for future permission gating   |
+| `permissions`  | `{ sqlite?: boolean }?`                    | Declare capabilities used by this widget |
 
 ### SettingsField
 
@@ -122,6 +122,40 @@ const widget: Widget = {
 export default widget;
 ```
 
+## Shell & dialog APIs
+
+Widgets have access to OS-level shell and dialog helpers via `api.shell` and
+`api.dialog`:
+
+```ts
+// Open a URL in the default browser (http/https/mailto only)
+await api.shell.openExternal('https://example.com');
+
+// Open a file or folder with the OS default app
+await api.shell.openPath('/home/user/documents');
+
+// Reveal a path in the system file manager
+await api.shell.showItemInFolder('/home/user/file.txt');
+
+// Open a native file-picker dialog; returns null if cancelled
+const paths = await api.dialog.openPath({
+  title: 'Pick a file',
+  properties: ['openFile', 'multiSelections'],
+});
+// properties options: 'openFile' | 'openDirectory' | 'multiSelections'
+```
+
+## Permissions
+
+The `manifest.permissions` field gates optional capabilities:
+
+| Key      | Type      | Description                         |
+| -------- | --------- | ----------------------------------- |
+| `sqlite` | `boolean` | Declare that this widget uses `api.sql` |
+
+Future gated capabilities (process spawn, pty, etc.) will use additional keys
+here.
+
 ## Tips
 
 - Long-running side effects belong in `useEffect`. Cancel them on unmount.
@@ -129,5 +163,4 @@ export default widget;
 - If a widget throws during render, the host shows an error and the rest of
   the dashboard keeps working.
 - Network calls go out from the renderer like any browser fetch. Be aware of
-  CORS; for OAuth flows, use `shell.openExternal` patterns and a callback URL
-  scheme (foundation does not provide one yet).
+  CORS.

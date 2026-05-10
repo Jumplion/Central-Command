@@ -1,4 +1,4 @@
-import type { InstanceId, SqlRunResult, WidgetId } from '@shared/types';
+import type { DialogOpenPathOptions, InstanceId, SqlRunResult, WidgetId } from '@shared/types';
 
 export interface WidgetApi {
   widgetId: WidgetId;
@@ -22,6 +22,14 @@ export interface WidgetApi {
     all<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
     get<T = unknown>(sql: string, params?: unknown[]): Promise<T | undefined>;
     exec(sql: string): Promise<void>;
+  };
+  shell: {
+    openExternal(url: string): Promise<void>;
+    openPath(path: string): Promise<string>;
+    showItemInFolder(path: string): Promise<void>;
+  };
+  dialog: {
+    openPath(options?: DialogOpenPathOptions): Promise<string[] | null>;
   };
 }
 
@@ -53,6 +61,14 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
       get: <T,>(sql: string, params: unknown[] = []) =>
         window.cc.sql.get(widgetId, sql, params) as Promise<T | undefined>,
       exec: (sql) => window.cc.sql.exec(widgetId, sql)
+    },
+    shell: {
+      openExternal: (url) => window.cc.shell.openExternal(url),
+      openPath: (path) => window.cc.shell.openPath(path),
+      showItemInFolder: (path) => window.cc.shell.showItemInFolder(path)
+    },
+    dialog: {
+      openPath: (options) => window.cc.dialog.openPath(options)
     }
   };
 }

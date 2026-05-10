@@ -10,7 +10,12 @@ export const IPC = {
   SQL_RUN: 'cc:sql:run',
   SQL_ALL: 'cc:sql:all',
   SQL_GET: 'cc:sql:get',
-  SQL_EXEC: 'cc:sql:exec'
+  SQL_EXEC: 'cc:sql:exec',
+
+  SHELL_OPEN_EXTERNAL: 'cc:shell:openExternal',
+  SHELL_OPEN_PATH: 'cc:shell:openPath',
+  SHELL_SHOW_IN_FOLDER: 'cc:shell:showInFolder',
+  DIALOG_OPEN_PATH: 'cc:dialog:openPath',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
