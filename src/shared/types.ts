@@ -75,6 +75,18 @@ export interface DialogOpenPathOptions {
   properties?: ('openFile' | 'openDirectory' | 'multiSelections')[];
 }
 
+export interface NetFetchInit {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+}
+
+export interface NetFetchResponse {
+  ok: boolean;
+  status: number;
+  body: string;
+}
+
 export interface CCApi {
   state: {
     load(): Promise<AppState>;
@@ -99,5 +111,8 @@ export interface CCApi {
   };
   dialog: {
     openPath(options?: DialogOpenPathOptions): Promise<string[] | null>;
+  };
+  net: {
+    fetch(url: string, init?: NetFetchInit): Promise<NetFetchResponse>;
   };
 }

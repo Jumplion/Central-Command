@@ -1,4 +1,4 @@
-import type { DialogOpenPathOptions, InstanceId, SqlRunResult, WidgetId } from '@shared/types';
+import type { DialogOpenPathOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
 
 export interface WidgetApi {
   widgetId: WidgetId;
@@ -30,6 +30,9 @@ export interface WidgetApi {
   };
   dialog: {
     openPath(options?: DialogOpenPathOptions): Promise<string[] | null>;
+  };
+  net: {
+    fetch(url: string, init?: NetFetchInit): Promise<NetFetchResponse>;
   };
 }
 
@@ -69,6 +72,9 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
     },
     dialog: {
       openPath: (options) => window.cc.dialog.openPath(options)
+    },
+    net: {
+      fetch: (url, init) => window.cc.net.fetch(url, init)
     }
   };
 }

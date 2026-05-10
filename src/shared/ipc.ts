@@ -16,6 +16,8 @@ export const IPC = {
   SHELL_OPEN_PATH: 'cc:shell:openPath',
   SHELL_SHOW_IN_FOLDER: 'cc:shell:showInFolder',
   DIALOG_OPEN_PATH: 'cc:dialog:openPath',
+
+  NET_FETCH: 'cc:net:fetch',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
