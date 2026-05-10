@@ -1,6 +1,6 @@
-import { ipcMain, shell, dialog } from 'electron';
+import { ipcMain, shell, dialog, net } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { AppState, DialogOpenPathOptions } from '@shared/types';
+import type { AppState, DialogOpenPathOptions, NetFetchInit } from '@shared/types';
 import type { Storage } from './storage';
 
 const isString = (x: unknown): x is string => typeof x === 'string';
@@ -67,5 +67,19 @@ export function registerIpc(storage: Storage): void {
       properties: opts.properties,
     });
     return result.canceled ? null : result.filePaths;
+  });
+
+  ipcMain.handle(IPC.NET_FETCH, async (_e, url: unknown, init: unknown) => {
+    if (!isString(url) || !/^https?:\/\//.test(url)) throw new Error('net.fetch: url must be http(s)');
+    const options: NetFetchInit = {};
+    if (init && typeof init === 'object') {
+      const i = init as Record<string, unknown>;
+      if (typeof i.method === 'string') options.method = i.method;
+      if (i.headers && typeof i.headers === 'object') options.headers = i.headers as Record<string, string>;
+      if (typeof i.body === 'string') options.body = i.body;
+    }
+    const resp = await net.fetch(url, options);
+    const body = await resp.text();
+    return { ok: resp.ok, status: resp.status, body };
   });
 }

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipc';
-import type { AppState, CCApi, DialogOpenPathOptions, SqlRunResult } from '../shared/types';
+import type { AppState, CCApi, DialogOpenPathOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
 
 const api: CCApi = {
   state: {
@@ -28,6 +28,10 @@ const api: CCApi = {
   dialog: {
     openPath: (options?: DialogOpenPathOptions): Promise<string[] | null> =>
       ipcRenderer.invoke(IPC.DIALOG_OPEN_PATH, options)
+  },
+  net: {
+    fetch: (url: string, init?: NetFetchInit): Promise<NetFetchResponse> =>
+      ipcRenderer.invoke(IPC.NET_FETCH, url, init)
   }
 };
 
