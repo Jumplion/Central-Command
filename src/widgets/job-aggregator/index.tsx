@@ -1,7 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface FilterState {
+  keywords: string[];
+  locations: string[];
+  empTypes: string[];
+  remoteOnly: boolean;
+}
+
+interface FilterProfile {
+  id: string;
+  name: string;
+  filters: FilterState;
+  createdAt: number;
+}
 
 interface JobListing {
   id: string;
@@ -47,6 +61,8 @@ type NetFetcher = (
   init?: { method?: string; headers?: Record<string, string>; body?: string }
 ) => Promise<{ ok: boolean; status: number; body: string }>;
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const STATUSES: SavedStatus[] = ['Interested', 'Applied', 'Phone', 'Onsite', 'Offer', 'Rejected'];
 
 const STATUS_COLORS: Record<SavedStatus, string> = {
@@ -59,22 +75,28 @@ const STATUS_COLORS: Record<SavedStatus, string> = {
 };
 
 const SOURCE_COLORS: Record<string, string> = {
-  LinkedIn:    '#0a66c2',
-  Indeed:      '#003a9b',
-  Glassdoor:   '#0caa41',
-  ZipRecruiter:'#59bd66',
+  LinkedIn:     '#0a66c2',
+  Indeed:       '#003a9b',
+  Glassdoor:    '#0caa41',
+  ZipRecruiter: '#59bd66',
   'Google Jobs':'#4285f4',
-  Monster:     '#6e2d8e',
-  Arbeitnow:   '#6ea8ff',
+  Monster:      '#6e2d8e',
+  Arbeitnow:    '#6ea8ff',
 };
 
-const EMP_TYPES = [
-  { value: 'all',        label: 'All Types' },
-  { value: 'fulltime',   label: 'Full-time' },
-  { value: 'parttime',   label: 'Part-time' },
-  { value: 'contractor', label: 'Contract' },
-  { value: 'intern',     label: 'Internship' },
-];
+const EMP_TYPES = ['fulltime', 'parttime', 'contractor', 'intern'] as const;
+type EmpType = (typeof EMP_TYPES)[number];
+
+const EMP_TYPE_LABELS: Record<EmpType, string> = {
+  fulltime:   'Full-time',
+  parttime:   'Part-time',
+  contractor: 'Contract',
+  intern:     'Internship',
+};
+
+const PROFILES_KV_KEY = 'filterProfiles';
+
+// ─── SQL ──────────────────────────────────────────────────────────────────────
 
 const INIT_SQL = `
   CREATE TABLE IF NOT EXISTS saved_jobs (
@@ -98,6 +120,24 @@ const INIT_SQL = `
     saved_at        INTEGER NOT NULL
   );
 `;
+
+// ─── Validation ───────────────────────────────────────────────────────────────
+
+function validateFilters(f: FilterState): string[] {
+  const errors: string[] = [];
+  if (f.keywords.length === 0) {
+    errors.push('At least one keyword is required.');
+  }
+  const shortKw = f.keywords.filter((k) => k.trim().length < 2);
+  if (shortKw.length) {
+    errors.push(`Keywords must be ≥2 characters: ${shortKw.map((k) => `"${k}"`).join(', ')}`);
+  }
+  const badLoc = f.locations.filter((l) => l.trim().length < 2 || l.trim().length > 100);
+  if (badLoc.length) {
+    errors.push(`Locations must be 2–100 characters: ${badLoc.map((l) => `"${l}"`).join(', ')}`);
+  }
+  return errors;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -143,13 +183,17 @@ function empTypeLabel(t: string): string {
 async function searchJSearch(
   fetch: NetFetcher,
   key: string,
-  query: string,
-  remote: boolean,
-  empType: string
+  filters: FilterState
 ): Promise<JobListing[]> {
-  const p = new URLSearchParams({ query, num_pages: '1', page: '1' });
-  if (remote) p.set('remote_jobs_only', 'true');
-  if (empType !== 'all') p.set('employment_types', empType.toUpperCase());
+  const kwStr = filters.keywords.join(' ');
+  const locStr = filters.locations.length > 0
+    ? ` in ${filters.locations.join(' OR ')}`
+    : '';
+  const p = new URLSearchParams({ query: `${kwStr}${locStr}`, num_pages: '1', page: '1' });
+  if (filters.remoteOnly) p.set('remote_jobs_only', 'true');
+  if (filters.empTypes.length > 0) {
+    p.set('employment_types', filters.empTypes.map((t) => t.toUpperCase()).join(','));
+  }
 
   const resp = await fetch(`https://jsearch.p.rapidapi.com/search?${p}`, {
     headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': 'jsearch.p.rapidapi.com' },
@@ -182,11 +226,10 @@ async function searchJSearch(
 
 async function searchArbeitnow(
   fetch: NetFetcher,
-  query: string,
-  remote: boolean
+  filters: FilterState
 ): Promise<JobListing[]> {
-  const p = new URLSearchParams({ search: query });
-  if (remote) p.set('remote', 'true');
+  const p = new URLSearchParams({ search: filters.keywords.join(' ') });
+  if (filters.remoteOnly) p.set('remote', 'true');
 
   const resp = await fetch(`https://www.arbeitnow.com/api/job-board-api?${p}`);
   if (!resp.ok) throw new Error(`Arbeitnow error ${resp.status}`);
@@ -210,9 +253,290 @@ async function searchArbeitnow(
   }));
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── TagInput ─────────────────────────────────────────────────────────────────
 
-const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
+function TagInput({
+  label, values, onChange, placeholder,
+}: {
+  label: string;
+  values: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commit = (raw: string) => {
+    const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
+    const unique = parts.filter((p) => !values.includes(p));
+    if (unique.length) onChange([...values, ...unique]);
+    setDraft('');
+  };
+
+  const remove = (idx: number) => onChange(values.filter((_, i) => i !== idx));
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && draft.trim()) { e.preventDefault(); commit(draft); }
+    else if (e.key === ',' && draft.trim()) { e.preventDefault(); commit(draft.replace(/,$/, '')); }
+    else if (e.key === 'Backspace' && !draft && values.length > 0) remove(values.length - 1);
+  };
+
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (text.includes(',') || text.includes('\n')) {
+      e.preventDefault();
+      commit(text.replace(/\n/g, ','));
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 3 }}>{label}</div>
+      <div
+        style={{
+          display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+          padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 4,
+          minHeight: 30, cursor: 'text',
+        }}
+        onClick={() => inputRef.current?.focus()}
+      >
+        {values.map((v, i) => (
+          <span
+            key={i}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '1px 6px', borderRadius: 3, fontSize: 11,
+              background: 'var(--accent)22', color: 'var(--accent)',
+              border: '1px solid var(--accent)44',
+            }}
+          >
+            {v}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); remove(i); }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 0, color: 'inherit', fontSize: 10, lineHeight: 1, opacity: 0.7,
+              }}
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={onKeyDown}
+          onBlur={() => { if (draft.trim()) commit(draft); }}
+          onPaste={onPaste}
+          placeholder={values.length === 0 ? placeholder : '+ add more'}
+          style={{
+            border: 'none', outline: 'none', background: 'transparent',
+            fontSize: 12, padding: '1px 2px', flex: 1, minWidth: 80,
+            color: 'var(--text)',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── EmpTypeSelector ──────────────────────────────────────────────────────────
+
+function EmpTypeSelector({
+  selected, onChange,
+}: {
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const toggle = (t: string) =>
+    onChange(selected.includes(t) ? selected.filter((x) => x !== t) : [...selected, t]);
+
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 3 }}>Employment Type</div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {(['__all__', ...EMP_TYPES] as const).map((t) => {
+          const isAll = t === '__all__';
+          const active = isAll ? selected.length === 0 : selected.includes(t);
+          return (
+            <button
+              key={t}
+              onClick={() => isAll ? onChange([]) : toggle(t)}
+              style={{
+                fontSize: 11, padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
+                background: active ? 'var(--accent)22' : 'transparent',
+                border: active ? '1px solid var(--accent)55' : '1px solid var(--border)',
+                color: active ? 'var(--accent)' : 'var(--text-dim)',
+              }}
+            >
+              {isAll ? 'All' : EMP_TYPE_LABELS[t]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── FilterSummaryBar ─────────────────────────────────────────────────────────
+
+function FilterSummaryBar({ filters }: { filters: FilterState }) {
+  const chips: { label: string; color: string }[] = [
+    ...filters.keywords.map((k) => ({ label: k, color: '#6ea8ff' })),
+    ...filters.locations.map((l) => ({ label: `📍 ${l}`, color: '#f59e0b' })),
+    ...filters.empTypes.map((t) => ({ label: EMP_TYPE_LABELS[t as EmpType] ?? t, color: '#a78bfa' })),
+    ...(filters.remoteOnly ? [{ label: 'Remote only', color: '#34d399' }] : []),
+  ];
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div style={{
+      display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center',
+      padding: '4px 8px', borderRadius: 4,
+      background: 'var(--panel-2)', border: '1px solid var(--border)',
+    }}>
+      <span style={{ fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap', marginRight: 2 }}>
+        Active:
+      </span>
+      {chips.map((c, i) => (
+        <span
+          key={i}
+          style={{
+            fontSize: 10, padding: '1px 6px', borderRadius: 3,
+            background: `${c.color}22`, color: c.color, border: `1px solid ${c.color}44`,
+          }}
+        >
+          {c.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ─── FilterProfilesPanel ──────────────────────────────────────────────────────
+
+function profileTooltip(p: FilterProfile): string {
+  const parts: string[] = [];
+  if (p.filters.keywords.length) parts.push(`Keywords: ${p.filters.keywords.join(', ')}`);
+  if (p.filters.locations.length) parts.push(`Locations: ${p.filters.locations.join(', ')}`);
+  if (p.filters.empTypes.length)
+    parts.push(`Types: ${p.filters.empTypes.map((t) => EMP_TYPE_LABELS[t as EmpType] ?? t).join(', ')}`);
+  if (p.filters.remoteOnly) parts.push('Remote only');
+  return parts.join(' | ') || 'Empty profile';
+}
+
+function FilterProfilesPanel({
+  profiles, onApply, onSave, onDelete,
+}: {
+  profiles: FilterProfile[];
+  onApply: (p: FilterProfile) => void;
+  onSave: (name: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [showSave, setShowSave] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [nameError, setNameError] = useState('');
+
+  const handleSave = () => {
+    const name = newName.trim();
+    if (!name) { setNameError('Name required'); return; }
+    if (name.length > 50) { setNameError('Max 50 chars'); return; }
+    if (profiles.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+      setNameError('Name already exists');
+      return;
+    }
+    onSave(name);
+    setNewName('');
+    setShowSave(false);
+    setNameError('');
+  };
+
+  return (
+    <div style={{
+      display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap',
+      padding: '4px 8px', borderRadius: 4,
+      background: 'var(--panel-2)', border: '1px solid var(--border)',
+    }}>
+      <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>Profiles:</span>
+
+      {profiles.length === 0 && !showSave && (
+        <span style={{ fontSize: 11, color: 'var(--text-dim)', opacity: 0.5 }}>None saved</span>
+      )}
+
+      {profiles.map((p) => (
+        <div key={p.id} style={{ display: 'flex', alignItems: 'stretch' }}>
+          <button
+            onClick={() => onApply(p)}
+            title={profileTooltip(p)}
+            style={{
+              fontSize: 11, padding: '1px 8px', cursor: 'pointer',
+              borderRadius: '3px 0 0 3px',
+              background: 'var(--accent)11', border: '1px solid var(--accent)33',
+              color: 'var(--accent)',
+            }}
+          >
+            {p.name}
+          </button>
+          <button
+            onClick={() => onDelete(p.id)}
+            title="Delete profile"
+            style={{
+              fontSize: 10, padding: '1px 5px', cursor: 'pointer',
+              borderRadius: '0 3px 3px 0', borderLeft: 'none',
+              background: '#ff6e6e11', border: '1px solid #ff6e6e33', color: '#ff6e6e',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+
+      {showSave ? (
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flex: 1 }}>
+          <input
+            autoFocus
+            style={{ fontSize: 11, padding: '2px 6px', width: 120 }}
+            placeholder="Profile name"
+            value={newName}
+            onChange={(e) => { setNewName(e.target.value); setNameError(''); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Escape') { setShowSave(false); setNameError(''); setNewName(''); }
+            }}
+          />
+          <button
+            className="primary"
+            style={{ fontSize: 11, padding: '2px 8px' }}
+            onClick={handleSave}
+          >
+            Save
+          </button>
+          <button
+            className="ghost"
+            style={{ fontSize: 11, padding: '2px 6px' }}
+            onClick={() => { setShowSave(false); setNameError(''); setNewName(''); }}
+          >
+            ✕
+          </button>
+          {nameError && <span style={{ fontSize: 11, color: '#ff6e6e' }}>{nameError}</span>}
+        </div>
+      ) : (
+        <button
+          className="ghost"
+          style={{ fontSize: 11, padding: '1px 8px', marginLeft: 'auto' }}
+          onClick={() => setShowSave(true)}
+        >
+          + Save current
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── SourceBadge / StatusBadge / JobCard ──────────────────────────────────────
 
 function SourceBadge({ source }: { source: string }) {
   const color = SOURCE_COLORS[source] ?? '#888';
@@ -222,18 +546,6 @@ function SourceBadge({ source }: { source: string }) {
       background: `${color}22`, color, border: `1px solid ${color}44`, fontWeight: 600,
     }}>
       {source}
-    </span>
-  );
-}
-
-function StatusBadge({ status }: { status: SavedStatus }) {
-  const color = STATUS_COLORS[status];
-  return (
-    <span style={{
-      fontSize: 10, padding: '1px 6px', borderRadius: 3,
-      background: `${color}22`, color, fontWeight: 600,
-    }}>
-      {status}
     </span>
   );
 }
@@ -274,9 +586,7 @@ function JobCard({
           </div>
           {job.description && (
             <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4, lineHeight: 1.4 }}>
-              {job.description.length > 160
-                ? `${job.description.slice(0, 160)}…`
-                : job.description}
+              {job.description.length > 160 ? `${job.description.slice(0, 160)}…` : job.description}
             </div>
           )}
         </div>
@@ -313,18 +623,23 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = { padding: '5px 6px', verticalAlign: 'middle' };
 
 function JobAggregator({ api, settings }: WidgetProps) {
-  const [tab, setTab]               = useState<'search' | 'saved'>('search');
-  const [keywords, setKeywords]     = useState((settings.defaultKeywords as string) || '');
-  const [location, setLocation]     = useState((settings.defaultLocation as string) || '');
-  const [remoteOnly, setRemoteOnly] = useState(Boolean(settings.remoteOnly));
-  const [empType, setEmpType]       = useState('all');
-  const [results, setResults]       = useState<JobListing[]>([]);
-  const [searching, setSearching]   = useState(false);
+  const [tab, setTab] = useState<'search' | 'saved'>('search');
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    keywords: settings.defaultKeywords ? [(settings.defaultKeywords as string).trim()] : [],
+    locations: settings.defaultLocation ? [(settings.defaultLocation as string).trim()] : [],
+    empTypes: [],
+    remoteOnly: Boolean(settings.remoteOnly),
+  }));
+  const [profiles, setProfiles] = useState<FilterProfile[]>([]);
+  const [results, setResults] = useState<JobListing[]>([]);
+  const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
-  const [savedJobs, setSavedJobs]   = useState<SavedJob[]>([]);
-  const [savedIds, setSavedIds]     = useState<Set<string>>(new Set());
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [activeFilters, setActiveFilters] = useState<FilterState | null>(null);
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savedFilter, setSavedFilter] = useState<SavedStatus | 'All'>('All');
-  const [ready, setReady]           = useState(false);
+  const [ready, setReady] = useState(false);
 
   const apiKey = (settings.rapidApiKey as string) || '';
 
@@ -334,35 +649,55 @@ function JobAggregator({ api, settings }: WidgetProps) {
     setSavedIds(new Set(rows.map((r) => r.job_id)));
   }, [api]);
 
+  const persistProfiles = useCallback(async (next: FilterProfile[]) => {
+    await api.kv.set(PROFILES_KV_KEY, next);
+    setProfiles(next);
+  }, [api]);
+
   useEffect(() => {
-    api.sql.exec(INIT_SQL).then(() => {
-      loadSaved();
-      setReady(true);
+    api.sql.exec(INIT_SQL).then(() => { loadSaved(); setReady(true); });
+    api.kv.get<FilterProfile[]>(PROFILES_KV_KEY).then((saved) => {
+      if (Array.isArray(saved)) setProfiles(saved);
     });
   }, []);
 
   const handleSearch = async () => {
-    const q = keywords.trim();
-    if (!q) return;
+    const errs = validateFilters(filters);
+    if (errs.length > 0) { setValidationErrors(errs); return; }
+    setValidationErrors([]);
     setSearching(true);
     setSearchError('');
     setResults([]);
+    setActiveFilters({ ...filters });
     try {
       const jobs = apiKey
-        ? await searchJSearch(
-            api.net.fetch,
-            apiKey,
-            location.trim() ? `${q} in ${location.trim()}` : q,
-            remoteOnly,
-            empType
-          )
-        : await searchArbeitnow(api.net.fetch, q, remoteOnly);
+        ? await searchJSearch(api.net.fetch, apiKey, filters)
+        : await searchArbeitnow(api.net.fetch, filters);
       setResults(jobs);
     } catch (e) {
       setSearchError(e instanceof Error ? e.message : 'Search failed');
     } finally {
       setSearching(false);
     }
+  };
+
+  const handleSaveProfile = async (name: string) => {
+    const profile: FilterProfile = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name,
+      filters: { ...filters, keywords: [...filters.keywords], locations: [...filters.locations], empTypes: [...filters.empTypes] },
+      createdAt: Date.now(),
+    };
+    await persistProfiles([...profiles, profile]);
+  };
+
+  const handleDeleteProfile = async (id: string) => {
+    await persistProfiles(profiles.filter((p) => p.id !== id));
+  };
+
+  const handleApplyProfile = (p: FilterProfile) => {
+    setFilters({ ...p.filters, keywords: [...p.filters.keywords], locations: [...p.filters.locations], empTypes: [...p.filters.empTypes] });
+    setValidationErrors([]);
   };
 
   const handleSave = async (job: JobListing) => {
@@ -392,8 +727,9 @@ function JobAggregator({ api, settings }: WidgetProps) {
     await loadSaved();
   };
 
-  const filteredSaved =
-    savedFilter === 'All' ? savedJobs : savedJobs.filter((j) => j.status === savedFilter);
+  const filteredSaved = savedFilter === 'All'
+    ? savedJobs
+    : savedJobs.filter((j) => j.status === savedFilter);
 
   if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
 
@@ -434,62 +770,73 @@ function JobAggregator({ api, settings }: WidgetProps) {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
-                style={{ ...inp, flex: 2 }}
-                placeholder="Keywords (e.g. Software Engineer)"
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') void handleSearch(); }}
+            <FilterProfilesPanel
+              profiles={profiles}
+              onApply={handleApplyProfile}
+              onSave={handleSaveProfile}
+              onDelete={handleDeleteProfile}
+            />
+
+            <TagInput
+              label="Keywords"
+              values={filters.keywords}
+              onChange={(keywords) => { setFilters((f) => ({ ...f, keywords })); setValidationErrors([]); }}
+              placeholder="e.g. Software Engineer  (Enter or , to add)"
+            />
+
+            {apiKey && (
+              <TagInput
+                label="Locations"
+                values={filters.locations}
+                onChange={(locations) => { setFilters((f) => ({ ...f, locations })); setValidationErrors([]); }}
+                placeholder="e.g. New York  (Enter or , to add multiple)"
               />
-              {apiKey && (
-                <input
-                  style={{ ...inp, flex: 1 }}
-                  placeholder="Location (e.g. New York, NY)"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void handleSearch(); }}
-                />
-              )}
-              <button
-                className="primary"
-                style={{ fontSize: 12, padding: '4px 12px' }}
-                onClick={() => void handleSearch()}
-                disabled={searching || !keywords.trim()}
-              >
-                {searching ? '…' : 'Search'}
-              </button>
-            </div>
+            )}
+
+            {apiKey && (
+              <EmpTypeSelector
+                selected={filters.empTypes}
+                onChange={(empTypes) => setFilters((f) => ({ ...f, empTypes }))}
+              />
+            )}
 
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              {apiKey && (
-                <select
-                  style={{ ...inp, cursor: 'pointer' }}
-                  value={empType}
-                  onChange={(e) => setEmpType(e.target.value)}
-                >
-                  {EMP_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              )}
               <label style={{
                 fontSize: 12, display: 'flex', gap: 4,
                 alignItems: 'center', color: 'var(--text-dim)', cursor: 'pointer',
               }}>
                 <input
                   type="checkbox"
-                  checked={remoteOnly}
-                  onChange={(e) => setRemoteOnly(e.target.checked)}
+                  checked={filters.remoteOnly}
+                  onChange={(e) => setFilters((f) => ({ ...f, remoteOnly: e.target.checked }))}
                 />
                 Remote only
               </label>
               {results.length > 0 && (
-                <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                   {results.length} result{results.length !== 1 ? 's' : ''}
                 </span>
               )}
+              <button
+                className="primary"
+                style={{ fontSize: 12, padding: '4px 16px', marginLeft: 'auto' }}
+                onClick={() => void handleSearch()}
+                disabled={searching}
+              >
+                {searching ? '…' : 'Search'}
+              </button>
             </div>
+
+            {validationErrors.length > 0 && (
+              <div style={{
+                fontSize: 11, padding: '5px 8px', borderRadius: 4,
+                background: '#ff6e6e22', border: '1px solid #ff6e6e44', color: '#ff6e6e',
+              }}>
+                {validationErrors.map((err, i) => <div key={i}>{err}</div>)}
+              </div>
+            )}
+
+            {activeFilters && <FilterSummaryBar filters={activeFilters} />}
           </div>
 
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
@@ -503,7 +850,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
                 color: 'var(--text-dim)', fontSize: 13,
                 textAlign: 'center', padding: '32px 0',
               }}>
-                {keywords.trim()
+                {filters.keywords.length > 0
                   ? 'No results — try different keywords or remove filters.'
                   : 'Enter keywords and press Search to find jobs.'}
               </div>
@@ -524,7 +871,6 @@ function JobAggregator({ api, settings }: WidgetProps) {
       {/* ── Saved tab ── */}
       {tab === 'saved' && (
         <>
-          {/* Status filter chips */}
           <div style={{ flexShrink: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {(['All', ...STATUSES] as const).map((s) => {
               const count = s === 'All'
@@ -582,13 +928,11 @@ function JobAggregator({ api, settings }: WidgetProps) {
                           {Boolean(job.is_remote) && ' · Remote'}
                         </div>
                       </td>
-                      <td style={tdStyle}>
-                        <SourceBadge source={job.source} />
-                      </td>
+                      <td style={tdStyle}><SourceBadge source={job.source} /></td>
                       <td style={tdStyle}>
                         <select
                           style={{
-                            ...inp,
+                            ...thStyle,
                             background: 'transparent', border: 'none', cursor: 'pointer',
                             color: STATUS_COLORS[job.status], fontWeight: 600, fontSize: 11,
                             padding: 0,
@@ -644,10 +988,10 @@ const widget: Widget = {
     id: 'job-aggregator',
     name: 'Job Aggregator',
     description: 'Search LinkedIn, Indeed, ZipRecruiter, Glassdoor, and more. Save and track interesting listings.',
-    version: '0.1.0',
+    version: '0.2.0',
     icon: '🔍',
-    defaultSize: { w: 8, h: 9 },
-    minSize:     { w: 5, h: 6 },
+    defaultSize: { w: 8, h: 10 },
+    minSize:     { w: 5, h: 7 },
     permissions: { sqlite: true },
     settings: [
       {
