@@ -33,7 +33,7 @@ which holds the dashboard state and per-widget storage.
 
 ## Project layout
 
-```
+```bash
 src/
 ├── main/        # Electron main process (window, IPC, storage)
 ├── preload/     # contextBridge exposing window.cc to the renderer

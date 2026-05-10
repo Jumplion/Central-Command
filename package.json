@@ -4,8 +4,12 @@
   "private": true,
   "description": "Personal extensible dashboard built on Electron + React.",
   "main": "./out/main/index.js",
+  "author": {
+    "name": "Tomer Braff",
+    "email": "tomerbraff@gmail.com"
+  },
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "electron-vite dev -- --disable-gpu --no-sandbox",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
