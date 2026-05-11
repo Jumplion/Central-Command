@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -10,11 +10,17 @@ interface FilterState {
   remoteOnly: boolean;
 }
 
+interface ResumeKeyword {
+  term: string;
+  weight: number;
+}
+
 interface FilterProfile {
   id: string;
   name: string;
   filters: FilterState;
   createdAt: number;
+  resumeKeywords?: ResumeKeyword[];
 }
 
 interface JobListing {
@@ -95,6 +101,137 @@ const EMP_TYPE_LABELS: Record<EmpType, string> = {
 };
 
 const PROFILES_KV_KEY = 'filterProfiles';
+const PROFILES_SEEDED_KEY = 'profilesSeeded_v1';
+
+// ─── Default Resume Profiles ──────────────────────────────────────────────────
+
+const DEFAULT_PROFILES: FilterProfile[] = [
+  {
+    id: 'default-software-dev',
+    name: 'Software Developer',
+    filters: {
+      keywords: ['Software Engineer', 'C# Developer', '.NET Developer', 'Full Stack Developer'],
+      locations: [],
+      empTypes: ['fulltime'],
+      remoteOnly: false,
+    },
+    createdAt: 0,
+    resumeKeywords: [
+      { term: 'software engineer',  weight: 10 },
+      { term: 'software developer', weight: 10 },
+      { term: 'full stack',         weight: 9  },
+      { term: 'full-stack',         weight: 9  },
+      { term: 'C#',                 weight: 10 },
+      { term: '.NET',               weight: 10 },
+      { term: 'ASP.NET',            weight: 8  },
+      { term: 'backend',            weight: 7  },
+      { term: 'back-end',           weight: 7  },
+      { term: 'Azure',              weight: 8  },
+      { term: 'AWS',                weight: 7  },
+      { term: 'REST API',           weight: 7  },
+      { term: 'RESTful',            weight: 7  },
+      { term: 'JavaScript',         weight: 6  },
+      { term: 'TypeScript',         weight: 5  },
+      { term: 'Python',             weight: 5  },
+      { term: 'SQL',                weight: 6  },
+      { term: 'MVC',                weight: 6  },
+      { term: 'microservices',      weight: 6  },
+      { term: 'CI/CD',              weight: 5  },
+      { term: 'Git',                weight: 4  },
+      { term: 'Agile',              weight: 5  },
+      { term: 'Scrum',              weight: 4  },
+      { term: 'unit testing',       weight: 5  },
+      { term: 'TDD',                weight: 5  },
+      { term: 'senior',             weight: 6  },
+      { term: 'enterprise',         weight: 5  },
+      { term: 'DevOps',             weight: 5  },
+      { term: 'Node.js',            weight: 4  },
+    ],
+  },
+  {
+    id: 'default-game-design',
+    name: 'Game Designer',
+    filters: {
+      keywords: ['Game Designer', 'Game Developer', 'Unreal Engine'],
+      locations: [],
+      empTypes: ['fulltime'],
+      remoteOnly: false,
+    },
+    createdAt: 0,
+    resumeKeywords: [
+      { term: 'game designer',    weight: 10 },
+      { term: 'game developer',   weight: 10 },
+      { term: 'game design',      weight: 10 },
+      { term: 'gameplay',         weight: 8  },
+      { term: 'Unreal Engine',    weight: 10 },
+      { term: 'Unreal',           weight: 8  },
+      { term: 'Unity',            weight: 9  },
+      { term: 'game engine',      weight: 7  },
+      { term: 'AAA',              weight: 8  },
+      { term: 'Blueprints',       weight: 8  },
+      { term: 'C++',              weight: 8  },
+      { term: 'Lua',              weight: 7  },
+      { term: 'combat design',    weight: 9  },
+      { term: 'level design',     weight: 9  },
+      { term: 'encounter design', weight: 9  },
+      { term: 'set piece',        weight: 8  },
+      { term: 'systems design',   weight: 8  },
+      { term: 'prototyping',      weight: 7  },
+      { term: 'accessibility',    weight: 7  },
+      { term: 'scripting',        weight: 6  },
+      { term: 'Perforce',         weight: 5  },
+      { term: 'RPG',              weight: 6  },
+      { term: 'player experience',weight: 6  },
+      { term: 'game studio',      weight: 6  },
+      { term: 'console',          weight: 5  },
+    ],
+  },
+  {
+    id: 'default-cybersecurity',
+    name: 'Cybersecurity',
+    filters: {
+      keywords: ['Cybersecurity', 'Security Engineer', 'Application Security'],
+      locations: [],
+      empTypes: ['fulltime'],
+      remoteOnly: false,
+    },
+    createdAt: 0,
+    resumeKeywords: [
+      { term: 'cybersecurity',        weight: 10 },
+      { term: 'security engineer',    weight: 10 },
+      { term: 'application security', weight: 10 },
+      { term: 'AppSec',               weight: 9  },
+      { term: 'security analyst',     weight: 9  },
+      { term: 'information security', weight: 9  },
+      { term: 'SOC',                  weight: 8  },
+      { term: 'CompTIA',              weight: 7  },
+      { term: 'Security+',            weight: 8  },
+      { term: 'SIEM',                 weight: 9  },
+      { term: 'Splunk',               weight: 8  },
+      { term: 'Sentinel',             weight: 7  },
+      { term: 'Wireshark',            weight: 7  },
+      { term: 'Nmap',                 weight: 6  },
+      { term: 'IAM',                  weight: 8  },
+      { term: 'OAuth',                weight: 7  },
+      { term: 'JWT',                  weight: 7  },
+      { term: 'NIST',                 weight: 7  },
+      { term: 'vulnerability',        weight: 8  },
+      { term: 'penetration testing',  weight: 8  },
+      { term: 'pen test',             weight: 8  },
+      { term: 'secure coding',        weight: 9  },
+      { term: 'threat detection',     weight: 8  },
+      { term: 'incident response',    weight: 8  },
+      { term: 'cloud security',       weight: 8  },
+      { term: 'authentication',       weight: 6  },
+      { term: 'cryptography',         weight: 7  },
+      { term: 'Azure',                weight: 5  },
+      { term: 'AWS',                  weight: 5  },
+      { term: 'PowerShell',           weight: 6  },
+      { term: 'Python',               weight: 5  },
+      { term: 'C#',                   weight: 4  },
+    ],
+  },
+];
 
 // ─── SQL ──────────────────────────────────────────────────────────────────────
 
@@ -176,6 +313,24 @@ function empTypeLabel(t: string): string {
     contractor: 'Contract', intern: 'Intern',
   };
   return map[t] || t;
+}
+
+function scoreJob(job: JobListing, keywords: ResumeKeyword[]): number {
+  const titleText = job.title.toLowerCase();
+  const bodyText = job.description.toLowerCase();
+  let score = 0;
+  for (const { term, weight } of keywords) {
+    const t = term.toLowerCase();
+    if (titleText.includes(t)) score += weight * 2;
+    else if (bodyText.includes(t)) score += weight;
+  }
+  // Normalize: "ideal" = top-8 weighted terms all matching in the title
+  const ideal = [...keywords]
+    .map((k) => k.weight)
+    .sort((a, b) => b - a)
+    .slice(0, 8)
+    .reduce((s, w) => s + w * 2, 0);
+  return ideal > 0 ? Math.min(100, Math.round((score / ideal) * 100)) : 0;
 }
 
 // ─── API adapters ─────────────────────────────────────────────────────────────
@@ -551,18 +706,23 @@ function SourceBadge({ source }: { source: string }) {
 }
 
 function JobCard({
-  job, isSaved, onSave, onApply,
+  job, isSaved, onSave, onApply, matchScore,
 }: {
   job: JobListing;
   isSaved: boolean;
   onSave: () => void;
   onApply: () => void;
+  matchScore?: number;
 }) {
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryPeriod);
+  const isRecommended = typeof matchScore === 'number' && matchScore >= 60;
+  const isGoodMatch   = typeof matchScore === 'number' && matchScore >= 35 && matchScore < 60;
   return (
     <div style={{
-      border: '1px solid var(--border)', borderRadius: 6,
-      padding: '8px 10px', marginBottom: 6, background: 'var(--panel-2)',
+      border: isRecommended ? '1px solid #f59e0b66' : '1px solid var(--border)',
+      borderRadius: 6,
+      padding: '8px 10px', marginBottom: 6,
+      background: isRecommended ? '#f59e0b08' : 'var(--panel-2)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ minWidth: 0 }}>
@@ -577,6 +737,22 @@ function JobCard({
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <SourceBadge source={job.source} />
+            {isRecommended && (
+              <span style={{
+                fontSize: 10, padding: '1px 6px', borderRadius: 3, fontWeight: 700,
+                background: '#f59e0b22', color: '#f59e0b', border: '1px solid #f59e0b55',
+              }}>
+                ★ Recommended
+              </span>
+            )}
+            {isGoodMatch && (
+              <span style={{
+                fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                background: '#34d39922', color: '#34d399', border: '1px solid #34d39944',
+              }}>
+                Good Match
+              </span>
+            )}
             {salary && <span style={{ fontSize: 11, color: '#34d399' }}>{salary}</span>}
             {job.datePosted && (
               <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
@@ -631,6 +807,8 @@ function JobAggregator({ api, settings }: WidgetProps) {
     remoteOnly: Boolean(settings.remoteOnly),
   }));
   const [profiles, setProfiles] = useState<FilterProfile[]>([]);
+  const [activeProfile, setActiveProfile] = useState<FilterProfile | null>(null);
+  const [resultsProfile, setResultsProfile] = useState<FilterProfile | null>(null);
   const [results, setResults] = useState<JobListing[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
@@ -656,9 +834,19 @@ function JobAggregator({ api, settings }: WidgetProps) {
 
   useEffect(() => {
     api.sql.exec(INIT_SQL).then(() => { loadSaved(); setReady(true); });
-    api.kv.get<FilterProfile[]>(PROFILES_KV_KEY).then((saved) => {
-      if (Array.isArray(saved)) setProfiles(saved);
-    });
+    (async () => {
+      const saved = await api.kv.get<FilterProfile[]>(PROFILES_KV_KEY);
+      if (Array.isArray(saved)) {
+        setProfiles(saved);
+      } else {
+        const seeded = await api.kv.get<boolean>(PROFILES_SEEDED_KEY);
+        if (!seeded) {
+          await api.kv.set(PROFILES_KV_KEY, DEFAULT_PROFILES);
+          await api.kv.set(PROFILES_SEEDED_KEY, true);
+          setProfiles(DEFAULT_PROFILES);
+        }
+      }
+    })();
   }, []);
 
   const handleSearch = async () => {
@@ -668,6 +856,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
     setSearching(true);
     setSearchError('');
     setResults([]);
+    setResultsProfile(activeProfile);
     setActiveFilters({ ...filters });
     try {
       const jobs = apiKey
@@ -697,6 +886,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
 
   const handleApplyProfile = (p: FilterProfile) => {
     setFilters({ ...p.filters, keywords: [...p.filters.keywords], locations: [...p.filters.locations], empTypes: [...p.filters.empTypes] });
+    setActiveProfile(p);
     setValidationErrors([]);
   };
 
@@ -726,6 +916,14 @@ function JobAggregator({ api, settings }: WidgetProps) {
     await api.sql.run('DELETE FROM saved_jobs WHERE id=?', [id]);
     await loadSaved();
   };
+
+  const scoredResults = useMemo(() => {
+    const keywords = resultsProfile?.resumeKeywords;
+    if (!keywords?.length) return results.map((j) => ({ job: j, score: -1 }));
+    return [...results]
+      .map((j) => ({ job: j, score: scoreJob(j, keywords) }))
+      .sort((a, b) => b.score - a.score);
+  }, [results, resultsProfile]);
 
   const filteredSaved = savedFilter === 'All'
     ? savedJobs
@@ -815,6 +1013,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
               {results.length > 0 && (
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                   {results.length} result{results.length !== 1 ? 's' : ''}
+                  {resultsProfile?.resumeKeywords?.length ? ' · ranked by match' : ''}
                 </span>
               )}
               <button
@@ -855,10 +1054,11 @@ function JobAggregator({ api, settings }: WidgetProps) {
                   : 'Enter keywords and press Search to find jobs.'}
               </div>
             )}
-            {results.map((job) => (
+            {scoredResults.map(({ job, score }) => (
               <JobCard
                 key={job.id}
                 job={job}
+                matchScore={score >= 0 ? score : undefined}
                 isSaved={savedIds.has(job.id)}
                 onSave={() => void handleSave(job)}
                 onApply={() => job.applyLink && void api.shell.openExternal(job.applyLink)}
