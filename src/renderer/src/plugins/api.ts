@@ -23,6 +23,7 @@ export interface WidgetApi {
     all<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
     get<T = unknown>(sql: string, params?: unknown[]): Promise<T | undefined>;
     exec(sql: string): Promise<void>;
+    runBatch(items: { sql: string; params?: unknown[] }[]): Promise<SqlRunResult[]>;
   };
   shell: {
     openExternal(url: string): Promise<void>;
@@ -64,16 +65,11 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
         window.cc.sql.all(widgetId, sql, params) as Promise<T[]>,
       get: <T,>(sql: string, params: unknown[] = []) =>
         window.cc.sql.get(widgetId, sql, params) as Promise<T | undefined>,
-      exec: (sql) => window.cc.sql.exec(widgetId, sql)
+      exec: (sql) => window.cc.sql.exec(widgetId, sql),
+      runBatch: (items) => window.cc.sql.runBatch(widgetId, items)
     },
-    shell: {
-      openExternal: (url) => window.cc.shell.openExternal(url),
-      openPath: (path) => window.cc.shell.openPath(path),
-      showItemInFolder: (path) => window.cc.shell.showItemInFolder(path)
-    },
-    dialog: {
-      openPath: (options) => window.cc.dialog.openPath(options)
-    },
+    shell: window.cc.shell,
+    dialog: window.cc.dialog,
     net: {
       fetch: async (url, init) => {
         const t0 = Date.now();

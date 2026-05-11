@@ -27,15 +27,18 @@ export function Dashboard() {
     return () => ro.disconnect();
   }, []);
 
-  const layout: Layout[] = dashboard.instances.map((i) => ({
-    i: i.instanceId,
-    x: i.layout.x,
-    y: i.layout.y,
-    w: i.layout.w,
-    h: i.layout.h,
-    minW: 2,
-    minH: 2
-  }));
+  const layout: Layout[] = dashboard.instances.map((i) => {
+    const min = getWidget(i.widgetId)?.manifest.minSize;
+    return {
+      i: i.instanceId,
+      x: i.layout.x,
+      y: i.layout.y,
+      w: i.layout.w,
+      h: i.layout.h,
+      minW: min?.w ?? 2,
+      minH: min?.h ?? 2
+    };
+  });
 
   const handleChange = (next: Layout[]) => {
     updateLayout(

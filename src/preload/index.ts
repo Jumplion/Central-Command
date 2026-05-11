@@ -18,7 +18,8 @@ const api: CCApi = {
       ipcRenderer.invoke(IPC.SQL_RUN, widgetId, sql, params),
     all: (widgetId, sql, params = []) => ipcRenderer.invoke(IPC.SQL_ALL, widgetId, sql, params),
     get: (widgetId, sql, params = []) => ipcRenderer.invoke(IPC.SQL_GET, widgetId, sql, params),
-    exec: (widgetId, sql) => ipcRenderer.invoke(IPC.SQL_EXEC, widgetId, sql)
+    exec: (widgetId, sql) => ipcRenderer.invoke(IPC.SQL_EXEC, widgetId, sql),
+    runBatch: (widgetId, items) => ipcRenderer.invoke(IPC.SQL_RUN_BATCH, widgetId, items)
   },
   shell: {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke(IPC.SHELL_OPEN_EXTERNAL, url),

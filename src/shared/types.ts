@@ -103,6 +103,7 @@ export interface CCApi {
     all(widgetId: string, sql: string, params?: unknown[]): Promise<unknown[]>;
     get(widgetId: string, sql: string, params?: unknown[]): Promise<unknown>;
     exec(widgetId: string, sql: string): Promise<void>;
+    runBatch(widgetId: string, items: { sql: string; params?: unknown[] }[]): Promise<SqlRunResult[]>;
   };
   shell: {
     openExternal(url: string): Promise<void>;

@@ -1,5 +1,16 @@
 import type { FeedType, SavedStatus } from './types';
 
+// ─── Shared style constants ───────────────────────────────────────────────────
+
+export const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
+
+export const thStyle: React.CSSProperties = {
+  padding: '4px 6px', fontWeight: 500, fontSize: 11,
+  textAlign: 'left', borderBottom: '1px solid var(--border)',
+};
+
+export const tdStyle: React.CSSProperties = { padding: '5px 6px', verticalAlign: 'middle' };
+
 // ─── Status / source colours ──────────────────────────────────────────────────
 
 export const STATUSES: SavedStatus[] = ['Interested', 'Applied', 'Phone', 'Onsite', 'Offer', 'Rejected'];

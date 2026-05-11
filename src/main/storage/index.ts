@@ -4,12 +4,7 @@ import { promises as fs } from 'node:fs';
 import { JsonStore } from './json';
 import { SqliteStore } from './sqlite';
 import type { AppState } from '@shared/types';
-
-const DEFAULT_STATE: AppState = {
-  version: 1,
-  dashboards: [{ id: 'default', name: 'Home', instances: [] }],
-  activeDashboardId: 'default'
-};
+import { DEFAULT_STATE } from '@shared/defaults';
 
 function isAppState(x: unknown): x is AppState {
   if (!x || typeof x !== 'object') return false;

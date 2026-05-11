@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import type { AppState, Dashboard, DashboardId, InstanceId, WidgetId, WidgetInstance, WidgetSettings } from '@shared/types';
+import { DEFAULT_STATE } from '@shared/defaults';
 import { defaultSettingsFor, getWidget } from '@renderer/plugins/registry';
 
 interface DashboardStore {
@@ -24,13 +25,14 @@ interface DashboardStore {
   setTitle(instanceId: InstanceId, title: string | undefined): void;
 }
 
-const DEFAULT_STATE: AppState = {
-  version: 1,
-  dashboards: [{ id: 'default', name: 'Home', instances: [] }],
-  activeDashboardId: 'default'
-};
-
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function patchActive(state: AppState, fn: (d: Dashboard) => Dashboard): AppState {
+  return {
+    ...state,
+    dashboards: state.dashboards.map((d) => (d.id === state.activeDashboardId ? fn(d) : d))
+  };
+}
 
 export const useDashboard = create<DashboardStore>((set, get) => ({
   loaded: false,
@@ -101,9 +103,8 @@ export const useDashboard = create<DashboardStore>((set, get) => ({
     const instanceId = nanoid(10);
     const { defaultSize } = widget.manifest;
     const settings = defaultSettingsFor(widget.manifest);
-    set((s) => {
-      const dashboards = s.state.dashboards.map((d) => {
-        if (d.id !== s.state.activeDashboardId) return d;
+    set((s) => ({
+      state: patchActive(s.state, (d) => {
         const maxY = d.instances.reduce((m, inst) => Math.max(m, inst.layout.y + inst.layout.h), 0);
         const inst: WidgetInstance = {
           instanceId,
@@ -112,29 +113,25 @@ export const useDashboard = create<DashboardStore>((set, get) => ({
           settings
         };
         return { ...d, instances: [...d.instances, inst] };
-      });
-      return { state: { ...s.state, dashboards } };
-    });
+      })
+    }));
     get().persist();
     return instanceId;
   },
 
   removeInstance(instanceId) {
-    set((s) => {
-      const dashboards = s.state.dashboards.map((d) =>
-        d.id !== s.state.activeDashboardId
-          ? d
-          : { ...d, instances: d.instances.filter((i) => i.instanceId !== instanceId) }
-      );
-      return { state: { ...s.state, dashboards } };
-    });
+    set((s) => ({
+      state: patchActive(s.state, (d) => ({
+        ...d,
+        instances: d.instances.filter((i) => i.instanceId !== instanceId)
+      }))
+    }));
     get().persist();
   },
 
   updateLayout(layouts) {
-    set((s) => {
-      const dashboards = s.state.dashboards.map((d) => {
-        if (d.id !== s.state.activeDashboardId) return d;
+    set((s) => ({
+      state: patchActive(s.state, (d) => {
         const map = new Map(layouts.map((l) => [l.instanceId, l]));
         return {
           ...d,
@@ -143,43 +140,28 @@ export const useDashboard = create<DashboardStore>((set, get) => ({
             return l ? { ...i, layout: { x: l.x, y: l.y, w: l.w, h: l.h } } : i;
           })
         };
-      });
-      return { state: { ...s.state, dashboards } };
-    });
+      })
+    }));
     get().persist();
   },
 
   updateSettings(instanceId, settings) {
-    set((s) => {
-      const dashboards = s.state.dashboards.map((d) =>
-        d.id !== s.state.activeDashboardId
-          ? d
-          : {
-              ...d,
-              instances: d.instances.map((i) =>
-                i.instanceId === instanceId ? { ...i, settings } : i
-              )
-            }
-      );
-      return { state: { ...s.state, dashboards } };
-    });
+    set((s) => ({
+      state: patchActive(s.state, (d) => ({
+        ...d,
+        instances: d.instances.map((i) => (i.instanceId === instanceId ? { ...i, settings } : i))
+      }))
+    }));
     get().persist();
   },
 
   setTitle(instanceId, title) {
-    set((s) => {
-      const dashboards = s.state.dashboards.map((d) =>
-        d.id !== s.state.activeDashboardId
-          ? d
-          : {
-              ...d,
-              instances: d.instances.map((i) =>
-                i.instanceId === instanceId ? { ...i, title } : i
-              )
-            }
-      );
-      return { state: { ...s.state, dashboards } };
-    });
+    set((s) => ({
+      state: patchActive(s.state, (d) => ({
+        ...d,
+        instances: d.instances.map((i) => (i.instanceId === instanceId ? { ...i, title } : i))
+      }))
+    }));
     get().persist();
   }
 }));

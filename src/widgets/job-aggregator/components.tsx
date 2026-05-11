@@ -1,18 +1,7 @@
 import { useState } from 'react';
 import type { JobListing, CompanyFeed, FeedJob, FeedType, SavedStatus } from './types';
-import { SOURCE_COLORS, STATUS_COLORS, FEED_COLORS, FEED_LABELS, STATUSES } from './constants';
+import { SOURCE_COLORS, STATUS_COLORS, FEED_COLORS, FEED_LABELS, STATUSES, inp, thStyle, tdStyle } from './constants';
 import { formatSalary, relativeDate, empTypeLabel } from './utils';
-
-// ─── Shared style constants ───────────────────────────────────────────────────
-
-export const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
-
-export const thStyle: React.CSSProperties = {
-  padding: '4px 6px', fontWeight: 500, fontSize: 11,
-  textAlign: 'left', borderBottom: '1px solid var(--border)',
-};
-
-export const tdStyle: React.CSSProperties = { padding: '5px 6px', verticalAlign: 'middle' };
 
 // ─── SourceBadge ──────────────────────────────────────────────────────────────
 

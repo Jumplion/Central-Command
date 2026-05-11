@@ -11,38 +11,39 @@ export function registerIpc(storage: Storage): void {
   ipcMain.handle(IPC.STATE_LOAD, () => storage.loadState());
   ipcMain.handle(IPC.STATE_SAVE, (_e, state: AppState) => storage.saveState(state));
 
-  ipcMain.handle(IPC.KV_GET, (_e, widgetId: unknown, key: unknown) => {
-    if (!isString(widgetId) || !isString(key)) throw new Error('kv.get: invalid arguments');
-    return storage.json.get(widgetId, key);
-  });
-  ipcMain.handle(IPC.KV_SET, (_e, widgetId: unknown, key: unknown, value: unknown) => {
-    if (!isString(widgetId) || !isString(key)) throw new Error('kv.set: invalid arguments');
-    return storage.json.set(widgetId, key, value);
-  });
-  ipcMain.handle(IPC.KV_DEL, (_e, widgetId: unknown, key: unknown) => {
-    if (!isString(widgetId) || !isString(key)) throw new Error('kv.del: invalid arguments');
-    return storage.json.del(widgetId, key);
-  });
+  // ─── KV handlers ─────────────────────────────────────────────────────────────
+  function kvHandler(channel: string, fn: (widgetId: string, key: string, value?: unknown) => unknown) {
+    ipcMain.handle(channel, (_e, widgetId: unknown, key: unknown, value?: unknown) => {
+      if (!isString(widgetId) || !isString(key)) throw new Error(`${channel}: invalid arguments`);
+      return fn(widgetId, key, value);
+    });
+  }
+  kvHandler(IPC.KV_GET,  (w, k) => storage.json.get(w, k));
+  kvHandler(IPC.KV_SET,  (w, k, v) => storage.json.set(w, k, v));
+  kvHandler(IPC.KV_DEL,  (w, k) => storage.json.del(w, k));
   ipcMain.handle(IPC.KV_KEYS, (_e, widgetId: unknown) => {
     if (!isString(widgetId)) throw new Error('kv.keys: invalid arguments');
     return storage.json.keys(widgetId);
   });
 
-  ipcMain.handle(IPC.SQL_RUN, (_e, widgetId: unknown, sql: unknown, params: unknown) => {
-    if (!isString(widgetId) || !isString(sql) || !isParams(params)) throw new Error('sql.run: invalid arguments');
-    return storage.sqlite.run(widgetId, sql, params);
-  });
-  ipcMain.handle(IPC.SQL_ALL, (_e, widgetId: unknown, sql: unknown, params: unknown) => {
-    if (!isString(widgetId) || !isString(sql) || !isParams(params)) throw new Error('sql.all: invalid arguments');
-    return storage.sqlite.all(widgetId, sql, params);
-  });
-  ipcMain.handle(IPC.SQL_GET, (_e, widgetId: unknown, sql: unknown, params: unknown) => {
-    if (!isString(widgetId) || !isString(sql) || !isParams(params)) throw new Error('sql.get: invalid arguments');
-    return storage.sqlite.get(widgetId, sql, params);
-  });
+  // ─── SQL handlers ─────────────────────────────────────────────────────────────
+  function sqlQueryHandler(channel: string, method: 'run' | 'all' | 'get') {
+    ipcMain.handle(channel, (_e, widgetId: unknown, sql: unknown, params: unknown) => {
+      if (!isString(widgetId) || !isString(sql) || !isParams(params))
+        throw new Error(`${channel}: invalid arguments`);
+      return storage.sqlite[method](widgetId, sql, params);
+    });
+  }
+  sqlQueryHandler(IPC.SQL_RUN, 'run');
+  sqlQueryHandler(IPC.SQL_ALL, 'all');
+  sqlQueryHandler(IPC.SQL_GET, 'get');
   ipcMain.handle(IPC.SQL_EXEC, (_e, widgetId: unknown, sql: unknown) => {
     if (!isString(widgetId) || !isString(sql)) throw new Error('sql.exec: invalid arguments');
     return storage.sqlite.exec(widgetId, sql);
+  });
+  ipcMain.handle(IPC.SQL_RUN_BATCH, (_e, widgetId: unknown, items: unknown) => {
+    if (!isString(widgetId) || !Array.isArray(items)) throw new Error('sql.runBatch: invalid arguments');
+    return storage.sqlite.runBatch(widgetId, items as { sql: string; params?: unknown[] }[]);
   });
 
   const isWsl = !!(process.env['WSL_DISTRO_NAME'] ?? process.env['WSL_INTEROP']);

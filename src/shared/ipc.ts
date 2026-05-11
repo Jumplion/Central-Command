@@ -11,6 +11,7 @@ export const IPC = {
   SQL_ALL: 'cc:sql:all',
   SQL_GET: 'cc:sql:get',
   SQL_EXEC: 'cc:sql:exec',
+  SQL_RUN_BATCH: 'cc:sql:runBatch',
 
   SHELL_OPEN_EXTERNAL: 'cc:shell:openExternal',
   SHELL_OPEN_PATH: 'cc:shell:openPath',

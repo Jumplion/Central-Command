@@ -40,6 +40,19 @@ export class SqliteStore {
     this.dbFor(widgetId).exec(sql);
   }
 
+  runBatch(widgetId: string, items: { sql: string; params?: unknown[] }[]): SqlRunResult[] {
+    const db = this.dbFor(widgetId);
+    const results: SqlRunResult[] = [];
+    const run = db.transaction(() => {
+      for (const item of items) {
+        const result = db.prepare(item.sql).run(...((item.params ?? []) as unknown[]));
+        results.push({ changes: result.changes, lastInsertRowid: Number(result.lastInsertRowid) });
+      }
+    });
+    run();
+    return results;
+  }
+
   closeAll(): void {
     for (const db of this.dbs.values()) {
       try { db.close(); } catch { /* ignore */ }

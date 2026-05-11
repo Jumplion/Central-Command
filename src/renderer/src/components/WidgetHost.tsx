@@ -16,11 +16,11 @@ export function WidgetHost({ instance, widget }: Props) {
   const [showSettings, setShowSettings] = useState(false);
 
   const api = useMemo(
-    () => (widget ? createWidgetApi(widget.manifest.id, instance.instanceId) : null),
-    [widget, instance.instanceId]
+    () => createWidgetApi(instance.widgetId, instance.instanceId),
+    [instance.widgetId, instance.instanceId]
   );
 
-  if (!widget || !api) {
+  if (!widget) {
     return (
       <div className="widget widget-missing">
         <div className="widget-header">

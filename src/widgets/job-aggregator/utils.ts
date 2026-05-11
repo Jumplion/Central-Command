@@ -1,3 +1,5 @@
+import { EMP_TYPES } from './constants';
+
 // ─── Pure formatting helpers ──────────────────────────────────────────────────
 
 export function formatSalary(
@@ -27,13 +29,12 @@ export function relativeDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const EMP_TYPE_LABELS: Record<string, string> = {
-  FULLTIME: 'Full-time', PARTTIME: 'Part-time', CONTRACTOR: 'Contract', INTERN: 'Intern',
-  fulltime: 'Full-time', parttime: 'Part-time', contractor: 'Contract', intern: 'Intern',
-};
+const EMP_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  EMP_TYPES.filter((t) => t.value !== 'all').map((t) => [t.value.toUpperCase(), t.label])
+);
 
 export function empTypeLabel(t: string): string {
-  return EMP_TYPE_LABELS[t] ?? t;
+  return EMP_TYPE_LABELS[t.toUpperCase()] ?? t;
 }
 
 export function stripHtml(html: string): string {
