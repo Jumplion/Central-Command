@@ -757,6 +757,8 @@ function JobAggregator({ api, settings }: WidgetProps) {
   const [feedLoading, setFeedLoading] = useState<Record<number, boolean>>({});
   const [feedErrors, setFeedErrors] = useState<Record<number, string>>({});
   const [showAddFeed, setShowAddFeed] = useState(false);
+  const [feedSearch, setFeedSearch] = useState('');
+  const [feedTypeFilter, setFeedTypeFilter] = useState<FeedType | 'all'>('all');
 
   const [ready, setReady] = useState(false);
   const apiKey = (settings.rapidApiKey as string) || '';
@@ -894,9 +896,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
     }
   }, [api, apiKey]);
 
-  const handleRefreshAll = async () => {
-    for (const feed of feeds) await handleRefreshFeed(feed);
-  };
+  const handleRefreshAll = () => void Promise.all(feeds.map((feed) => handleRefreshFeed(feed)));
 
   const handleSaveFeedJob = async (job: FeedJob, feed: CompanyFeed) => {
     const jobId = `feed-${feed.id}-${job.ext_id}`;
@@ -912,6 +912,12 @@ function JobAggregator({ api, settings }: WidgetProps) {
   };
 
   const filteredSaved = savedFilter === 'All' ? savedJobs : savedJobs.filter((j) => j.status === savedFilter);
+
+  const visibleFeeds = feeds.filter((f) => {
+    if (feedTypeFilter !== 'all' && f.feed_type !== feedTypeFilter) return false;
+    if (feedSearch.trim()) return f.name.toLowerCase().includes(feedSearch.trim().toLowerCase());
+    return true;
+  });
 
   if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
 
@@ -1082,18 +1088,49 @@ function JobAggregator({ api, settings }: WidgetProps) {
       {/* ── Boards tab ── */}
       {tab === 'boards' && (
         <>
-          <div style={{ flexShrink: 0, display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button className="primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setShowAddFeed((x) => !x)}>
-              {showAddFeed ? 'Cancel' : '+ Add Feed'}
-            </button>
-            <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => void handleRefreshAll()} title="Refresh all feeds">
-              ↻ Refresh All
-            </button>
-            <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* Action row */}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <button className="primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setShowAddFeed((x) => !x)}>
+                {showAddFeed ? 'Cancel' : '+ Add Company'}
+              </button>
+              <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleRefreshAll} title="Refresh all feeds">
+                ↻ Refresh All
+              </button>
               {feeds.filter((f) => f.feed_type === 'search').length > 0 && !apiKey && (
-                <span style={{ color: '#f59e0b' }}>⚠ Search feeds need RapidAPI key</span>
+                <span style={{ fontSize: 11, color: '#f59e0b', marginLeft: 'auto' }}>⚠ Search feeds need RapidAPI key</span>
               )}
-            </span>
+            </div>
+
+            {/* Search + type filter row */}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                style={{ ...inp, flex: 1 }}
+                placeholder={`Search ${feeds.length} companies…`}
+                value={feedSearch}
+                onChange={(e) => setFeedSearch(e.target.value)}
+              />
+              {(['all', 'lever', 'greenhouse', 'rss', 'search'] as const).map((t) => {
+                const active = feedTypeFilter === t;
+                const label  = t === 'all' ? 'All' : FEED_LABELS[t];
+                const count  = t === 'all' ? feeds.length : feeds.filter((f) => f.feed_type === t).length;
+                if (count === 0 && t !== 'all') return null;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setFeedTypeFilter(t)}
+                    style={{
+                      fontSize: 11, padding: '2px 7px', borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap',
+                      background: active ? 'var(--accent)22' : 'transparent',
+                      border:     active ? '1px solid var(--accent)55' : '1px solid var(--border)',
+                      color:      active ? 'var(--accent)' : 'var(--text-dim)',
+                    }}
+                  >
+                    {label} ({count})
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {showAddFeed && (
@@ -1101,12 +1138,14 @@ function JobAggregator({ api, settings }: WidgetProps) {
           )}
 
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-            {feeds.length === 0 && !showAddFeed ? (
+            {visibleFeeds.length === 0 ? (
               <div style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>
-                No company feeds — click "+ Add Feed" to get started.
+                {feeds.length === 0
+                  ? 'No company feeds — click "+ Add Company" to get started.'
+                  : 'No companies match your search.'}
               </div>
             ) : (
-              feeds.map((feed) => (
+              visibleFeeds.map((feed) => (
                 <BoardSection
                   key={feed.id}
                   feed={feed}
