@@ -127,31 +127,51 @@ const EMP_TYPES = [
 //   search      – JSearch keyword search (requires RapidAPI key in settings)
 //                 Used for large enterprises on Workday/Taleo/proprietary ATS
 //                 with no public feed endpoints.
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 
 const DEFAULT_FEEDS: Array<{ name: string; url: string; feed_type: FeedType }> = [
-  // ── Tech / SaaS — Lever (verified handles) ────────────────────────────────
+  // ── Tech / SaaS — Lever ───────────────────────────────────────────────────
+  { name: 'AppLovin',            url: 'applovin',            feed_type: 'lever' },
   { name: 'Eventbrite',          url: 'eventbrite',          feed_type: 'lever' },
+  { name: 'Kabam',               url: 'kabam',               feed_type: 'lever' },
   { name: 'KPMG',                url: 'kpmg',                feed_type: 'lever' },
   { name: 'Netflix',             url: 'netflix',             feed_type: 'lever' },
+  { name: 'Niantic',             url: 'niantic',             feed_type: 'lever' },
   { name: 'Palantir',            url: 'palantir',            feed_type: 'lever' },
+  { name: 'People Can Fly',      url: 'peoplecanfly',        feed_type: 'lever' },
+  { name: 'Scopely',             url: 'scopely',             feed_type: 'lever' },
   { name: 'Shield AI',           url: 'shieldai',            feed_type: 'lever' },
   { name: 'Shopify',             url: 'shopify',             feed_type: 'lever' },
+  { name: 'Unity Technologies',  url: 'unity',               feed_type: 'lever' },
 
-  // ── Texas Tech — Lever (verified) ─────────────────────────────────────────
+  // ── Texas Tech — Lever ────────────────────────────────────────────────────
   { name: 'HighLevel (Dallas)',   url: 'gohighlevel',         feed_type: 'lever' },
+  { name: 'Jam City',            url: 'jamcity',             feed_type: 'lever' },
 
-  // ── Gaming — Greenhouse (verified tokens) ─────────────────────────────────
+  // ── Gaming — Greenhouse ────────────────────────────────────────────────────
   { name: '2K Games',             url: '2k',                             feed_type: 'greenhouse' },
+  { name: 'Avalanche Studios',    url: 'avalanchestudios',               feed_type: 'greenhouse' },
   { name: 'Bungie',               url: 'bungie',                         feed_type: 'greenhouse' },
+  { name: 'CD Projekt Red',       url: 'cdprojektred',                   feed_type: 'greenhouse' },
+  { name: 'Devolver Digital',     url: 'devolverdigital',                feed_type: 'greenhouse' },
   { name: 'Digital Extremes',     url: 'digitalextremes',                feed_type: 'greenhouse' },
   { name: 'Epic Games',           url: 'epicgames',                      feed_type: 'greenhouse' },
+  { name: 'Frontier Developments', url: 'frontierdevelopments',          feed_type: 'greenhouse' },
+  { name: 'Hi-Rez Studios',       url: 'hirezstudios',                   feed_type: 'greenhouse' },
   { name: 'Insomniac Games',      url: 'insomniac',                      feed_type: 'greenhouse' },
+  { name: 'IO Interactive',       url: 'iointeractive',                  feed_type: 'greenhouse' },
+  { name: 'Iron Galaxy',          url: 'irongalaxy',                     feed_type: 'greenhouse' },
+  { name: 'Jagex',                url: 'jagex',                          feed_type: 'greenhouse' },
   { name: 'Naughty Dog',          url: 'naughtydog',                     feed_type: 'greenhouse' },
+  { name: 'Paradox Interactive',  url: 'paradoxinteractive',             feed_type: 'greenhouse' },
   { name: 'PlayStation / Sony IE', url: 'sonyinteractiveentertainmentglobal', feed_type: 'greenhouse' },
   { name: 'Riot Games',           url: 'riotgames',                      feed_type: 'greenhouse' },
   { name: 'Rockstar Games',       url: 'rockstargames',                  feed_type: 'greenhouse' },
   { name: 'Take-Two Interactive', url: 'taketwo',                        feed_type: 'greenhouse' },
+  { name: 'Team17',               url: 'team17',                         feed_type: 'greenhouse' },
+  { name: 'Turtle Rock Studios',  url: 'turtlerock',                     feed_type: 'greenhouse' },
+  { name: 'Wargaming',            url: 'wargaming',                      feed_type: 'greenhouse' },
+  { name: 'Wizards of the Coast', url: 'wizardsofthecoast',              feed_type: 'greenhouse' },
 
   // ── Tech — Greenhouse (verified tokens) ───────────────────────────────────
   { name: 'Anthropic',            url: 'anthropic',           feed_type: 'greenhouse' },
@@ -182,11 +202,18 @@ const DEFAULT_FEEDS: Array<{ name: string; url: string; feed_type: FeedType }> =
   { name: 'SentinelOne',          url: 'SentinelOne cybersecurity',      feed_type: 'search' },
   { name: 'Trellix',              url: 'Trellix Plano Texas cybersecurity', feed_type: 'search' },
 
-  // ── Gaming Publishers — JSearch (own career portals) ──────────────────────
+  // ── Gaming Publishers — JSearch (Workday / proprietary ATS) ─────────────
   { name: 'Activision Blizzard',  url: 'Activision Blizzard',            feed_type: 'search' },
+  { name: 'Bandai Namco',         url: 'Bandai Namco game developer',    feed_type: 'search' },
+  { name: 'Capcom',               url: 'Capcom game developer',          feed_type: 'search' },
   { name: 'Electronic Arts (EA)', url: 'Electronic Arts',                feed_type: 'search' },
   { name: 'Gearbox Software',     url: 'Gearbox Software Frisco Texas',  feed_type: 'search' },
+  { name: 'Nintendo',             url: 'Nintendo developer',             feed_type: 'search' },
+  { name: 'Sega',                 url: 'Sega game developer',            feed_type: 'search' },
+  { name: 'Square Enix',          url: 'Square Enix game developer',     feed_type: 'search' },
   { name: 'Ubisoft',              url: 'Ubisoft',                        feed_type: 'search' },
+  { name: 'Warner Bros Games',    url: 'Warner Bros Games developer',    feed_type: 'search' },
+  { name: 'Xbox Game Studios',    url: 'Xbox Game Studios developer',    feed_type: 'search' },
 ];
 
 // ─── SQL ──────────────────────────────────────────────────────────────────────
@@ -1108,7 +1135,7 @@ const widget: Widget = {
     id: 'job-aggregator',
     name: 'Job Aggregator',
     description: 'Search LinkedIn, Indeed, ZipRecruiter, and more. Monitor 40+ company boards (Lever, Greenhouse, RSS, JSearch). Save and track listings.',
-    version: '0.3.0',
+    version: '0.4.0',
     icon: '🔍',
     defaultSize: { w: 8, h: 10 },
     minSize:     { w: 5, h: 7 },
