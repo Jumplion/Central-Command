@@ -14,11 +14,10 @@
     "useDefineForClassFields": true,
     "noEmit": true,
     "types": ["vite/client"],
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@renderer/*": ["src/renderer/src/*"],
-      "@widgets/*": ["src/widgets/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@renderer/*": ["./src/renderer/src/*"],
+      "@widgets/*": ["./src/widgets/*"]
     }
   },
   "include": [
