@@ -1,4 +1,5 @@
 import type { DialogOpenPathOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
+import { emitApiCall } from './apiEvents';
 
 export interface WidgetApi {
   widgetId: WidgetId;
@@ -74,7 +75,20 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
       openPath: (options) => window.cc.dialog.openPath(options)
     },
     net: {
-      fetch: (url, init) => window.cc.net.fetch(url, init)
+      fetch: async (url, init) => {
+        const t0 = Date.now();
+        const res = await window.cc.net.fetch(url, init);
+        emitApiCall({
+          widgetId,
+          url,
+          method: init?.method ?? 'GET',
+          timestamp: t0,
+          status: res.status,
+          duration: Date.now() - t0,
+          ok: res.ok,
+        });
+        return res;
+      }
     }
   };
 }
