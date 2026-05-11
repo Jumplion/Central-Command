@@ -1,31 +1,7 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface FilterState {
-  jobTitles: string[];
-  keywords: string[];
-  locations: string[];
-  companySizes: string[];
-  empTypes: string[];
-  experienceLevel: string;
-  datePosted: string;
-  remoteOnly: boolean;
-}
-
-interface ResumeKeyword {
-  term: string;
-  weight: number;
-}
-
-interface FilterProfile {
-  id: string;
-  name: string;
-  filters: FilterState;
-  createdAt: number;
-  resumeKeywords?: ResumeKeyword[];
-}
 
 interface JobListing {
   id: string;
@@ -66,6 +42,30 @@ interface SavedJob {
   saved_at: number;
 }
 
+type FeedType = 'rss' | 'lever' | 'greenhouse' | 'search';
+
+interface CompanyFeed {
+  id: number;
+  name: string;
+  url: string; // handle for lever/greenhouse, full URL for rss, search query for search
+  feed_type: FeedType;
+  enabled: number;
+  added_at: number;
+}
+
+interface FeedJob {
+  id: number;
+  feed_id: number;
+  ext_id: string;
+  title: string;
+  company: string;
+  location: string;
+  date_posted: string;
+  apply_link: string;
+  description: string;
+  fetched_at: number;
+}
+
 type NetFetcher = (
   url: string,
   init?: { method?: string; headers?: Record<string, string>; body?: string }
@@ -85,187 +85,135 @@ const STATUS_COLORS: Record<SavedStatus, string> = {
 };
 
 const SOURCE_COLORS: Record<string, string> = {
-  LinkedIn:     '#0a66c2',
-  Indeed:       '#003a9b',
-  Glassdoor:    '#0caa41',
-  ZipRecruiter: '#59bd66',
+  LinkedIn:    '#0a66c2',
+  Indeed:      '#003a9b',
+  Glassdoor:   '#0caa41',
+  ZipRecruiter:'#59bd66',
   'Google Jobs':'#4285f4',
-  Monster:      '#6e2d8e',
-  Arbeitnow:    '#6ea8ff',
+  Monster:     '#6e2d8e',
+  Arbeitnow:   '#6ea8ff',
+  Lever:       '#5d5df8',
+  Greenhouse:  '#24a47f',
 };
 
-const EMP_TYPES = ['fulltime', 'parttime', 'contractor', 'intern'] as const;
-type EmpType = (typeof EMP_TYPES)[number];
-const EMP_TYPE_LABELS: Record<EmpType, string> = {
-  fulltime: 'Full-time', parttime: 'Part-time', contractor: 'Contract', intern: 'Internship',
+const FEED_COLORS: Record<FeedType, string> = {
+  rss:        '#f59e0b',
+  lever:      '#5d5df8',
+  greenhouse: '#24a47f',
+  search:     '#6ea8ff',
 };
 
-const COMPANY_SIZE_OPTIONS = [
-  { value: 'startup',    label: 'Startup',    query: 'startup' },
-  { value: 'small',      label: 'Small',      query: 'small company' },
-  { value: 'midsize',    label: 'Mid-size',   query: 'mid-size company' },
-  { value: 'large',      label: 'Large',      query: 'large company' },
-  { value: 'enterprise', label: 'Enterprise', query: 'enterprise' },
+const FEED_LABELS: Record<FeedType, string> = {
+  rss:        'RSS',
+  lever:      'Lever',
+  greenhouse: 'Greenhouse',
+  search:     'Search',
+};
+
+const EMP_TYPES = [
+  { value: 'all',        label: 'All Types' },
+  { value: 'fulltime',   label: 'Full-time' },
+  { value: 'parttime',   label: 'Part-time' },
+  { value: 'contractor', label: 'Contract' },
+  { value: 'intern',     label: 'Internship' },
 ];
 
-const EXP_LEVEL_OPTIONS = [
-  { value: '',                             label: 'Any' },
-  { value: 'no_experience',               label: 'Entry' },
-  { value: 'under_3_years_experience',    label: 'Mid' },
-  { value: 'more_than_3_years_experience', label: 'Senior' },
-];
+// Pre-seeded company feeds. Bump SEED_VERSION whenever new entries are added —
+// the idempotent seeder will insert only names that don't already exist.
+//
+// Feed types:
+//   lever       – public XML at api.lever.co/v0/postings/{handle}?mode=xml (no key)
+//   greenhouse  – public JSON at api.greenhouse.io/v1/boards/{token}/jobs   (no key)
+//   search      – JSearch keyword search (requires RapidAPI key in settings)
+//                 Used for large enterprises on Workday/Taleo/proprietary ATS
+//                 with no public feed endpoints.
+export const SEED_VERSION = 3;
 
-const DATE_POSTED_OPTIONS = [
-  { value: '',      label: 'Any Time' },
-  { value: 'today', label: 'Today' },
-  { value: '3days', label: '3 Days' },
-  { value: 'week',  label: 'This Week' },
-  { value: 'month', label: 'This Month' },
-];
+const DEFAULT_FEEDS: Array<{ name: string; url: string; feed_type: FeedType }> = [
+  // ── Tech / SaaS — Lever ───────────────────────────────────────────────────
+  { name: 'AppLovin',            url: 'applovin',            feed_type: 'lever' },
+  { name: 'Eventbrite',          url: 'eventbrite',          feed_type: 'lever' },
+  { name: 'Kabam',               url: 'kabam',               feed_type: 'lever' },
+  { name: 'KPMG',                url: 'kpmg',                feed_type: 'lever' },
+  { name: 'Netflix',             url: 'netflix',             feed_type: 'lever' },
+  { name: 'Niantic',             url: 'niantic',             feed_type: 'lever' },
+  { name: 'Palantir',            url: 'palantir',            feed_type: 'lever' },
+  { name: 'People Can Fly',      url: 'peoplecanfly',        feed_type: 'lever' },
+  { name: 'Scopely',             url: 'scopely',             feed_type: 'lever' },
+  { name: 'Shield AI',           url: 'shieldai',            feed_type: 'lever' },
+  { name: 'Shopify',             url: 'shopify',             feed_type: 'lever' },
+  { name: 'Unity Technologies',  url: 'unity',               feed_type: 'lever' },
 
-const PROFILES_KV_KEY = 'filterProfiles';
-const PROFILES_SEEDED_KEY = 'profilesSeeded_v1';
+  // ── Texas Tech — Lever ────────────────────────────────────────────────────
+  { name: 'HighLevel (Dallas)',   url: 'gohighlevel',         feed_type: 'lever' },
+  { name: 'Jam City',            url: 'jamcity',             feed_type: 'lever' },
 
-// ─── Default Resume Profiles ──────────────────────────────────────────────────
+  // ── Gaming — Greenhouse ────────────────────────────────────────────────────
+  { name: '2K Games',             url: '2k',                             feed_type: 'greenhouse' },
+  { name: 'Avalanche Studios',    url: 'avalanchestudios',               feed_type: 'greenhouse' },
+  { name: 'Bungie',               url: 'bungie',                         feed_type: 'greenhouse' },
+  { name: 'CD Projekt Red',       url: 'cdprojektred',                   feed_type: 'greenhouse' },
+  { name: 'Devolver Digital',     url: 'devolverdigital',                feed_type: 'greenhouse' },
+  { name: 'Digital Extremes',     url: 'digitalextremes',                feed_type: 'greenhouse' },
+  { name: 'Epic Games',           url: 'epicgames',                      feed_type: 'greenhouse' },
+  { name: 'Frontier Developments', url: 'frontierdevelopments',          feed_type: 'greenhouse' },
+  { name: 'Hi-Rez Studios',       url: 'hirezstudios',                   feed_type: 'greenhouse' },
+  { name: 'Insomniac Games',      url: 'insomniac',                      feed_type: 'greenhouse' },
+  { name: 'IO Interactive',       url: 'iointeractive',                  feed_type: 'greenhouse' },
+  { name: 'Iron Galaxy',          url: 'irongalaxy',                     feed_type: 'greenhouse' },
+  { name: 'Jagex',                url: 'jagex',                          feed_type: 'greenhouse' },
+  { name: 'Naughty Dog',          url: 'naughtydog',                     feed_type: 'greenhouse' },
+  { name: 'Paradox Interactive',  url: 'paradoxinteractive',             feed_type: 'greenhouse' },
+  { name: 'PlayStation / Sony IE', url: 'sonyinteractiveentertainmentglobal', feed_type: 'greenhouse' },
+  { name: 'Riot Games',           url: 'riotgames',                      feed_type: 'greenhouse' },
+  { name: 'Rockstar Games',       url: 'rockstargames',                  feed_type: 'greenhouse' },
+  { name: 'Take-Two Interactive', url: 'taketwo',                        feed_type: 'greenhouse' },
+  { name: 'Team17',               url: 'team17',                         feed_type: 'greenhouse' },
+  { name: 'Turtle Rock Studios',  url: 'turtlerock',                     feed_type: 'greenhouse' },
+  { name: 'Wargaming',            url: 'wargaming',                      feed_type: 'greenhouse' },
+  { name: 'Wizards of the Coast', url: 'wizardsofthecoast',              feed_type: 'greenhouse' },
 
-const DEFAULT_PROFILES: FilterProfile[] = [
-  {
-    id: 'default-software-dev',
-    name: 'Software Developer',
-    filters: {
-      jobTitles: [],
-      keywords: ['Software Engineer', 'C# Developer', '.NET Developer', 'Full Stack Developer'],
-      locations: [],
-      companySizes: [],
-      empTypes: ['fulltime'],
-      experienceLevel: '',
-      datePosted: '',
-      remoteOnly: false,
-    },
-    createdAt: 0,
-    resumeKeywords: [
-      { term: 'software engineer',  weight: 10 },
-      { term: 'software developer', weight: 10 },
-      { term: 'full stack',         weight: 9  },
-      { term: 'full-stack',         weight: 9  },
-      { term: 'C#',                 weight: 10 },
-      { term: '.NET',               weight: 10 },
-      { term: 'ASP.NET',            weight: 8  },
-      { term: 'backend',            weight: 7  },
-      { term: 'back-end',           weight: 7  },
-      { term: 'Azure',              weight: 8  },
-      { term: 'AWS',                weight: 7  },
-      { term: 'REST API',           weight: 7  },
-      { term: 'RESTful',            weight: 7  },
-      { term: 'JavaScript',         weight: 6  },
-      { term: 'TypeScript',         weight: 5  },
-      { term: 'Python',             weight: 5  },
-      { term: 'SQL',                weight: 6  },
-      { term: 'MVC',                weight: 6  },
-      { term: 'microservices',      weight: 6  },
-      { term: 'CI/CD',              weight: 5  },
-      { term: 'Git',                weight: 4  },
-      { term: 'Agile',              weight: 5  },
-      { term: 'Scrum',              weight: 4  },
-      { term: 'unit testing',       weight: 5  },
-      { term: 'TDD',                weight: 5  },
-      { term: 'senior',             weight: 6  },
-      { term: 'enterprise',         weight: 5  },
-      { term: 'DevOps',             weight: 5  },
-      { term: 'Node.js',            weight: 4  },
-    ],
-  },
-  {
-    id: 'default-game-design',
-    name: 'Game Designer',
-    filters: {
-      jobTitles: [],
-      keywords: ['Game Designer', 'Game Developer', 'Unreal Engine'],
-      locations: [],
-      companySizes: [],
-      empTypes: ['fulltime'],
-      experienceLevel: '',
-      datePosted: '',
-      remoteOnly: false,
-    },
-    createdAt: 0,
-    resumeKeywords: [
-      { term: 'game designer',    weight: 10 },
-      { term: 'game developer',   weight: 10 },
-      { term: 'game design',      weight: 10 },
-      { term: 'gameplay',         weight: 8  },
-      { term: 'Unreal Engine',    weight: 10 },
-      { term: 'Unreal',           weight: 8  },
-      { term: 'Unity',            weight: 9  },
-      { term: 'game engine',      weight: 7  },
-      { term: 'AAA',              weight: 8  },
-      { term: 'Blueprints',       weight: 8  },
-      { term: 'C++',              weight: 8  },
-      { term: 'Lua',              weight: 7  },
-      { term: 'combat design',    weight: 9  },
-      { term: 'level design',     weight: 9  },
-      { term: 'encounter design', weight: 9  },
-      { term: 'set piece',        weight: 8  },
-      { term: 'systems design',   weight: 8  },
-      { term: 'prototyping',      weight: 7  },
-      { term: 'accessibility',    weight: 7  },
-      { term: 'scripting',        weight: 6  },
-      { term: 'Perforce',         weight: 5  },
-      { term: 'RPG',              weight: 6  },
-      { term: 'player experience',weight: 6  },
-      { term: 'game studio',      weight: 6  },
-      { term: 'console',          weight: 5  },
-    ],
-  },
-  {
-    id: 'default-cybersecurity',
-    name: 'Cybersecurity',
-    filters: {
-      jobTitles: [],
-      keywords: ['Cybersecurity', 'Security Engineer', 'Application Security'],
-      locations: [],
-      companySizes: [],
-      empTypes: ['fulltime'],
-      experienceLevel: '',
-      datePosted: '',
-      remoteOnly: false,
-    },
-    createdAt: 0,
-    resumeKeywords: [
-      { term: 'cybersecurity',        weight: 10 },
-      { term: 'security engineer',    weight: 10 },
-      { term: 'application security', weight: 10 },
-      { term: 'AppSec',               weight: 9  },
-      { term: 'security analyst',     weight: 9  },
-      { term: 'information security', weight: 9  },
-      { term: 'SOC',                  weight: 8  },
-      { term: 'CompTIA',              weight: 7  },
-      { term: 'Security+',            weight: 8  },
-      { term: 'SIEM',                 weight: 9  },
-      { term: 'Splunk',               weight: 8  },
-      { term: 'Sentinel',             weight: 7  },
-      { term: 'Wireshark',            weight: 7  },
-      { term: 'Nmap',                 weight: 6  },
-      { term: 'IAM',                  weight: 8  },
-      { term: 'OAuth',                weight: 7  },
-      { term: 'JWT',                  weight: 7  },
-      { term: 'NIST',                 weight: 7  },
-      { term: 'vulnerability',        weight: 8  },
-      { term: 'penetration testing',  weight: 8  },
-      { term: 'pen test',             weight: 8  },
-      { term: 'secure coding',        weight: 9  },
-      { term: 'threat detection',     weight: 8  },
-      { term: 'incident response',    weight: 8  },
-      { term: 'cloud security',       weight: 8  },
-      { term: 'authentication',       weight: 6  },
-      { term: 'cryptography',         weight: 7  },
-      { term: 'Azure',                weight: 5  },
-      { term: 'AWS',                  weight: 5  },
-      { term: 'PowerShell',           weight: 6  },
-      { term: 'Python',               weight: 5  },
-      { term: 'C#',                   weight: 4  },
-    ],
-  },
+  // ── Tech — Greenhouse (verified tokens) ───────────────────────────────────
+  { name: 'Anthropic',            url: 'anthropic',           feed_type: 'greenhouse' },
+  { name: 'GitLab',               url: 'gitlab',              feed_type: 'greenhouse' },
+  { name: 'Reddit',               url: 'reddit',              feed_type: 'greenhouse' },
+
+  // ── Texas Fortune 500 — JSearch (Workday / proprietary ATS) ───────────────
+  { name: 'American Airlines',    url: 'American Airlines',              feed_type: 'search' },
+  { name: 'AT&T',                 url: 'AT&T software engineer jobs',    feed_type: 'search' },
+  { name: 'Bank of America',      url: 'Bank of America',                feed_type: 'search' },
+  { name: 'Dell Technologies',    url: 'Dell Technologies',              feed_type: 'search' },
+  { name: 'ExxonMobil',           url: 'ExxonMobil Houston Texas',       feed_type: 'search' },
+  { name: 'Southwest Airlines',   url: 'Southwest Airlines Dallas',      feed_type: 'search' },
+  { name: 'Texas Instruments',    url: 'Texas Instruments Dallas',       feed_type: 'search' },
+  { name: 'Toyota',               url: 'Toyota Motor',                   feed_type: 'search' },
+  { name: 'USAA',                 url: 'USAA San Antonio Texas',         feed_type: 'search' },
+
+  // ── Defense / Aerospace Texas — JSearch ───────────────────────────────────
+  { name: 'Boeing',               url: 'Boeing engineer Texas',          feed_type: 'search' },
+  { name: 'L3Harris',             url: 'L3Harris engineer Texas',        feed_type: 'search' },
+  { name: 'Lockheed Martin',      url: 'Lockheed Martin Fort Worth Texas', feed_type: 'search' },
+  { name: 'Raytheon',             url: 'Raytheon Texas',                 feed_type: 'search' },
+
+  // ── Cybersecurity (Texas presence) — JSearch ──────────────────────────────
+  { name: 'CrowdStrike',          url: 'CrowdStrike Austin Texas',       feed_type: 'search' },
+  { name: 'Forcepoint',           url: 'Forcepoint Austin Texas',        feed_type: 'search' },
+  { name: 'Palo Alto Networks',   url: 'Palo Alto Networks cybersecurity', feed_type: 'search' },
+  { name: 'SentinelOne',          url: 'SentinelOne cybersecurity',      feed_type: 'search' },
+  { name: 'Trellix',              url: 'Trellix Plano Texas cybersecurity', feed_type: 'search' },
+
+  // ── Gaming Publishers — JSearch (Workday / proprietary ATS) ─────────────
+  { name: 'Activision Blizzard',  url: 'Activision Blizzard',            feed_type: 'search' },
+  { name: 'Bandai Namco',         url: 'Bandai Namco game developer',    feed_type: 'search' },
+  { name: 'Capcom',               url: 'Capcom game developer',          feed_type: 'search' },
+  { name: 'Electronic Arts (EA)', url: 'Electronic Arts',                feed_type: 'search' },
+  { name: 'Gearbox Software',     url: 'Gearbox Software Frisco Texas',  feed_type: 'search' },
+  { name: 'Nintendo',             url: 'Nintendo developer',             feed_type: 'search' },
+  { name: 'Sega',                 url: 'Sega game developer',            feed_type: 'search' },
+  { name: 'Square Enix',          url: 'Square Enix game developer',     feed_type: 'search' },
+  { name: 'Ubisoft',              url: 'Ubisoft',                        feed_type: 'search' },
+  { name: 'Warner Bros Games',    url: 'Warner Bros Games developer',    feed_type: 'search' },
+  { name: 'Xbox Game Studios',    url: 'Xbox Game Studios developer',    feed_type: 'search' },
 ];
 
 // ─── SQL ──────────────────────────────────────────────────────────────────────
@@ -291,72 +239,36 @@ const INIT_SQL = `
     notes           TEXT    NOT NULL DEFAULT '',
     saved_at        INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS company_feeds (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT    NOT NULL,
+    url        TEXT    NOT NULL,
+    feed_type  TEXT    NOT NULL DEFAULT 'rss',
+    enabled    INTEGER NOT NULL DEFAULT 1,
+    added_at   INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS feed_jobs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    feed_id     INTEGER NOT NULL,
+    ext_id      TEXT    NOT NULL,
+    title       TEXT    NOT NULL,
+    company     TEXT    NOT NULL DEFAULT '',
+    location    TEXT    NOT NULL DEFAULT '',
+    date_posted TEXT    NOT NULL DEFAULT '',
+    apply_link  TEXT    NOT NULL DEFAULT '',
+    description TEXT    NOT NULL DEFAULT '',
+    fetched_at  INTEGER NOT NULL,
+    UNIQUE(feed_id, ext_id)
+  );
 `;
 
-// ─── Validation ───────────────────────────────────────────────────────────────
-
-function validateFilters(f: FilterState): string[] {
-  const errors: string[] = [];
-  if (f.jobTitles.length === 0 && f.keywords.length === 0) {
-    errors.push('Enter at least one job title or keyword.');
-  }
-  const shortTags = [...f.jobTitles, ...f.keywords].filter((t) => t.trim().length < 2);
-  if (shortTags.length) {
-    errors.push(`Tags must be ≥2 characters: ${shortTags.map((t) => `"${t}"`).join(', ')}`);
-  }
-  const badLoc = f.locations.filter((l) => l.trim().length < 2 || l.trim().length > 100);
-  if (badLoc.length) {
-    errors.push(`Locations must be 2–100 characters: ${badLoc.map((l) => `"${l}"`).join(', ')}`);
-  }
-  return errors;
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function buildJSearchQuery(f: FilterState): string {
-  const parts = [...f.jobTitles, ...f.keywords];
-  if (f.companySizes.length) {
-    const sizeTerms = f.companySizes
-      .map((s) => COMPANY_SIZE_OPTIONS.find((o) => o.value === s)?.query ?? s)
-      .join(' OR ');
-    parts.push(sizeTerms);
-  }
-  let q = parts.join(' ');
-  if (f.locations.length) q += ` in ${f.locations.join(' OR ')}`;
-  return q;
-}
-
-function normalizeLoadedProfiles(raw: unknown): FilterProfile[] {
-  if (!Array.isArray(raw)) return [];
-  const result: FilterProfile[] = [];
-  for (const item of raw) {
-    if (typeof item !== 'object' || item === null) continue;
-    const p = item as Record<string, unknown>;
-    const f = (p.filters ?? {}) as Record<string, unknown>;
-    result.push({
-      id: String(p.id ?? Date.now()),
-      name: String(p.name ?? 'Unnamed'),
-      createdAt: Number(p.createdAt ?? Date.now()),
-      filters: {
-        jobTitles:       Array.isArray(f.jobTitles)  ? (f.jobTitles as string[])  : [],
-        keywords:        Array.isArray(f.keywords)   ? (f.keywords as string[])   : [],
-        locations:       Array.isArray(f.locations)  ? (f.locations as string[])  : [],
-        companySizes:    Array.isArray(f.companySizes) ? (f.companySizes as string[]) : [],
-        empTypes:        Array.isArray(f.empTypes)   ? (f.empTypes as string[])   : [],
-        experienceLevel: typeof f.experienceLevel === 'string' ? f.experienceLevel : '',
-        datePosted:      typeof f.datePosted === 'string'      ? f.datePosted      : '',
-        remoteOnly:      Boolean(f.remoteOnly),
-      },
-    });
-  }
-  return result;
-}
 
 function formatSalary(
   min?: number | null,
   max?: number | null,
   currency = 'USD',
-  period = 'YEAR'
+  period = 'YEAR',
 ): string {
   if (!min && !max) return '';
   const fmt = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
@@ -381,30 +293,91 @@ function relativeDate(dateStr: string): string {
 
 function empTypeLabel(t: string): string {
   const map: Record<string, string> = {
-    FULLTIME: 'Full-time', PARTTIME: 'Part-time',
-    CONTRACTOR: 'Contract', INTERN: 'Intern',
-    fulltime: 'Full-time', parttime: 'Part-time',
-    contractor: 'Contract', intern: 'Intern',
+    FULLTIME: 'Full-time', PARTTIME: 'Part-time', CONTRACTOR: 'Contract', INTERN: 'Intern',
+    fulltime: 'Full-time', parttime: 'Part-time', contractor: 'Contract', intern: 'Intern',
   };
   return map[t] || t;
 }
 
-function scoreJob(job: JobListing, keywords: ResumeKeyword[]): number {
-  const titleText = job.title.toLowerCase();
-  const bodyText = job.description.toLowerCase();
-  let score = 0;
-  for (const { term, weight } of keywords) {
-    const t = term.toLowerCase();
-    if (titleText.includes(t)) score += weight * 2;
-    else if (bodyText.includes(t)) score += weight;
-  }
-  // Normalize: "ideal" = top-8 weighted terms all matching in the title
-  const ideal = [...keywords]
-    .map((k) => k.weight)
-    .sort((a, b) => b - a)
-    .slice(0, 8)
-    .reduce((s, w) => s + w * 2, 0);
-  return ideal > 0 ? Math.min(100, Math.round((score / ideal) * 100)) : 0;
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// ─── Feed parsers ─────────────────────────────────────────────────────────────
+
+type ParsedFeedJob  = Omit<FeedJob, 'id' | 'feed_id' | 'fetched_at'>;
+type StampedFeedJob = ParsedFeedJob & { fetched_at: number };
+
+function parseLeverXML(xmlText: string, feedName: string): ParsedFeedJob[] {
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('Invalid XML from Lever feed');
+  const results: ParsedFeedJob[] = [];
+  doc.querySelectorAll('job').forEach((job) => {
+    const title      = job.querySelector('title')?.textContent?.trim() ?? '';
+    const hostedUrl  = job.querySelector('hostedUrl')?.textContent?.trim() ?? '';
+    const applyUrl   = job.querySelector('applyUrl')?.textContent?.trim() || hostedUrl;
+    const location   = job.querySelector('categories location')?.textContent?.trim() ?? '';
+    const createdAt  = job.querySelector('createdAt')?.textContent?.trim();
+    const datePosted = createdAt ? new Date(Number(createdAt)).toISOString().slice(0, 10) : '';
+    const desc = stripHtml(
+      job.querySelector('descriptionBody')?.textContent ??
+      job.querySelector('description')?.textContent ?? ''
+    ).slice(0, 400);
+    if (title && hostedUrl) {
+      results.push({ ext_id: hostedUrl, title, company: feedName, location, date_posted: datePosted, apply_link: applyUrl, description: desc });
+    }
+  });
+  return results;
+}
+
+function parseRSSXML(xmlText: string, feedName: string): ParsedFeedJob[] {
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('Invalid XML feed');
+  const rssItems   = Array.from(doc.querySelectorAll('item'));
+  const atomItems  = Array.from(doc.querySelectorAll('entry'));
+  const nodes      = rssItems.length > 0 ? rssItems : atomItems;
+  const results: ParsedFeedJob[] = [];
+  nodes.forEach((item) => {
+    const isAtom = item.tagName === 'entry';
+    const title  = item.querySelector('title')?.textContent?.trim() ?? '';
+    const link   = isAtom
+      ? (item.querySelector('link')?.getAttribute('href') ?? '')
+      : (item.querySelector('link')?.textContent?.trim() ?? item.querySelector('guid')?.textContent?.trim() ?? '');
+    const desc = stripHtml(
+      item.querySelector('description')?.textContent ??
+      item.querySelector('summary')?.textContent ?? ''
+    ).slice(0, 400);
+    const pub = item.querySelector('pubDate')?.textContent ?? item.querySelector('updated')?.textContent ?? '';
+    const d   = pub ? new Date(pub) : null;
+    const datePosted = d && !isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : '';
+    if (title && link) {
+      results.push({
+        ext_id: link,
+        title,
+        company: item.querySelector('company')?.textContent?.trim() || feedName,
+        location: item.querySelector('location')?.textContent?.trim() ?? '',
+        date_posted: datePosted,
+        apply_link: link,
+        description: desc,
+      });
+    }
+  });
+  return results;
+}
+
+function parseGreenhouseJSON(jsonText: string, feedName: string): ParsedFeedJob[] {
+  const data = JSON.parse(jsonText) as { jobs?: Record<string, unknown>[] };
+  return (data.jobs ?? [])
+    .map((j): ParsedFeedJob => ({
+      ext_id:      String(j.id ?? Math.random()),
+      title:       String(j.title ?? ''),
+      company:     feedName,
+      location:    (j.location as { name?: string } | null)?.name ?? '',
+      date_posted: String(j.updated_at ?? '').slice(0, 10),
+      apply_link:  String(j.absolute_url ?? ''),
+      description: '',
+    }))
+    .filter((j) => j.title);
 }
 
 // ─── API adapters ─────────────────────────────────────────────────────────────
@@ -412,31 +385,23 @@ function scoreJob(job: JobListing, keywords: ResumeKeyword[]): number {
 async function searchJSearch(
   fetch: NetFetcher,
   key: string,
-  filters: FilterState,
-  limit: number
+  query: string,
+  remote: boolean,
+  empType: string,
 ): Promise<JobListing[]> {
-  const query = buildJSearchQuery(filters);
-  if (!query.trim()) throw new Error('Search query is empty.');
-
-  const numPages = String(Math.max(1, Math.ceil(limit / 10)));
-  const p = new URLSearchParams({ query, num_pages: numPages, page: '1' });
-  if (filters.remoteOnly) p.set('remote_jobs_only', 'true');
-  if (filters.empTypes.length) p.set('employment_types', filters.empTypes.map((t) => t.toUpperCase()).join(','));
-  if (filters.experienceLevel) p.set('job_requirements', filters.experienceLevel);
-  if (filters.datePosted) p.set('date_posted', filters.datePosted);
-
+  const p = new URLSearchParams({ query, num_pages: '1', page: '1' });
+  if (remote) p.set('remote_jobs_only', 'true');
+  if (empType !== 'all') p.set('employment_types', empType.toUpperCase());
   const resp = await fetch(`https://jsearch.p.rapidapi.com/search?${p}`, {
     headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': 'jsearch.p.rapidapi.com' },
   });
-
   if (!resp.ok) {
     let msg = `JSearch error ${resp.status}`;
     try { msg = (JSON.parse(resp.body) as { message?: string }).message ?? msg; } catch {}
     throw new Error(msg);
   }
-
   const data = JSON.parse(resp.body) as { data?: Record<string, unknown>[] };
-  return (data.data ?? []).slice(0, limit).map((j): JobListing => ({
+  return (data.data ?? []).map((j): JobListing => ({
     id:             String(j.job_id ?? Math.random()),
     title:          String(j.job_title ?? ''),
     company:        String(j.employer_name ?? ''),
@@ -454,20 +419,14 @@ async function searchJSearch(
   }));
 }
 
-async function searchArbeitnow(
-  fetch: NetFetcher,
-  filters: FilterState,
-  limit: number
-): Promise<JobListing[]> {
-  const p = new URLSearchParams({ search: [...filters.jobTitles, ...filters.keywords].join(' ') });
-  if (filters.remoteOnly) p.set('remote', 'true');
-
+async function searchArbeitnow(fetch: NetFetcher, query: string, remote: boolean): Promise<JobListing[]> {
+  const p = new URLSearchParams({ search: query });
+  if (remote) p.set('remote', 'true');
   const resp = await fetch(`https://www.arbeitnow.com/api/job-board-api?${p}`);
   if (!resp.ok) throw new Error(`Arbeitnow error ${resp.status}`);
-
   const data = JSON.parse(resp.body) as { data?: Record<string, unknown>[] };
-  return (data.data ?? []).slice(0, limit).map((j): JobListing => ({
-    id:             `arbeitnow-${j.slug ?? Math.random()}`,
+  return (data.data ?? []).slice(0, 25).map((j): JobListing => ({
+    id:             `arbeitnow-${String(j.slug ?? Math.random())}`,
     title:          String(j.title ?? ''),
     company:        String(j.company_name ?? ''),
     location:       String(j.location ?? (j.remote ? 'Remote' : '')),
@@ -484,335 +443,51 @@ async function searchArbeitnow(
   }));
 }
 
-// ─── TagInput ─────────────────────────────────────────────────────────────────
+async function fetchFeed(
+  fetch: NetFetcher,
+  feed: CompanyFeed,
+  apiKey: string,
+): Promise<StampedFeedJob[]> {
+  const ts = Date.now();
+  const stamp = (jobs: ParsedFeedJob[]): StampedFeedJob[] => jobs.map((j) => ({ ...j, fetched_at: ts }));
 
-function TagInput({
-  values, onChange, placeholder,
-}: {
-  values: string[];
-  onChange: (v: string[]) => void;
-  placeholder?: string;
-}) {
-  const [draft, setDraft] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const commit = (raw: string) => {
-    const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
-    const unique = parts.filter((p) => !values.includes(p));
-    if (unique.length) onChange([...values, ...unique]);
-    setDraft('');
-  };
-
-  const remove = (idx: number) => onChange(values.filter((_, i) => i !== idx));
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && draft.trim()) { e.preventDefault(); commit(draft); }
-    else if (e.key === ',' && draft.trim()) { e.preventDefault(); commit(draft.replace(/,$/, '')); }
-    else if (e.key === 'Backspace' && !draft && values.length > 0) remove(values.length - 1);
-  };
-
-  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const text = e.clipboardData.getData('text');
-    if (text.includes(',') || text.includes('\n')) {
-      e.preventDefault();
-      commit(text.replace(/\n/g, ','));
-    }
-  };
-
-  return (
-    <div
-      style={{
-        display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
-        padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 4,
-        minHeight: 30, cursor: 'text',
-      }}
-      onClick={() => inputRef.current?.focus()}
-    >
-      {values.map((v, i) => (
-        <span
-          key={i}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3,
-            padding: '1px 6px', borderRadius: 3, fontSize: 11,
-            background: 'var(--accent)22', color: 'var(--accent)',
-            border: '1px solid var(--accent)44',
-          }}
-        >
-          {v}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); remove(i); }}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: 0, color: 'inherit', fontSize: 10, lineHeight: 1, opacity: 0.7,
-            }}
-          >
-            ✕
-          </button>
-        </span>
-      ))}
-      <input
-        ref={inputRef}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={onKeyDown}
-        onBlur={() => { if (draft.trim()) commit(draft); }}
-        onPaste={onPaste}
-        placeholder={values.length === 0 ? placeholder : '+ add more'}
-        style={{
-          border: 'none', outline: 'none', background: 'transparent',
-          fontSize: 12, padding: '1px 2px', flex: 1, minWidth: 80,
-          color: 'var(--text)',
-        }}
-      />
-    </div>
-  );
+  if (feed.feed_type === 'lever') {
+    const resp = await fetch(`https://api.lever.co/v0/postings/${feed.url}?mode=xml`);
+    if (!resp.ok) throw new Error(`Lever error ${resp.status}`);
+    return stamp(parseLeverXML(resp.body, feed.name));
+  }
+  if (feed.feed_type === 'greenhouse') {
+    const resp = await fetch(`https://api.greenhouse.io/v1/boards/${feed.url}/jobs`);
+    if (!resp.ok) throw new Error(`Greenhouse error ${resp.status}`);
+    return stamp(parseGreenhouseJSON(resp.body, feed.name));
+  }
+  if (feed.feed_type === 'rss') {
+    const resp = await fetch(feed.url);
+    if (!resp.ok) throw new Error(`RSS error ${resp.status}`);
+    // Try Lever XML first (it uses <job> tags), then generic RSS
+    const isLeverFmt = resp.body.includes('<jobs>');
+    return stamp(isLeverFmt ? parseLeverXML(resp.body, feed.name) : parseRSSXML(resp.body, feed.name));
+  }
+  if (feed.feed_type === 'search') {
+    if (!apiKey) throw new Error('JSearch API key required for keyword-search feeds. Add it in widget settings.');
+    const jobs = await searchJSearch(fetch, apiKey, feed.url, false, 'all');
+    return jobs.slice(0, 25).map((j) => ({
+      ext_id:      j.id,
+      title:       j.title,
+      company:     j.company,
+      location:    j.location,
+      date_posted: j.datePosted,
+      apply_link:  j.applyLink,
+      description: j.description,
+      fetched_at:  ts,
+    }));
+  }
+  throw new Error(`Unknown feed type: ${feed.feed_type}`);
 }
 
-// ─── FilterSection ────────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div style={{
-        fontSize: 10, fontWeight: 600, color: 'var(--text-dim)',
-        textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4,
-      }}>
-        {label}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-// ─── ChipGroup ────────────────────────────────────────────────────────────────
-
-function ChipGroup({
-  options, selected, onChange, multiSelect = false,
-}: {
-  options: { value: string; label: string }[];
-  selected: string | string[];
-  onChange: (v: string | string[]) => void;
-  multiSelect?: boolean;
-}) {
-  const isActive = (val: string) =>
-    multiSelect
-      ? (selected as string[]).includes(val)
-      : selected === val;
-
-  const handleClick = (val: string) => {
-    if (!multiSelect) {
-      onChange(val);
-      return;
-    }
-    const arr = selected as string[];
-    if (val === '') { onChange([]); return; }
-    onChange(arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val]);
-  };
-
-  const noneActive = multiSelect
-    ? (selected as string[]).length === 0
-    : selected === '';
-
-  return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {options.map(({ value, label }) => {
-        const active = value === '' || value === '__all__'
-          ? noneActive
-          : isActive(value);
-        return (
-          <button
-            key={value}
-            onClick={() => handleClick(value)}
-            style={{
-              fontSize: 11, padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
-              background: active ? 'var(--accent)22' : 'transparent',
-              border: active ? '1px solid var(--accent)55' : '1px solid var(--border)',
-              color: active ? 'var(--accent)' : 'var(--text-dim)',
-            }}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── FilterSummaryBar ─────────────────────────────────────────────────────────
-
-function FilterSummaryBar({ filters }: { filters: FilterState }) {
-  const chips: { label: string; color: string }[] = [
-    ...filters.jobTitles.map((j) => ({ label: j,       color: '#6ea8ff' })),
-    ...filters.keywords.map((k)   => ({ label: k,       color: '#67e8f9' })),
-    ...filters.locations.map((l)  => ({ label: `📍 ${l}`, color: '#f59e0b' })),
-    ...filters.companySizes.map((s) => ({
-      label: COMPANY_SIZE_OPTIONS.find((o) => o.value === s)?.label ?? s,
-      color: '#fb923c',
-    })),
-    ...filters.empTypes.map((t) => ({
-      label: EMP_TYPE_LABELS[t as EmpType] ?? t,
-      color: '#a78bfa',
-    })),
-    ...(filters.experienceLevel ? [{
-      label: EXP_LEVEL_OPTIONS.find((o) => o.value === filters.experienceLevel)?.label ?? filters.experienceLevel,
-      color: '#4ade80',
-    }] : []),
-    ...(filters.datePosted ? [{
-      label: DATE_POSTED_OPTIONS.find((o) => o.value === filters.datePosted)?.label ?? filters.datePosted,
-      color: '#f472b6',
-    }] : []),
-    ...(filters.remoteOnly ? [{ label: 'Remote only', color: '#34d399' }] : []),
-  ];
-
-  if (chips.length === 0) return null;
-
-  return (
-    <div style={{
-      display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center',
-      padding: '4px 8px', borderRadius: 4,
-      background: 'var(--panel-2)', border: '1px solid var(--border)',
-    }}>
-      <span style={{ fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap', marginRight: 2 }}>
-        Active:
-      </span>
-      {chips.map((c, i) => (
-        <span
-          key={i}
-          style={{
-            fontSize: 10, padding: '1px 6px', borderRadius: 3,
-            background: `${c.color}22`, color: c.color, border: `1px solid ${c.color}44`,
-          }}
-        >
-          {c.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ─── FilterProfilesPanel ──────────────────────────────────────────────────────
-
-function profileTooltip(p: FilterProfile): string {
-  const parts: string[] = [];
-  if (p.filters.jobTitles.length)   parts.push(`Titles: ${p.filters.jobTitles.join(', ')}`);
-  if (p.filters.keywords.length)    parts.push(`Keywords: ${p.filters.keywords.join(', ')}`);
-  if (p.filters.locations.length)   parts.push(`Locations: ${p.filters.locations.join(', ')}`);
-  if (p.filters.companySizes.length)
-    parts.push(`Company: ${p.filters.companySizes.map((s) => COMPANY_SIZE_OPTIONS.find((o) => o.value === s)?.label ?? s).join(', ')}`);
-  if (p.filters.empTypes.length)
-    parts.push(`Types: ${p.filters.empTypes.map((t) => EMP_TYPE_LABELS[t as EmpType] ?? t).join(', ')}`);
-  if (p.filters.experienceLevel)
-    parts.push(EXP_LEVEL_OPTIONS.find((o) => o.value === p.filters.experienceLevel)?.label ?? '');
-  if (p.filters.remoteOnly) parts.push('Remote only');
-  return parts.join(' · ') || 'Empty profile';
-}
-
-function FilterProfilesPanel({
-  profiles, onApply, onSave, onDelete,
-}: {
-  profiles: FilterProfile[];
-  onApply: (p: FilterProfile) => void;
-  onSave: (name: string) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [showSave, setShowSave] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [nameError, setNameError] = useState('');
-
-  const handleSave = () => {
-    const name = newName.trim();
-    if (!name) { setNameError('Name required'); return; }
-    if (name.length > 50) { setNameError('Max 50 chars'); return; }
-    if (profiles.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
-      setNameError('Name already exists');
-      return;
-    }
-    onSave(name);
-    setNewName('');
-    setShowSave(false);
-    setNameError('');
-  };
-
-  return (
-    <div style={{
-      display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap',
-      padding: '4px 8px', borderRadius: 4,
-      background: 'var(--panel-2)', border: '1px solid var(--border)',
-    }}>
-      <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>Profiles:</span>
-
-      {profiles.length === 0 && !showSave && (
-        <span style={{ fontSize: 11, color: 'var(--text-dim)', opacity: 0.5 }}>None saved</span>
-      )}
-
-      {profiles.map((p) => (
-        <div key={p.id} style={{ display: 'flex', alignItems: 'stretch' }}>
-          <button
-            onClick={() => onApply(p)}
-            title={profileTooltip(p)}
-            style={{
-              fontSize: 11, padding: '1px 8px', cursor: 'pointer',
-              borderRadius: '3px 0 0 3px',
-              background: 'var(--accent)11', border: '1px solid var(--accent)33',
-              color: 'var(--accent)',
-            }}
-          >
-            {p.name}
-          </button>
-          <button
-            onClick={() => onDelete(p.id)}
-            title="Delete profile"
-            style={{
-              fontSize: 10, padding: '1px 5px', cursor: 'pointer',
-              borderRadius: '0 3px 3px 0', borderLeft: 'none',
-              background: '#ff6e6e11', border: '1px solid #ff6e6e33', color: '#ff6e6e',
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-
-      {showSave ? (
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flex: 1 }}>
-          <input
-            autoFocus
-            style={{ fontSize: 11, padding: '2px 6px', width: 120 }}
-            placeholder="Profile name"
-            value={newName}
-            onChange={(e) => { setNewName(e.target.value); setNameError(''); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave();
-              if (e.key === 'Escape') { setShowSave(false); setNameError(''); setNewName(''); }
-            }}
-          />
-          <button className="primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={handleSave}>
-            Save
-          </button>
-          <button
-            className="ghost"
-            style={{ fontSize: 11, padding: '2px 6px' }}
-            onClick={() => { setShowSave(false); setNameError(''); setNewName(''); }}
-          >
-            ✕
-          </button>
-          {nameError && <span style={{ fontSize: 11, color: '#ff6e6e' }}>{nameError}</span>}
-        </div>
-      ) : (
-        <button
-          className="ghost"
-          style={{ fontSize: 11, padding: '1px 8px', marginLeft: 'auto' }}
-          onClick={() => setShowSave(true)}
-        >
-          + Save current
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ─── SourceBadge / JobCard ────────────────────────────────────────────────────
+const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
 
 function SourceBadge({ source }: { source: string }) {
   const color = SOURCE_COLORS[source] ?? '#888';
@@ -826,31 +501,35 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
+function FeedTypeBadge({ type }: { type: FeedType }) {
+  const color = FEED_COLORS[type];
+  return (
+    <span style={{
+      fontSize: 10, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap',
+      background: `${color}22`, color, border: `1px solid ${color}44`, fontWeight: 600,
+    }}>
+      {FEED_LABELS[type]}
+    </span>
+  );
+}
+
 function JobCard({
-  job, isSaved, onSave, onApply, onIgnore, matchScore,
+  job, isSaved, onSave, onApply,
 }: {
   job: JobListing;
   isSaved: boolean;
   onSave: () => void;
   onApply: () => void;
-  onIgnore: () => void;
-  matchScore?: number;
 }) {
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryPeriod);
-  const isRecommended = typeof matchScore === 'number' && matchScore >= 60;
-  const isGoodMatch   = typeof matchScore === 'number' && matchScore >= 35 && matchScore < 60;
   return (
     <div style={{
-      border: isRecommended ? '1px solid #f59e0b66' : '1px solid var(--border)',
-      borderRadius: 6,
-      padding: '8px 10px', marginBottom: 6,
-      background: isRecommended ? '#f59e0b08' : 'var(--panel-2)',
+      border: '1px solid var(--border)', borderRadius: 6,
+      padding: '8px 10px', marginBottom: 6, background: 'var(--panel-2)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, lineHeight: 1.3 }}>
-            {job.title}
-          </div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, lineHeight: 1.3 }}>{job.title}</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>
             {job.company}
             {job.location && ` · ${job.location}`}
@@ -859,27 +538,9 @@ function JobCard({
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <SourceBadge source={job.source} />
-            {isRecommended && (
-              <span style={{
-                fontSize: 10, padding: '1px 6px', borderRadius: 3, fontWeight: 700,
-                background: '#f59e0b22', color: '#f59e0b', border: '1px solid #f59e0b55',
-              }}>
-                ★ Recommended
-              </span>
-            )}
-            {isGoodMatch && (
-              <span style={{
-                fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                background: '#34d39922', color: '#34d399', border: '1px solid #34d39944',
-              }}>
-                Good Match
-              </span>
-            )}
             {salary && <span style={{ fontSize: 11, color: '#34d399' }}>{salary}</span>}
             {job.datePosted && (
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                {relativeDate(job.datePosted)}
-              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{relativeDate(job.datePosted)}</span>
             )}
           </div>
           {job.description && (
@@ -889,30 +550,14 @@ function JobCard({
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-          <button
-            className="ghost"
-            style={{ fontSize: 11, padding: '2px 8px' }}
-            onClick={onApply}
-            title="Open application link"
-          >
-            Apply ↗
-          </button>
+          <button className="ghost" style={{ fontSize: 11, padding: '2px 8px' }} onClick={onApply}>Apply ↗</button>
           <button
             className={isSaved ? 'ghost' : 'primary'}
             style={{ fontSize: 11, padding: '2px 8px' }}
             onClick={onSave}
             disabled={isSaved}
-            title={isSaved ? 'Already saved' : 'Save this job'}
           >
             {isSaved ? 'Saved ✓' : 'Save'}
-          </button>
-          <button
-            className="ghost"
-            style={{ fontSize: 11, padding: '2px 8px', color: 'var(--text-dim)', opacity: 0.6 }}
-            onClick={onIgnore}
-            title="Hide this job and never show it again"
-          >
-            Ignore
           </button>
         </div>
       </div>
@@ -920,7 +565,167 @@ function JobCard({
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+function AddFeedForm({ onSave, onCancel }: {
+  onSave: (name: string, url: string, feedType: FeedType) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [name, setName]         = useState('');
+  const [feedType, setFeedType] = useState<FeedType>('lever');
+  const [url, setUrl]           = useState('');
+  const [saving, setSaving]     = useState(false);
+
+  const meta: Record<FeedType, { label: string; placeholder: string; hint: string }> = {
+    lever:      { label: 'Company handle', placeholder: 'e.g. netflix  (from jobs.lever.co/netflix)', hint: 'Find it in the jobs.lever.co/YOUR-HANDLE URL' },
+    greenhouse: { label: 'Board token',    placeholder: 'e.g. squarespace  (from boards.greenhouse.io/squarespace)', hint: 'Find it in the boards.greenhouse.io/YOUR-TOKEN URL' },
+    rss:        { label: 'Feed URL',       placeholder: 'https://example.com/jobs/feed.xml', hint: 'Any public RSS or Atom XML feed' },
+    search:     { label: 'Search keywords', placeholder: 'e.g. Toyota Motor  (aggregates from LinkedIn, Indeed, etc.)', hint: 'Requires a RapidAPI key in widget settings' },
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !url.trim()) return;
+    setSaving(true);
+    try { await onSave(name.trim(), url.trim(), feedType); } finally { setSaving(false); }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{
+      border: '1px solid var(--border)', borderRadius: 6,
+      padding: 10, background: 'var(--panel-2)',
+      display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
+    }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        <input style={inp} placeholder="Company name *" value={name} onChange={(e) => setName(e.target.value)} required />
+        <select style={{ ...inp, cursor: 'pointer' }} value={feedType} onChange={(e) => setFeedType(e.target.value as FeedType)}>
+          <option value="lever">Lever (public XML feed)</option>
+          <option value="greenhouse">Greenhouse (public JSON API)</option>
+          <option value="rss">RSS / Atom XML</option>
+          <option value="search">JSearch keyword search</option>
+        </select>
+      </div>
+      <input
+        style={inp}
+        placeholder={meta[feedType].placeholder}
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        required
+      />
+      <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>{meta[feedType].hint}</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button type="submit" className="primary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={saving}>
+          {saving ? 'Adding…' : 'Add Feed'}
+        </button>
+        <button type="button" className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function BoardSection({
+  feed, jobs, loading, error, savedIds,
+  onRefresh, onDelete, onSave, onApply,
+}: {
+  feed: CompanyFeed;
+  jobs: FeedJob[];
+  loading: boolean;
+  error: string;
+  savedIds: Set<string>;
+  onRefresh: () => void;
+  onDelete: () => void;
+  onSave: (job: FeedJob) => void;
+  onApply: (url: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const lastFetch = jobs[0]?.fetched_at;
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', marginBottom: 6 }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'var(--panel-2)', cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => setExpanded((x) => !x)}
+      >
+        <span style={{ fontSize: 12, flex: 1, fontWeight: 500 }}>{feed.name}</span>
+        <FeedTypeBadge type={feed.feed_type} />
+        {!loading && jobs.length > 0 && (
+          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{jobs.length} job{jobs.length !== 1 ? 's' : ''}</span>
+        )}
+        {loading && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Fetching…</span>}
+        {lastFetch && !loading && (
+          <span style={{ fontSize: 10, color: 'var(--text-dim)' }} title={new Date(lastFetch).toLocaleString()}>
+            {relativeDate(new Date(lastFetch).toISOString().slice(0, 10))}
+          </span>
+        )}
+        <button
+          className="ghost"
+          style={{ fontSize: 11, padding: '1px 6px' }}
+          onClick={(e) => { e.stopPropagation(); onRefresh(); }}
+          title="Refresh"
+          disabled={loading}
+        >↻</button>
+        <button
+          className="ghost danger"
+          style={{ fontSize: 11, padding: '1px 6px' }}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          title="Remove feed"
+        >✕</button>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{expanded ? '▲' : '▼'}</span>
+      </div>
+
+      {expanded && (
+        <div style={{ padding: '6px 10px 10px' }}>
+          {error && <div style={{ fontSize: 11, color: '#ff6e6e', marginBottom: 6 }}>{error}</div>}
+          {!loading && !error && jobs.length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '8px 0' }}>
+              No jobs cached — click ↻ to fetch.
+              {feed.feed_type === 'search' && ' (Requires RapidAPI key in settings.)'}
+            </div>
+          )}
+          {jobs.map((job) => {
+            const savedKey = `feed-${feed.id}-${job.ext_id}`;
+            return (
+              <div
+                key={job.id}
+                style={{ display: 'flex', gap: 8, padding: '6px 0', borderTop: '1px solid var(--border)', alignItems: 'flex-start' }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 500, fontSize: 12, lineHeight: 1.3 }}>{job.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                    {job.company}
+                    {job.location && ` · ${job.location}`}
+                    {job.date_posted && ` · ${relativeDate(job.date_posted)}`}
+                  </div>
+                  {job.description && (
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2, lineHeight: 1.4 }}>
+                      {job.description.length > 130 ? `${job.description.slice(0, 130)}…` : job.description}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  {job.apply_link && (
+                    <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={() => onApply(job.apply_link)} title="Open posting">↗</button>
+                  )}
+                  <button
+                    className={savedIds.has(savedKey) ? 'ghost' : 'primary'}
+                    style={{ fontSize: 11, padding: '1px 6px' }}
+                    onClick={() => onSave(job)}
+                    disabled={savedIds.has(savedKey)}
+                    title={savedIds.has(savedKey) ? 'Already saved' : 'Save to tracker'}
+                  >
+                    {savedIds.has(savedKey) ? '✓' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Table helpers ─────────────────────────────────────────────────────────────
 
 const thStyle: React.CSSProperties = {
   padding: '4px 6px', fontWeight: 500, fontSize: 11,
@@ -928,35 +733,35 @@ const thStyle: React.CSSProperties = {
 };
 const tdStyle: React.CSSProperties = { padding: '5px 6px', verticalAlign: 'middle' };
 
-const EMPTY_FILTERS: FilterState = {
-  jobTitles: [], keywords: [], locations: [], companySizes: [],
-  empTypes: [], experienceLevel: '', datePosted: '', remoteOnly: false,
-};
+// ─── Main component ───────────────────────────────────────────────────────────
 
 function JobAggregator({ api, settings }: WidgetProps) {
-  const [tab, setTab] = useState<'search' | 'saved'>('search');
-  const [filters, setFilters] = useState<FilterState>(() => ({
-    ...EMPTY_FILTERS,
-    jobTitles:  settings.defaultKeywords ? [(settings.defaultKeywords as string).trim()] : [],
-    locations:  settings.defaultLocation ? [(settings.defaultLocation as string).trim()] : [],
-    remoteOnly: Boolean(settings.remoteOnly),
-  }));
-  const [profiles, setProfiles] = useState<FilterProfile[]>([]);
-  const [activeProfile, setActiveProfile] = useState<FilterProfile | null>(null);
-  const [resultsProfile, setResultsProfile] = useState<FilterProfile | null>(null);
-  const [results, setResults] = useState<JobListing[]>([]);
-  const [searching, setSearching] = useState(false);
+  // Search tab state
+  const [tab, setTab]               = useState<'search' | 'saved' | 'boards'>('search');
+  const [keywords, setKeywords]     = useState((settings.defaultKeywords as string) || '');
+  const [location, setLocation]     = useState((settings.defaultLocation as string) || '');
+  const [remoteOnly, setRemoteOnly] = useState(Boolean(settings.remoteOnly));
+  const [empType, setEmpType]       = useState('all');
+  const [results, setResults]       = useState<JobListing[]>([]);
+  const [searching, setSearching]   = useState(false);
   const [searchError, setSearchError] = useState('');
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [activeFilters, setActiveFilters] = useState<FilterState | null>(null);
-  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [savedFilter, setSavedFilter] = useState<SavedStatus | 'All'>('All');
-  const [resultLimit, setResultLimit] = useState(10);
-  const [ready, setReady] = useState(false);
 
+  // Saved tab state
+  const [savedJobs, setSavedJobs]     = useState<SavedJob[]>([]);
+  const [savedIds, setSavedIds]       = useState<Set<string>>(new Set());
+  const [savedFilter, setSavedFilter] = useState<SavedStatus | 'All'>('All');
+
+  // Boards tab state
+  const [feeds, setFeeds]           = useState<CompanyFeed[]>([]);
+  const [feedJobs, setFeedJobs]     = useState<Record<number, FeedJob[]>>({});
+  const [feedLoading, setFeedLoading] = useState<Record<number, boolean>>({});
+  const [feedErrors, setFeedErrors] = useState<Record<number, string>>({});
+  const [showAddFeed, setShowAddFeed] = useState(false);
+
+  const [ready, setReady] = useState(false);
   const apiKey = (settings.rapidApiKey as string) || '';
+
+  // ── Data loaders ─────────────────────────────────────────────────────────────
 
   const loadSaved = useCallback(async () => {
     const rows = await api.sql.all<SavedJob>('SELECT * FROM saved_jobs ORDER BY saved_at DESC');
@@ -964,52 +769,51 @@ function JobAggregator({ api, settings }: WidgetProps) {
     setSavedIds(new Set(rows.map((r) => r.job_id)));
   }, [api]);
 
-  const persistProfiles = useCallback(async (next: FilterProfile[]) => {
-    await api.kv.set(PROFILES_KV_KEY, next);
-    setProfiles(next);
+  const loadFeeds = useCallback(async () => {
+    const rows = await api.sql.all<CompanyFeed>('SELECT * FROM company_feeds ORDER BY name ASC');
+    setFeeds(rows);
+    // Single query for all feed jobs, then group by feed_id in JS
+    const allJobs = await api.sql.all<FeedJob>(
+      'SELECT * FROM feed_jobs ORDER BY feed_id, date_posted DESC, fetched_at DESC',
+    );
+    const grouped: Record<number, FeedJob[]> = {};
+    for (const job of allJobs) (grouped[job.feed_id] ??= []).push(job);
+    setFeedJobs(grouped);
   }, [api]);
 
-  const patchFilters = (patch: Partial<FilterState>) => {
-    setFilters((f) => ({ ...f, ...patch }));
-    setValidationErrors([]);
-  };
+  // Idempotent: inserts a default feed only if no feed with that name already exists.
+  // Run on every mount so new entries added in future code updates are picked up.
+  const seedDefaultFeeds = useCallback(async () => {
+    for (const f of DEFAULT_FEEDS) {
+      await api.sql.run(
+        `INSERT INTO company_feeds (name, url, feed_type, enabled, added_at)
+         SELECT ?, ?, ?, 1, ? WHERE NOT EXISTS
+           (SELECT 1 FROM company_feeds WHERE name = ?)`,
+        [f.name, f.url, f.feed_type, Date.now(), f.name],
+      );
+    }
+  }, [api]);
 
   useEffect(() => {
     api.sql.exec(INIT_SQL).then(async () => {
-      await loadSaved();
-      const raw = await api.kv.get<string[]>('dismissedJobIds');
-      if (Array.isArray(raw)) setDismissedIds(new Set(raw));
+      await seedDefaultFeeds(); // idempotent — safe to run every mount
+      await Promise.all([loadSaved(), loadFeeds()]);
       setReady(true);
     });
-    (async () => {
-      const raw = await api.kv.get<unknown>(PROFILES_KV_KEY);
-      const normalized = normalizeLoadedProfiles(raw);
-      if (normalized.length > 0) {
-        setProfiles(normalized);
-      } else {
-        const seeded = await api.kv.get<boolean>(PROFILES_SEEDED_KEY);
-        if (!seeded) {
-          await api.kv.set(PROFILES_KV_KEY, DEFAULT_PROFILES);
-          await api.kv.set(PROFILES_SEEDED_KEY, true);
-          setProfiles(DEFAULT_PROFILES);
-        }
-      }
-    })();
   }, []);
 
+  // ── Search handlers ──────────────────────────────────────────────────────────
+
   const handleSearch = async () => {
-    const errs = validateFilters(filters);
-    if (errs.length > 0) { setValidationErrors(errs); return; }
-    setValidationErrors([]);
+    const q = keywords.trim();
+    if (!q) return;
     setSearching(true);
     setSearchError('');
     setResults([]);
-    setResultsProfile(activeProfile);
-    setActiveFilters({ ...filters });
     try {
       const jobs = apiKey
-        ? await searchJSearch(api.net.fetch, apiKey, filters, resultLimit)
-        : await searchArbeitnow(api.net.fetch, filters, resultLimit);
+        ? await searchJSearch(api.net.fetch, apiKey, location.trim() ? `${q} in ${location.trim()}` : q, remoteOnly, empType)
+        : await searchArbeitnow(api.net.fetch, q, remoteOnly);
       setResults(jobs);
     } catch (e) {
       setSearchError(e instanceof Error ? e.message : 'Search failed');
@@ -1018,22 +822,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
     }
   };
 
-  const handleSaveProfile = async (name: string) => {
-    await persistProfiles([...profiles, {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name,
-      createdAt: Date.now(),
-      filters: JSON.parse(JSON.stringify(filters)) as FilterState,
-    }]);
-  };
-
-  const handleApplyProfile = (p: FilterProfile) => {
-    setFilters(JSON.parse(JSON.stringify(p.filters)) as FilterState);
-    setActiveProfile(p);
-    setValidationErrors([]);
-  };
-
-  const handleSaveJob = async (job: JobListing) => {
+  const handleSaveSearchJob = async (job: JobListing) => {
     await api.sql.run(
       `INSERT OR IGNORE INTO saved_jobs
         (job_id,title,company,location,is_remote,employment_type,
@@ -1045,78 +834,84 @@ function JobAggregator({ api, settings }: WidgetProps) {
         job.employmentType, job.salaryMin ?? null, job.salaryMax ?? null,
         job.salaryCurrency, job.salaryPeriod, job.datePosted,
         job.applyLink, job.source, job.description, Date.now(),
-      ]
+      ],
     );
     await loadSaved();
   };
 
-  const handleIgnoreJob = async (jobId: string) => {
-    const nextDismissed = [...dismissedIds, jobId];
-    await api.kv.set('dismissedJobIds', nextDismissed);
-    setDismissedIds(new Set(nextDismissed));
-  };
-
-  const TRACKER_WIDGET_ID = 'job-tracker';
-  const TRACKER_INIT_SQL = `
-    CREATE TABLE IF NOT EXISTS applications (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      company      TEXT    NOT NULL,
-      role         TEXT    NOT NULL,
-      status       TEXT    NOT NULL DEFAULT 'Applied',
-      applied_at   TEXT    NOT NULL,
-      source       TEXT    NOT NULL DEFAULT '',
-      link         TEXT    NOT NULL DEFAULT '',
-      notes        TEXT    NOT NULL DEFAULT '',
-      last_updated INTEGER NOT NULL
-    );
-  `;
+  // ── Saved handlers ───────────────────────────────────────────────────────────
 
   const handleStatusChange = async (id: number, status: SavedStatus) => {
-    if (status === 'Interested') {
-      await api.sql.run('UPDATE saved_jobs SET status=? WHERE id=?', [status, id]);
-      await loadSaved();
-      return;
-    }
+    await api.sql.run('UPDATE saved_jobs SET status=? WHERE id=?', [status, id]);
+    await loadSaved();
+  };
 
-    const job = savedJobs.find((j) => j.id === id);
-    if (!job) return;
+  const handleDeleteSaved = async (id: number) => {
+    await api.sql.run('DELETE FROM saved_jobs WHERE id=?', [id]);
+    await loadSaved();
+  };
 
-    // Ensure tracker table exists, then insert
-    await window.cc.sql.exec(TRACKER_WIDGET_ID, TRACKER_INIT_SQL);
-    await window.cc.sql.run(
-      TRACKER_WIDGET_ID,
-      'INSERT OR IGNORE INTO applications (company,role,status,applied_at,source,link,notes,last_updated) VALUES (?,?,?,?,?,?,?,?)',
-      [job.company, job.title, status, new Date().toISOString().slice(0, 10), job.source, job.apply_link, job.notes, Date.now()]
+  // ── Board handlers ───────────────────────────────────────────────────────────
+
+  const handleAddFeed = async (name: string, url: string, feedType: FeedType) => {
+    await api.sql.run(
+      'INSERT INTO company_feeds (name, url, feed_type, enabled, added_at) VALUES (?,?,?,1,?)',
+      [name, url, feedType, Date.now()],
     );
+    await loadFeeds();
+    setShowAddFeed(false);
+  };
 
-    // Remove from aggregator saved list
-    await api.sql.run('DELETE FROM saved_jobs WHERE id=?', [id]);
+  const handleDeleteFeed = async (feedId: number) => {
+    await api.sql.run('DELETE FROM feed_jobs WHERE feed_id=?', [feedId]);
+    await api.sql.run('DELETE FROM company_feeds WHERE id=?', [feedId]);
+    await loadFeeds();
+  };
 
-    // Blacklist from future searches
-    const nextDismissed = [...dismissedIds, job.job_id];
-    await api.kv.set('dismissedJobIds', nextDismissed);
-    setDismissedIds(new Set(nextDismissed));
+  const handleRefreshFeed = useCallback(async (feed: CompanyFeed) => {
+    setFeedLoading((l) => ({ ...l, [feed.id]: true }));
+    setFeedErrors((e) => ({ ...e, [feed.id]: '' }));
+    try {
+      const jobs: StampedFeedJob[] = await fetchFeed(api.net.fetch, feed, apiKey);
+      await api.sql.run('DELETE FROM feed_jobs WHERE feed_id=?', [feed.id]);
+      for (const job of jobs) {
+        await api.sql.run(
+          `INSERT OR IGNORE INTO feed_jobs
+            (feed_id,ext_id,title,company,location,date_posted,apply_link,description,fetched_at)
+           VALUES (?,?,?,?,?,?,?,?,?)`,
+          [feed.id, job.ext_id, job.title, job.company, job.location, job.date_posted, job.apply_link, job.description, job.fetched_at],
+        );
+      }
+      const updated = await api.sql.all<FeedJob>(
+        'SELECT * FROM feed_jobs WHERE feed_id=? ORDER BY date_posted DESC, fetched_at DESC',
+        [feed.id],
+      );
+      setFeedJobs((j) => ({ ...j, [feed.id]: updated }));
+    } catch (e) {
+      setFeedErrors((err) => ({ ...err, [feed.id]: e instanceof Error ? e.message : 'Fetch failed' }));
+    } finally {
+      setFeedLoading((l) => ({ ...l, [feed.id]: false }));
+    }
+  }, [api, apiKey]);
 
+  const handleRefreshAll = async () => {
+    for (const feed of feeds) await handleRefreshFeed(feed);
+  };
+
+  const handleSaveFeedJob = async (job: FeedJob, feed: CompanyFeed) => {
+    const jobId = `feed-${feed.id}-${job.ext_id}`;
+    await api.sql.run(
+      `INSERT OR IGNORE INTO saved_jobs
+        (job_id,title,company,location,is_remote,employment_type,
+         salary_min,salary_max,salary_currency,salary_period,
+         date_posted,apply_link,source,description,status,notes,saved_at)
+       VALUES (?,?,?,?,0,'',NULL,NULL,'','',?,?,?,?,'Interested','',?)`,
+      [jobId, job.title, job.company, job.location, job.date_posted, job.apply_link, feed.name, job.description, Date.now()],
+    );
     await loadSaved();
   };
 
-  const handleDelete = async (id: number) => {
-    await api.sql.run('DELETE FROM saved_jobs WHERE id=?', [id]);
-    await loadSaved();
-  };
-
-  const scoredResults = useMemo(() => {
-    const visible = results.filter((j) => !dismissedIds.has(j.id));
-    const keywords = resultsProfile?.resumeKeywords;
-    if (!keywords?.length) return visible.map((j) => ({ job: j, score: -1 }));
-    return [...visible]
-      .map((j) => ({ job: j, score: scoreJob(j, keywords) }))
-      .sort((a, b) => b.score - a.score);
-  }, [results, resultsProfile, dismissedIds]);
-
-  const filteredSaved = savedFilter === 'All'
-    ? savedJobs
-    : savedJobs.filter((j) => j.status === savedFilter);
+  const filteredSaved = savedFilter === 'All' ? savedJobs : savedJobs.filter((j) => j.status === savedFilter);
 
   if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
 
@@ -1124,11 +919,8 @@ function JobAggregator({ api, settings }: WidgetProps) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>
 
       {/* Tab bar */}
-      <div style={{
-        display: 'flex', flexShrink: 0,
-        border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden',
-      }}>
-        {(['search', 'saved'] as const).map((t) => (
+      <div style={{ display: 'flex', flexShrink: 0, border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+        {(['search', 'saved', 'boards'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -1138,7 +930,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
               color:      tab === t ? 'var(--accent)'   : 'var(--text-dim)',
             }}
           >
-            {t === 'search' ? 'Search' : `Saved (${savedJobs.length})`}
+            {t === 'search' ? 'Search' : t === 'saved' ? `Saved (${savedJobs.length})` : `Boards (${feeds.length})`}
           </button>
         ))}
       </div>
@@ -1146,178 +938,64 @@ function JobAggregator({ api, settings }: WidgetProps) {
       {/* ── Search tab ── */}
       {tab === 'search' && (
         <>
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {!apiKey && (
-              <div style={{
-                fontSize: 11, padding: '5px 8px', borderRadius: 4,
-                background: '#f59e0b22', border: '1px solid #f59e0b44', color: '#f59e0b',
-              }}>
-                No API key — showing Arbeitnow results (remote/tech). Add a free RapidAPI key in
-                widget settings for full LinkedIn, Indeed, ZipRecruiter, and Glassdoor coverage.
+              <div style={{ fontSize: 11, padding: '5px 8px', borderRadius: 4, background: '#f59e0b22', border: '1px solid #f59e0b44', color: '#f59e0b' }}>
+                No API key — showing Arbeitnow (remote/tech). Add a free RapidAPI key in settings for LinkedIn, Indeed, ZipRecruiter, and Glassdoor coverage.
               </div>
             )}
-
-            <FilterProfilesPanel
-              profiles={profiles}
-              onApply={handleApplyProfile}
-              onSave={handleSaveProfile}
-              onDelete={(id) => void persistProfiles(profiles.filter((p) => p.id !== id))}
-            />
-
-            {/* Job Title + Location */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <FilterSection label="Job Title">
-                <TagInput
-                  values={filters.jobTitles}
-                  onChange={(jobTitles) => patchFilters({ jobTitles })}
-                  placeholder="e.g. Software Engineer"
-                />
-              </FilterSection>
-
-              <FilterSection label="Location">
-                <TagInput
-                  values={filters.locations}
-                  onChange={(locations) => patchFilters({ locations })}
-                  placeholder={apiKey ? 'e.g. New York, Dallas' : 'N/A without API key'}
-                />
-              </FilterSection>
-            </div>
-
-            {/* Keywords */}
-            <FilterSection label="Keywords">
-              <TagInput
-                values={filters.keywords}
-                onChange={(keywords) => patchFilters({ keywords })}
-                placeholder="e.g. React, Python, TypeScript"
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                style={{ ...inp, flex: 2 }}
+                placeholder="Keywords (e.g. Software Engineer)"
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleSearch(); }}
               />
-            </FilterSection>
-
-            {/* API-key-gated filters */}
-            {apiKey && (
-              <>
-                <FilterSection label="Company Size">
-                  <ChipGroup
-                    options={[{ value: '', label: 'Any' }, ...COMPANY_SIZE_OPTIONS]}
-                    selected={filters.companySizes}
-                    onChange={(v) => patchFilters({ companySizes: v as string[] })}
-                    multiSelect
-                  />
-                </FilterSection>
-
-                <FilterSection label="Employment Type">
-                  <ChipGroup
-                    options={[{ value: '', label: 'All' }, ...EMP_TYPES.map((t) => ({ value: t, label: EMP_TYPE_LABELS[t] }))]}
-                    selected={filters.empTypes}
-                    onChange={(v) => patchFilters({ empTypes: v as string[] })}
-                    multiSelect
-                  />
-                </FilterSection>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <FilterSection label="Experience Level">
-                    <ChipGroup
-                      options={EXP_LEVEL_OPTIONS}
-                      selected={filters.experienceLevel}
-                      onChange={(v) => patchFilters({ experienceLevel: v as string })}
-                    />
-                  </FilterSection>
-
-                  <FilterSection label="Date Posted">
-                    <ChipGroup
-                      options={DATE_POSTED_OPTIONS}
-                      selected={filters.datePosted}
-                      onChange={(v) => patchFilters({ datePosted: v as string })}
-                    />
-                  </FilterSection>
-                </div>
-              </>
-            )}
-
-            {/* Remote + Result limit + Search */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <label style={{
-                fontSize: 12, display: 'flex', gap: 4,
-                alignItems: 'center', color: 'var(--text-dim)', cursor: 'pointer',
-              }}>
+              {apiKey && (
                 <input
-                  type="checkbox"
-                  checked={filters.remoteOnly}
-                  onChange={(e) => patchFilters({ remoteOnly: e.target.checked })}
+                  style={{ ...inp, flex: 1 }}
+                  placeholder="Location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void handleSearch(); }}
                 />
-                Remote only
-              </label>
-
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginLeft: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>Show</span>
-                {[10, 20, 30, 50].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setResultLimit(n)}
-                    style={{
-                      fontSize: 11, padding: '2px 6px', borderRadius: 4, cursor: 'pointer',
-                      background: resultLimit === n ? 'var(--accent)22' : 'transparent',
-                      border: resultLimit === n ? '1px solid var(--accent)55' : '1px solid var(--border)',
-                      color: resultLimit === n ? 'var(--accent)' : 'var(--text-dim)',
-                    }}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-
-              {results.length > 0 && (
-                <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 4 }}>
-                  {scoredResults.length} result{scoredResults.length !== 1 ? 's' : ''}
-                  {resultsProfile?.resumeKeywords?.length ? ' · ranked by match' : ''}
-                </span>
               )}
-              <button
-                className="primary"
-                style={{ fontSize: 12, padding: '4px 16px', marginLeft: 'auto' }}
-                onClick={() => void handleSearch()}
-                disabled={searching}
-              >
+              <button className="primary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => void handleSearch()} disabled={searching || !keywords.trim()}>
                 {searching ? '…' : 'Search'}
               </button>
             </div>
-
-            {validationErrors.length > 0 && (
-              <div style={{
-                fontSize: 11, padding: '5px 8px', borderRadius: 4,
-                background: '#ff6e6e22', border: '1px solid #ff6e6e44', color: '#ff6e6e',
-              }}>
-                {validationErrors.map((err, i) => <div key={i}>{err}</div>)}
-              </div>
-            )}
-
-            {activeFilters && <FilterSummaryBar filters={activeFilters} />}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              {apiKey && (
+                <select style={{ ...inp, cursor: 'pointer' }} value={empType} onChange={(e) => setEmpType(e.target.value)}>
+                  {EMP_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              )}
+              <label style={{ fontSize: 12, display: 'flex', gap: 4, alignItems: 'center', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={remoteOnly} onChange={(e) => setRemoteOnly(e.target.checked)} />
+                Remote only
+              </label>
+              {results.length > 0 && (
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+                  {results.length} result{results.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
           </div>
-
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-            {searchError && (
-              <div style={{ fontSize: 12, color: '#ff6e6e', padding: '8px 0' }}>
-                {searchError}
-              </div>
-            )}
+            {searchError && <div style={{ fontSize: 12, color: '#ff6e6e', padding: '8px 0' }}>{searchError}</div>}
             {!searching && !searchError && results.length === 0 && (
-              <div style={{
-                color: 'var(--text-dim)', fontSize: 13,
-                textAlign: 'center', padding: '32px 0',
-              }}>
-                {filters.jobTitles.length > 0 || filters.keywords.length > 0
-                  ? 'No results — try different filters.'
-                  : 'Enter a job title or keyword and press Search.'}
+              <div style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>
+                {keywords.trim() ? 'No results — try different keywords.' : 'Enter keywords and press Search.'}
               </div>
             )}
-            {scoredResults.map(({ job, score }) => (
+            {results.map((job) => (
               <JobCard
                 key={job.id}
                 job={job}
-                matchScore={score >= 0 ? score : undefined}
                 isSaved={savedIds.has(job.id)}
-                onSave={() => void handleSaveJob(job)}
+                onSave={() => void handleSaveSearchJob(job)}
                 onApply={() => job.applyLink && void api.shell.openExternal(job.applyLink)}
-                onIgnore={() => void handleIgnoreJob(job.id)}
               />
             ))}
           </div>
@@ -1329,37 +1007,25 @@ function JobAggregator({ api, settings }: WidgetProps) {
         <>
           <div style={{ flexShrink: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {(['All', ...STATUSES] as const).map((s) => {
-              const count = s === 'All'
-                ? savedJobs.length
-                : savedJobs.filter((j) => j.status === s).length;
+              const count = s === 'All' ? savedJobs.length : savedJobs.filter((j) => j.status === s).length;
               const color = s === 'All' ? 'var(--accent)' : STATUS_COLORS[s];
               const active = savedFilter === s;
               return (
-                <button
-                  key={s}
-                  onClick={() => setSavedFilter(s)}
-                  style={{
-                    fontSize: 11, padding: '2px 8px', cursor: 'pointer', borderRadius: 4,
-                    background: active ? `${color}22` : 'transparent',
-                    border:     active ? `1px solid ${color}55` : '1px solid transparent',
-                    color:      active ? color : 'var(--text-dim)',
-                  }}
-                >
+                <button key={s} onClick={() => setSavedFilter(s)} style={{
+                  fontSize: 11, padding: '2px 8px', cursor: 'pointer', borderRadius: 4,
+                  background: active ? `${color}22` : 'transparent',
+                  border:     active ? `1px solid ${color}55` : '1px solid transparent',
+                  color:      active ? color : 'var(--text-dim)',
+                }}>
                   {s} ({count})
                 </button>
               );
             })}
           </div>
-
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             {filteredSaved.length === 0 ? (
-              <div style={{
-                color: 'var(--text-dim)', fontSize: 13,
-                textAlign: 'center', padding: '32px 0',
-              }}>
-                {savedJobs.length === 0
-                  ? 'No saved jobs yet — search and save interesting listings.'
-                  : 'No results for this filter.'}
+              <div style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>
+                {savedJobs.length === 0 ? 'No saved jobs yet — search or browse boards to save listings.' : 'No results for this filter.'}
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -1379,19 +1045,13 @@ function JobAggregator({ api, settings }: WidgetProps) {
                       <td style={tdStyle}>
                         <div style={{ fontWeight: 500, lineHeight: 1.3 }}>{job.title}</div>
                         <div style={{ color: 'var(--text-dim)', fontSize: 11 }}>
-                          {job.company}
-                          {job.location && ` · ${job.location}`}
-                          {Boolean(job.is_remote) && ' · Remote'}
+                          {job.company}{job.location && ` · ${job.location}`}{Boolean(job.is_remote) && ' · Remote'}
                         </div>
                       </td>
                       <td style={tdStyle}><SourceBadge source={job.source} /></td>
                       <td style={tdStyle}>
                         <select
-                          style={{
-                            background: 'transparent', border: 'none', cursor: 'pointer',
-                            color: STATUS_COLORS[job.status], fontWeight: 600, fontSize: 11,
-                            padding: 0,
-                          }}
+                          style={{ ...inp, background: 'transparent', border: 'none', cursor: 'pointer', color: STATUS_COLORS[job.status], fontWeight: 600, fontSize: 11, padding: 0 }}
                           value={job.status}
                           onChange={(e) => void handleStatusChange(job.id, e.target.value as SavedStatus)}
                         >
@@ -1406,28 +1066,60 @@ function JobAggregator({ api, settings }: WidgetProps) {
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {job.apply_link && (
-                          <button
-                            className="ghost"
-                            style={{ fontSize: 11, padding: '1px 6px' }}
-                            onClick={() => void api.shell.openExternal(job.apply_link)}
-                            title="Open application link"
-                          >
-                            ↗
-                          </button>
+                          <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={() => void api.shell.openExternal(job.apply_link)}>↗</button>
                         )}
-                        <button
-                          className="ghost danger"
-                          style={{ fontSize: 11, padding: '1px 6px' }}
-                          onClick={() => void handleDelete(job.id)}
-                          title="Remove"
-                        >
-                          ✕
-                        </button>
+                        <button className="ghost danger" style={{ fontSize: 11, padding: '1px 6px' }} onClick={() => void handleDeleteSaved(job.id)}>✕</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Boards tab ── */}
+      {tab === 'boards' && (
+        <>
+          <div style={{ flexShrink: 0, display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button className="primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setShowAddFeed((x) => !x)}>
+              {showAddFeed ? 'Cancel' : '+ Add Feed'}
+            </button>
+            <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => void handleRefreshAll()} title="Refresh all feeds">
+              ↻ Refresh All
+            </button>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+              {feeds.filter((f) => f.feed_type === 'search').length > 0 && !apiKey && (
+                <span style={{ color: '#f59e0b' }}>⚠ Search feeds need RapidAPI key</span>
+              )}
+            </span>
+          </div>
+
+          {showAddFeed && (
+            <AddFeedForm onSave={handleAddFeed} onCancel={() => setShowAddFeed(false)} />
+          )}
+
+          <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+            {feeds.length === 0 && !showAddFeed ? (
+              <div style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>
+                No company feeds — click "+ Add Feed" to get started.
+              </div>
+            ) : (
+              feeds.map((feed) => (
+                <BoardSection
+                  key={feed.id}
+                  feed={feed}
+                  jobs={feedJobs[feed.id] ?? []}
+                  loading={feedLoading[feed.id] ?? false}
+                  error={feedErrors[feed.id] ?? ''}
+                  savedIds={savedIds}
+                  onRefresh={() => void handleRefreshFeed(feed)}
+                  onDelete={() => void handleDeleteFeed(feed.id)}
+                  onSave={(job) => void handleSaveFeedJob(job, feed)}
+                  onApply={(url) => void api.shell.openExternal(url)}
+                />
+              ))
             )}
           </div>
         </>
@@ -1442,11 +1134,11 @@ const widget: Widget = {
   manifest: {
     id: 'job-aggregator',
     name: 'Job Aggregator',
-    description: 'Search LinkedIn, Indeed, ZipRecruiter, Glassdoor, and more. Save and track interesting listings.',
-    version: '0.3.0',
+    description: 'Search LinkedIn, Indeed, ZipRecruiter, and more. Monitor 40+ company boards (Lever, Greenhouse, RSS, JSearch). Save and track listings.',
+    version: '0.4.0',
     icon: '🔍',
-    defaultSize: { w: 8, h: 12 },
-    minSize:     { w: 5, h: 8 },
+    defaultSize: { w: 8, h: 10 },
+    minSize:     { w: 5, h: 7 },
     permissions: { sqlite: true },
     settings: [
       {
@@ -1458,7 +1150,7 @@ const widget: Widget = {
       {
         kind: 'string',
         key: 'defaultKeywords',
-        label: 'Default job title',
+        label: 'Default search keywords',
         placeholder: 'e.g. Software Engineer',
       },
       {
