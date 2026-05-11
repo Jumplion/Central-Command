@@ -51,7 +51,7 @@ export const EMP_TYPES = [
 
 // Bump SEED_VERSION whenever new entries are added — the seeder skips if the
 // stored version already matches (checked via KV on every mount).
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 5;
 
 export const DEFAULT_FEEDS: Array<{ name: string; url: string; feed_type: FeedType }> = [
   // ── Tech / SaaS — Lever ───────────────────────────────────────────────────
@@ -96,11 +96,61 @@ export const DEFAULT_FEEDS: Array<{ name: string; url: string; feed_type: FeedTy
   { name: 'Turtle Rock Studios',   url: 'turtlerock',                      feed_type: 'greenhouse' },
   { name: 'Wargaming',             url: 'wargaming',                       feed_type: 'greenhouse' },
   { name: 'Wizards of the Coast',  url: 'wizardsofthecoast',               feed_type: 'greenhouse' },
+  { name: 'Crystal Dynamics',      url: 'crystaldynamics',                 feed_type: 'greenhouse' },
+  { name: 'Krafton',               url: 'krafton',                         feed_type: 'greenhouse' },
+  { name: 'PUBG Corporation',      url: 'pubgcorporation',                 feed_type: 'greenhouse' },
+  { name: 'Roblox',                url: 'roblox',                          feed_type: 'greenhouse' },
+
+  // ── Gaming — Lever ──────────────────────────────────────────
+  { name: 'Larian Studios',        url: 'larian',             feed_type: 'lever' },
 
   // ── Tech — Greenhouse (verified tokens) ──────────────────────────────────
+  { name: 'Affirm',                url: 'affirm',             feed_type: 'greenhouse' },
+  { name: 'Airtable',              url: 'airtable',           feed_type: 'greenhouse' },
+  { name: 'Airbnb',                url: 'airbnb',             feed_type: 'greenhouse' },
+  { name: 'Amplitude',             url: 'amplitude',          feed_type: 'greenhouse' },
   { name: 'Anthropic',             url: 'anthropic',          feed_type: 'greenhouse' },
+  { name: 'Asana',                 url: 'asana',              feed_type: 'greenhouse' },
+  { name: 'Brex',                  url: 'brex',               feed_type: 'greenhouse' },
+  { name: 'Chime',                 url: 'chime',              feed_type: 'greenhouse' },
+  { name: 'Cloudflare',            url: 'cloudflare',         feed_type: 'greenhouse' },
+  { name: 'Databricks',            url: 'databricks',         feed_type: 'greenhouse' },
+  { name: 'Datadog',               url: 'datadog',            feed_type: 'greenhouse' },
+  { name: 'DeepMind',              url: 'deepmind',           feed_type: 'greenhouse' },
+  { name: 'Discord',               url: 'discord',            feed_type: 'greenhouse' },
+  { name: 'Dropbox',               url: 'dropbox',            feed_type: 'greenhouse' },
+  { name: 'Elastic',               url: 'elastic',            feed_type: 'greenhouse' },
+  { name: 'Fastly',                url: 'fastly',             feed_type: 'greenhouse' },
+  { name: 'Figma',                 url: 'figma',              feed_type: 'greenhouse' },
   { name: 'GitLab',                url: 'gitlab',             feed_type: 'greenhouse' },
+  { name: 'HubSpot',               url: 'hubspot',            feed_type: 'greenhouse' },
+  { name: 'Inflection AI',         url: 'inflectionai',       feed_type: 'greenhouse' },
+  { name: 'Instacart',             url: 'instacart',          feed_type: 'greenhouse' },
+  { name: 'Lyft',                  url: 'lyft',               feed_type: 'greenhouse' },
+  { name: 'Mixpanel',              url: 'mixpanel',           feed_type: 'greenhouse' },
+  { name: 'MongoDB',               url: 'mongodb',            feed_type: 'greenhouse' },
+  { name: 'Netlify',               url: 'netlify',            feed_type: 'greenhouse' },
+  { name: 'Nubank',                url: 'nubank',             feed_type: 'greenhouse' },
+  { name: 'Okta',                  url: 'okta',               feed_type: 'greenhouse' },
+  { name: 'PagerDuty',             url: 'pagerduty',          feed_type: 'greenhouse' },
   { name: 'Reddit',                url: 'reddit',             feed_type: 'greenhouse' },
+  { name: 'Robinhood',             url: 'robinhood',          feed_type: 'greenhouse' },
+  { name: 'Rubrik',                url: 'rubrik',             feed_type: 'greenhouse' },
+  { name: 'Scale AI',              url: 'scaleai',            feed_type: 'greenhouse' },
+  { name: 'Stripe',                url: 'stripe',             feed_type: 'greenhouse' },
+  { name: 'Twilio',                url: 'twilio',             feed_type: 'greenhouse' },
+  { name: 'Twitch',                url: 'twitch',             feed_type: 'greenhouse' },
+  { name: 'Vercel',                url: 'vercel',             feed_type: 'greenhouse' },
+  { name: 'Waymo',                 url: 'waymo',              feed_type: 'greenhouse' },
+  { name: 'xAI',                   url: 'xai',                feed_type: 'greenhouse' },
+
+  // ── Defense / Advanced Tech — Greenhouse ─────────────────────────────────
+  { name: 'Anduril Industries',    url: 'andurilindustries',  feed_type: 'greenhouse' },
+  { name: 'Relativity Space',      url: 'relativity',         feed_type: 'greenhouse' },
+
+  // ── Tech — Lever (additional) ─────────────────────────────────────────────
+  { name: 'Plaid',                 url: 'plaid',              feed_type: 'lever' },
+  { name: 'Spotify',               url: 'spotify',            feed_type: 'lever' },
 
   // ── Texas Fortune 500 — JSearch (Workday / proprietary ATS) ──────────────
   { name: 'American Airlines',     url: 'American Airlines',                 feed_type: 'search' },
@@ -138,6 +188,63 @@ export const DEFAULT_FEEDS: Array<{ name: string; url: string; feed_type: FeedTy
   { name: 'Ubisoft',               url: 'Ubisoft',                            feed_type: 'search' },
   { name: 'Warner Bros Games',     url: 'Warner Bros Games developer',        feed_type: 'search' },
   { name: 'Xbox Game Studios',     url: 'Xbox Game Studios developer',        feed_type: 'search' },
+
+  // ── Fortune 500 Tech — JSearch (Workday / proprietary ATS) ──────────────
+  { name: 'Amazon',                url: 'Amazon software engineer',           feed_type: 'search' },
+  { name: 'AMD',                   url: 'AMD Advanced Micro Devices engineer', feed_type: 'search' },
+  { name: 'Apple',                 url: 'Apple software engineer',            feed_type: 'search' },
+  { name: 'Cisco',                 url: 'Cisco Systems software engineer',    feed_type: 'search' },
+  { name: 'Coinbase',              url: 'Coinbase software engineer',         feed_type: 'search' },
+  { name: 'DoorDash',              url: 'DoorDash software engineer',         feed_type: 'search' },
+  { name: 'Google',                url: 'Google software engineer',           feed_type: 'search' },
+  { name: 'IBM',                   url: 'IBM software engineer',              feed_type: 'search' },
+  { name: 'Intel',                 url: 'Intel Corporation software engineer', feed_type: 'search' },
+  { name: 'Meta',                  url: 'Meta software engineer',             feed_type: 'search' },
+  { name: 'Microsoft',             url: 'Microsoft software engineer',        feed_type: 'search' },
+  { name: 'Nvidia',                url: 'Nvidia software engineer',           feed_type: 'search' },
+  { name: 'Oracle',                url: 'Oracle software engineer',           feed_type: 'search' },
+  { name: 'Qualcomm',              url: 'Qualcomm software engineer',         feed_type: 'search' },
+  { name: 'Salesforce',            url: 'Salesforce software engineer',       feed_type: 'search' },
+  { name: 'Snowflake',             url: 'Snowflake software engineer',        feed_type: 'search' },
+  { name: 'Uber',                  url: 'Uber software engineer',             feed_type: 'search' },
+  { name: 'Zoom',                  url: 'Zoom Video Communications engineer', feed_type: 'search' },
+
+  // ── Fortune 500 Finance — JSearch ─────────────────────────────────────────
+  { name: 'American Express',      url: 'American Express software engineer', feed_type: 'search' },
+  { name: 'Capital One',           url: 'Capital One software engineer',      feed_type: 'search' },
+  { name: 'Citigroup',             url: 'Citigroup software engineer',        feed_type: 'search' },
+  { name: 'Goldman Sachs',         url: 'Goldman Sachs software engineer',    feed_type: 'search' },
+  { name: 'JPMorgan Chase',        url: 'JPMorgan Chase software engineer',   feed_type: 'search' },
+  { name: 'Morgan Stanley',        url: 'Morgan Stanley software engineer',   feed_type: 'search' },
+  { name: 'Wells Fargo',           url: 'Wells Fargo software engineer',      feed_type: 'search' },
+
+  // ── US Gaming Studios — JSearch (Workday / proprietary ATS) ─────────────
+  { name: 'Bethesda Game Studios', url: 'Bethesda Game Studios developer',    feed_type: 'search' },
+  { name: 'BioWare',               url: 'BioWare game developer',             feed_type: 'search' },
+  { name: 'id Software',           url: 'id Software game developer',         feed_type: 'search' },
+  { name: 'NetherRealm Studios',   url: 'NetherRealm Studios developer',      feed_type: 'search' },
+  { name: 'Obsidian Entertainment',url: 'Obsidian Entertainment developer',   feed_type: 'search' },
+  { name: 'Raven Software',        url: 'Raven Software game developer',      feed_type: 'search' },
+  { name: 'Respawn Entertainment', url: 'Respawn Entertainment developer',    feed_type: 'search' },
+  { name: 'Santa Monica Studio',   url: 'Santa Monica Studio Sony developer', feed_type: 'search' },
+  { name: 'Treyarch',              url: 'Treyarch game developer',            feed_type: 'search' },
+  { name: 'Valve',                 url: 'Valve Corporation developer',        feed_type: 'search' },
+
+  // ── International Gaming Studios — JSearch ────────────────────────────────
+  { name: '11 bit studios',        url: '11 bit studios game developer',      feed_type: 'search' },
+  { name: 'Behaviour Interactive', url: 'Behaviour Interactive game developer',feed_type: 'search' },
+  { name: 'Bloober Team',          url: 'Bloober Team game developer',        feed_type: 'search' },
+  { name: 'Bohemia Interactive',   url: 'Bohemia Interactive developer',      feed_type: 'search' },
+  { name: 'Creative Assembly',     url: 'Creative Assembly game developer',   feed_type: 'search' },
+  { name: 'Crytek',                url: 'Crytek game developer',              feed_type: 'search' },
+  { name: 'Eidos Montreal',        url: 'Eidos Montreal game developer',      feed_type: 'search' },
+  { name: 'HoYoverse',             url: 'HoYoverse miHoYo game developer',   feed_type: 'search' },
+  { name: 'Klei Entertainment',    url: 'Klei Entertainment game developer',  feed_type: 'search' },
+  { name: 'Nexon America',         url: 'Nexon America game developer',       feed_type: 'search' },
+  { name: 'Pearl Abyss',           url: 'Pearl Abyss game developer',         feed_type: 'search' },
+  { name: 'Relic Entertainment',   url: 'Relic Entertainment game developer', feed_type: 'search' },
+  { name: 'Remedy Entertainment',  url: 'Remedy Entertainment developer',     feed_type: 'search' },
+  { name: 'Techland',              url: 'Techland game developer',            feed_type: 'search' },
 ];
 
 // ─── SQL schema ───────────────────────────────────────────────────────────────
