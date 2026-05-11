@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { JobListing, CompanyFeed, FeedJob, FeedType, SavedStatus } from './types';
-import { SOURCE_COLORS, STATUS_COLORS, FEED_COLORS, FEED_LABELS, STATUSES, inp, thStyle, tdStyle } from './constants';
+import type { JobListing, CompanyFeed, FeedJob, FeedType, CompanyType, SavedStatus } from './types';
+import { SOURCE_COLORS, STATUS_COLORS, FEED_COLORS, FEED_LABELS, COMPANY_TYPE_LABELS, COMPANY_TYPE_ORDER, STATUSES, inp, thStyle, tdStyle } from './constants';
 import { formatSalary, relativeDate, empTypeLabel } from './utils';
 
 // ─── SourceBadge ──────────────────────────────────────────────────────────────
@@ -95,19 +95,20 @@ const ADD_FEED_META: Record<FeedType, { placeholder: string; hint: string }> = {
 };
 
 export function AddFeedForm({ onSave, onCancel }: {
-  onSave: (name: string, url: string, feedType: FeedType) => Promise<void>;
+  onSave: (name: string, url: string, feedType: FeedType, companyType: CompanyType) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [name, setName]         = useState('');
-  const [feedType, setFeedType] = useState<FeedType>('lever');
-  const [url, setUrl]           = useState('');
-  const [saving, setSaving]     = useState(false);
+  const [name, setName]               = useState('');
+  const [feedType, setFeedType]       = useState<FeedType>('lever');
+  const [companyType, setCompanyType] = useState<CompanyType>('tech');
+  const [url, setUrl]                 = useState('');
+  const [saving, setSaving]           = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !url.trim()) return;
     setSaving(true);
-    try { await onSave(name.trim(), url.trim(), feedType); } finally { setSaving(false); }
+    try { await onSave(name.trim(), url.trim(), feedType, companyType); } finally { setSaving(false); }
   };
 
   return (
@@ -116,8 +117,13 @@ export function AddFeedForm({ onSave, onCancel }: {
       padding: 10, background: 'var(--panel-2)',
       display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
     }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
         <input style={inp} placeholder="Company name *" value={name} onChange={(e) => setName(e.target.value)} required />
+        <select style={{ ...inp, cursor: 'pointer' }} value={companyType} onChange={(e) => setCompanyType(e.target.value as CompanyType)}>
+          {COMPANY_TYPE_ORDER.map((t) => (
+            <option key={t} value={t}>{COMPANY_TYPE_LABELS[t]}</option>
+          ))}
+        </select>
         <select style={{ ...inp, cursor: 'pointer' }} value={feedType} onChange={(e) => setFeedType(e.target.value as FeedType)}>
           <option value="lever">Lever (public XML feed)</option>
           <option value="greenhouse">Greenhouse (public JSON API)</option>

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { WidgetApi } from '@renderer/plugins/api';
-import type { CompanyFeed, FeedJob, FeedType, StampedFeedJob } from './types';
-import { FEED_LABELS, inp } from './constants';
+import type { CompanyFeed, CompanyType, FeedJob, FeedType, StampedFeedJob } from './types';
+import { FEED_LABELS, COMPANY_TYPE_LABELS, COMPANY_TYPE_COLORS, COMPANY_TYPE_ORDER, inp } from './constants';
 import { fetchFeed } from './api';
 import { AddFeedForm, BoardSection } from './components';
 
@@ -21,11 +21,12 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
   const [showAddFeed, setShowAddFeed] = useState(false);
   const [feedSearch, setFeedSearch]   = useState('');
   const [feedTypeFilter, setFeedTypeFilter] = useState<FeedType | 'all'>('all');
+  const [groupCollapsed, setGroupCollapsed] = useState<Partial<Record<CompanyType, boolean>>>({});
 
-  const handleAddFeed = async (name: string, url: string, feedType: FeedType) => {
+  const handleAddFeed = async (name: string, url: string, feedType: FeedType, companyType: CompanyType) => {
     await api.sql.run(
-      'INSERT INTO company_feeds (name, url, feed_type, enabled, added_at) VALUES (?,?,?,1,?)',
-      [name, url, feedType, Date.now()],
+      'INSERT INTO company_feeds (name, url, feed_type, company_type, enabled, added_at) VALUES (?,?,?,?,1,?)',
+      [name, url, feedType, companyType, Date.now()],
     );
     onFeedsChange();
     setShowAddFeed(false);
@@ -80,6 +81,20 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
     return true;
   });
 
+  const grouped = COMPANY_TYPE_ORDER.reduce<Record<CompanyType, CompanyFeed[]>>((acc, t) => {
+    acc[t] = visibleFeeds.filter((f) => (f.company_type ?? 'other') === t);
+    return acc;
+  }, {} as Record<CompanyType, CompanyFeed[]>);
+
+  const toggleGroup = (type: CompanyType) =>
+    setGroupCollapsed((g) => ({ ...g, [type]: !g[type] }));
+
+  const allCollapsed = COMPANY_TYPE_ORDER.every((t) => groupCollapsed[t]);
+  const toggleAll    = () => {
+    const next = !allCollapsed;
+    setGroupCollapsed(Object.fromEntries(COMPANY_TYPE_ORDER.map((t) => [t, next])));
+  };
+
   return (
     <>
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -89,6 +104,9 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
           </button>
           <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleRefreshAll} title="Refresh all feeds">
             ↻ Refresh All
+          </button>
+          <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={toggleAll} title={allCollapsed ? 'Expand all groups' : 'Collapse all groups'}>
+            {allCollapsed ? '▶ Expand All' : '▼ Collapse All'}
           </button>
           {feeds.filter((f) => f.feed_type === 'search').length > 0 && !apiKey && (
             <span style={{ fontSize: 11, color: '#f59e0b', marginLeft: 'auto' }}>⚠ Search feeds need RapidAPI key</span>
@@ -136,20 +154,46 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
               : 'No companies match your search.'}
           </div>
         ) : (
-          visibleFeeds.map((feed) => (
-            <BoardSection
-              key={feed.id}
-              feed={feed}
-              jobs={feedJobs[feed.id] ?? []}
-              loading={feedLoading[feed.id] ?? false}
-              error={feedErrors[feed.id] ?? ''}
-              savedIds={savedIds}
-              onRefresh={() => void handleRefreshFeed(feed)}
-              onDelete={() => void handleDeleteFeed(feed.id)}
-              onSave={(job) => void handleSaveFeedJob(job, feed)}
-              onApply={(url) => void api.shell.openExternal(url)}
-            />
-          ))
+          COMPANY_TYPE_ORDER.map((type) => {
+            const groupFeeds = grouped[type];
+            if (groupFeeds.length === 0) return null;
+            const color     = COMPANY_TYPE_COLORS[type];
+            const collapsed = groupCollapsed[type] ?? false;
+            return (
+              <div key={type} style={{ marginBottom: 4 }}>
+                <div
+                  onClick={() => toggleGroup(type)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '5px 10px', marginBottom: collapsed ? 0 : 4,
+                    background: `${color}11`,
+                    border: `1px solid ${color}33`,
+                    borderRadius: 5, cursor: 'pointer', userSelect: 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 600, color }}>{COMPANY_TYPE_LABELS[type]}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', flex: 1 }}>
+                    — {groupFeeds.length} compan{groupFeeds.length !== 1 ? 'ies' : 'y'}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{collapsed ? '▶' : '▼'}</span>
+                </div>
+                {!collapsed && groupFeeds.map((feed) => (
+                  <BoardSection
+                    key={feed.id}
+                    feed={feed}
+                    jobs={feedJobs[feed.id] ?? []}
+                    loading={feedLoading[feed.id] ?? false}
+                    error={feedErrors[feed.id] ?? ''}
+                    savedIds={savedIds}
+                    onRefresh={() => void handleRefreshFeed(feed)}
+                    onDelete={() => void handleDeleteFeed(feed.id)}
+                    onSave={(job) => void handleSaveFeedJob(job, feed)}
+                    onApply={(url) => void api.shell.openExternal(url)}
+                  />
+                ))}
+              </div>
+            );
+          })
         )}
       </div>
     </>

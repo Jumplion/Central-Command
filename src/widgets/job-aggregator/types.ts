@@ -41,11 +41,14 @@ export interface SavedJob {
 
 export type FeedType = 'rss' | 'lever' | 'greenhouse' | 'search';
 
+export type CompanyType = 'gaming' | 'tech' | 'finance' | 'defense' | 'cybersecurity' | 'other';
+
 export interface CompanyFeed {
   id: number;
   name: string;
   url: string; // handle for lever/greenhouse, full URL for rss, search query for search
   feed_type: FeedType;
+  company_type: CompanyType;
   enabled: number;
   added_at: number;
 }
