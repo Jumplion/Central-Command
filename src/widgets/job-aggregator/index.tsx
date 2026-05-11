@@ -4,9 +4,13 @@ import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FilterState {
+  jobTitles: string[];
   keywords: string[];
   locations: string[];
+  companySizes: string[];
   empTypes: string[];
+  experienceLevel: string;
+  datePosted: string;
   remoteOnly: boolean;
 }
 
@@ -92,13 +96,32 @@ const SOURCE_COLORS: Record<string, string> = {
 
 const EMP_TYPES = ['fulltime', 'parttime', 'contractor', 'intern'] as const;
 type EmpType = (typeof EMP_TYPES)[number];
-
 const EMP_TYPE_LABELS: Record<EmpType, string> = {
-  fulltime:   'Full-time',
-  parttime:   'Part-time',
-  contractor: 'Contract',
-  intern:     'Internship',
+  fulltime: 'Full-time', parttime: 'Part-time', contractor: 'Contract', intern: 'Internship',
 };
+
+const COMPANY_SIZE_OPTIONS = [
+  { value: 'startup',    label: 'Startup',    query: 'startup' },
+  { value: 'small',      label: 'Small',      query: 'small company' },
+  { value: 'midsize',    label: 'Mid-size',   query: 'mid-size company' },
+  { value: 'large',      label: 'Large',      query: 'large company' },
+  { value: 'enterprise', label: 'Enterprise', query: 'enterprise' },
+];
+
+const EXP_LEVEL_OPTIONS = [
+  { value: '',                             label: 'Any' },
+  { value: 'no_experience',               label: 'Entry' },
+  { value: 'under_3_years_experience',    label: 'Mid' },
+  { value: 'more_than_3_years_experience', label: 'Senior' },
+];
+
+const DATE_POSTED_OPTIONS = [
+  { value: '',      label: 'Any Time' },
+  { value: 'today', label: 'Today' },
+  { value: '3days', label: '3 Days' },
+  { value: 'week',  label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+];
 
 const PROFILES_KV_KEY = 'filterProfiles';
 const PROFILES_SEEDED_KEY = 'profilesSeeded_v1';
@@ -110,9 +133,13 @@ const DEFAULT_PROFILES: FilterProfile[] = [
     id: 'default-software-dev',
     name: 'Software Developer',
     filters: {
+      jobTitles: [],
       keywords: ['Software Engineer', 'C# Developer', '.NET Developer', 'Full Stack Developer'],
       locations: [],
+      companySizes: [],
       empTypes: ['fulltime'],
+      experienceLevel: '',
+      datePosted: '',
       remoteOnly: false,
     },
     createdAt: 0,
@@ -152,9 +179,13 @@ const DEFAULT_PROFILES: FilterProfile[] = [
     id: 'default-game-design',
     name: 'Game Designer',
     filters: {
+      jobTitles: [],
       keywords: ['Game Designer', 'Game Developer', 'Unreal Engine'],
       locations: [],
+      companySizes: [],
       empTypes: ['fulltime'],
+      experienceLevel: '',
+      datePosted: '',
       remoteOnly: false,
     },
     createdAt: 0,
@@ -190,9 +221,13 @@ const DEFAULT_PROFILES: FilterProfile[] = [
     id: 'default-cybersecurity',
     name: 'Cybersecurity',
     filters: {
+      jobTitles: [],
       keywords: ['Cybersecurity', 'Security Engineer', 'Application Security'],
       locations: [],
+      companySizes: [],
       empTypes: ['fulltime'],
+      experienceLevel: '',
+      datePosted: '',
       remoteOnly: false,
     },
     createdAt: 0,
@@ -262,12 +297,12 @@ const INIT_SQL = `
 
 function validateFilters(f: FilterState): string[] {
   const errors: string[] = [];
-  if (f.keywords.length === 0) {
-    errors.push('At least one keyword is required.');
+  if (f.jobTitles.length === 0 && f.keywords.length === 0) {
+    errors.push('Enter at least one job title or keyword.');
   }
-  const shortKw = f.keywords.filter((k) => k.trim().length < 2);
-  if (shortKw.length) {
-    errors.push(`Keywords must be ≥2 characters: ${shortKw.map((k) => `"${k}"`).join(', ')}`);
+  const shortTags = [...f.jobTitles, ...f.keywords].filter((t) => t.trim().length < 2);
+  if (shortTags.length) {
+    errors.push(`Tags must be ≥2 characters: ${shortTags.map((t) => `"${t}"`).join(', ')}`);
   }
   const badLoc = f.locations.filter((l) => l.trim().length < 2 || l.trim().length > 100);
   if (badLoc.length) {
@@ -277,6 +312,45 @@ function validateFilters(f: FilterState): string[] {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildJSearchQuery(f: FilterState): string {
+  const parts = [...f.jobTitles, ...f.keywords];
+  if (f.companySizes.length) {
+    const sizeTerms = f.companySizes
+      .map((s) => COMPANY_SIZE_OPTIONS.find((o) => o.value === s)?.query ?? s)
+      .join(' OR ');
+    parts.push(sizeTerms);
+  }
+  let q = parts.join(' ');
+  if (f.locations.length) q += ` in ${f.locations.join(' OR ')}`;
+  return q;
+}
+
+function normalizeLoadedProfiles(raw: unknown): FilterProfile[] {
+  if (!Array.isArray(raw)) return [];
+  const result: FilterProfile[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) continue;
+    const p = item as Record<string, unknown>;
+    const f = (p.filters ?? {}) as Record<string, unknown>;
+    result.push({
+      id: String(p.id ?? Date.now()),
+      name: String(p.name ?? 'Unnamed'),
+      createdAt: Number(p.createdAt ?? Date.now()),
+      filters: {
+        jobTitles:       Array.isArray(f.jobTitles)  ? (f.jobTitles as string[])  : [],
+        keywords:        Array.isArray(f.keywords)   ? (f.keywords as string[])   : [],
+        locations:       Array.isArray(f.locations)  ? (f.locations as string[])  : [],
+        companySizes:    Array.isArray(f.companySizes) ? (f.companySizes as string[]) : [],
+        empTypes:        Array.isArray(f.empTypes)   ? (f.empTypes as string[])   : [],
+        experienceLevel: typeof f.experienceLevel === 'string' ? f.experienceLevel : '',
+        datePosted:      typeof f.datePosted === 'string'      ? f.datePosted      : '',
+        remoteOnly:      Boolean(f.remoteOnly),
+      },
+    });
+  }
+  return result;
+}
 
 function formatSalary(
   min?: number | null,
@@ -340,15 +414,14 @@ async function searchJSearch(
   key: string,
   filters: FilterState
 ): Promise<JobListing[]> {
-  const kwStr = filters.keywords.join(' ');
-  const locStr = filters.locations.length > 0
-    ? ` in ${filters.locations.join(' OR ')}`
-    : '';
-  const p = new URLSearchParams({ query: `${kwStr}${locStr}`, num_pages: '1', page: '1' });
+  const query = buildJSearchQuery(filters);
+  if (!query.trim()) throw new Error('Search query is empty.');
+
+  const p = new URLSearchParams({ query, num_pages: '1', page: '1' });
   if (filters.remoteOnly) p.set('remote_jobs_only', 'true');
-  if (filters.empTypes.length > 0) {
-    p.set('employment_types', filters.empTypes.map((t) => t.toUpperCase()).join(','));
-  }
+  if (filters.empTypes.length) p.set('employment_types', filters.empTypes.map((t) => t.toUpperCase()).join(','));
+  if (filters.experienceLevel) p.set('job_requirements', filters.experienceLevel);
+  if (filters.datePosted) p.set('date_posted', filters.datePosted);
 
   const resp = await fetch(`https://jsearch.p.rapidapi.com/search?${p}`, {
     headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': 'jsearch.p.rapidapi.com' },
@@ -383,7 +456,7 @@ async function searchArbeitnow(
   fetch: NetFetcher,
   filters: FilterState
 ): Promise<JobListing[]> {
-  const p = new URLSearchParams({ search: filters.keywords.join(' ') });
+  const p = new URLSearchParams({ search: [...filters.jobTitles, ...filters.keywords].join(' ') });
   if (filters.remoteOnly) p.set('remote', 'true');
 
   const resp = await fetch(`https://www.arbeitnow.com/api/job-board-api?${p}`);
@@ -411,9 +484,8 @@ async function searchArbeitnow(
 // ─── TagInput ─────────────────────────────────────────────────────────────────
 
 function TagInput({
-  label, values, onChange, placeholder,
+  values, onChange, placeholder,
 }: {
-  label: string;
   values: string[];
   onChange: (v: string[]) => void;
   placeholder?: string;
@@ -445,92 +517,121 @@ function TagInput({
   };
 
   return (
-    <div>
-      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 3 }}>{label}</div>
-      <div
-        style={{
-          display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
-          padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 4,
-          minHeight: 30, cursor: 'text',
-        }}
-        onClick={() => inputRef.current?.focus()}
-      >
-        {values.map((v, i) => (
-          <span
-            key={i}
+    <div
+      style={{
+        display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+        padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 4,
+        minHeight: 30, cursor: 'text',
+      }}
+      onClick={() => inputRef.current?.focus()}
+    >
+      {values.map((v, i) => (
+        <span
+          key={i}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 3,
+            padding: '1px 6px', borderRadius: 3, fontSize: 11,
+            background: 'var(--accent)22', color: 'var(--accent)',
+            border: '1px solid var(--accent)44',
+          }}
+        >
+          {v}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); remove(i); }}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 3,
-              padding: '1px 6px', borderRadius: 3, fontSize: 11,
-              background: 'var(--accent)22', color: 'var(--accent)',
-              border: '1px solid var(--accent)44',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 0, color: 'inherit', fontSize: 10, lineHeight: 1, opacity: 0.7,
             }}
           >
-            {v}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); remove(i); }}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: 0, color: 'inherit', fontSize: 10, lineHeight: 1, opacity: 0.7,
-              }}
-            >
-              ✕
-            </button>
-          </span>
-        ))}
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={onKeyDown}
-          onBlur={() => { if (draft.trim()) commit(draft); }}
-          onPaste={onPaste}
-          placeholder={values.length === 0 ? placeholder : '+ add more'}
-          style={{
-            border: 'none', outline: 'none', background: 'transparent',
-            fontSize: 12, padding: '1px 2px', flex: 1, minWidth: 80,
-            color: 'var(--text)',
-          }}
-        />
-      </div>
+            ✕
+          </button>
+        </span>
+      ))}
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={onKeyDown}
+        onBlur={() => { if (draft.trim()) commit(draft); }}
+        onPaste={onPaste}
+        placeholder={values.length === 0 ? placeholder : '+ add more'}
+        style={{
+          border: 'none', outline: 'none', background: 'transparent',
+          fontSize: 12, padding: '1px 2px', flex: 1, minWidth: 80,
+          color: 'var(--text)',
+        }}
+      />
     </div>
   );
 }
 
-// ─── EmpTypeSelector ──────────────────────────────────────────────────────────
+// ─── FilterSection ────────────────────────────────────────────────────────────
 
-function EmpTypeSelector({
-  selected, onChange,
-}: {
-  selected: string[];
-  onChange: (v: string[]) => void;
-}) {
-  const toggle = (t: string) =>
-    onChange(selected.includes(t) ? selected.filter((x) => x !== t) : [...selected, t]);
-
+function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 3 }}>Employment Type</div>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {(['__all__', ...EMP_TYPES] as const).map((t) => {
-          const isAll = t === '__all__';
-          const active = isAll ? selected.length === 0 : selected.includes(t);
-          return (
-            <button
-              key={t}
-              onClick={() => isAll ? onChange([]) : toggle(t)}
-              style={{
-                fontSize: 11, padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
-                background: active ? 'var(--accent)22' : 'transparent',
-                border: active ? '1px solid var(--accent)55' : '1px solid var(--border)',
-                color: active ? 'var(--accent)' : 'var(--text-dim)',
-              }}
-            >
-              {isAll ? 'All' : EMP_TYPE_LABELS[t]}
-            </button>
-          );
-        })}
+      <div style={{
+        fontSize: 10, fontWeight: 600, color: 'var(--text-dim)',
+        textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4,
+      }}>
+        {label}
       </div>
+      {children}
+    </div>
+  );
+}
+
+// ─── ChipGroup ────────────────────────────────────────────────────────────────
+
+function ChipGroup({
+  options, selected, onChange, multiSelect = false,
+}: {
+  options: { value: string; label: string }[];
+  selected: string | string[];
+  onChange: (v: string | string[]) => void;
+  multiSelect?: boolean;
+}) {
+  const isActive = (val: string) =>
+    multiSelect
+      ? (selected as string[]).includes(val)
+      : selected === val;
+
+  const handleClick = (val: string) => {
+    if (!multiSelect) {
+      onChange(val);
+      return;
+    }
+    const arr = selected as string[];
+    if (val === '') { onChange([]); return; }
+    onChange(arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val]);
+  };
+
+  const noneActive = multiSelect
+    ? (selected as string[]).length === 0
+    : selected === '';
+
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {options.map(({ value, label }) => {
+        const active = value === '' || value === '__all__'
+          ? noneActive
+          : isActive(value);
+        return (
+          <button
+            key={value}
+            onClick={() => handleClick(value)}
+            style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
+              background: active ? 'var(--accent)22' : 'transparent',
+              border: active ? '1px solid var(--accent)55' : '1px solid var(--border)',
+              color: active ? 'var(--accent)' : 'var(--text-dim)',
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -539,9 +640,25 @@ function EmpTypeSelector({
 
 function FilterSummaryBar({ filters }: { filters: FilterState }) {
   const chips: { label: string; color: string }[] = [
-    ...filters.keywords.map((k) => ({ label: k, color: '#6ea8ff' })),
-    ...filters.locations.map((l) => ({ label: `📍 ${l}`, color: '#f59e0b' })),
-    ...filters.empTypes.map((t) => ({ label: EMP_TYPE_LABELS[t as EmpType] ?? t, color: '#a78bfa' })),
+    ...filters.jobTitles.map((j) => ({ label: j,       color: '#6ea8ff' })),
+    ...filters.keywords.map((k)   => ({ label: k,       color: '#67e8f9' })),
+    ...filters.locations.map((l)  => ({ label: `📍 ${l}`, color: '#f59e0b' })),
+    ...filters.companySizes.map((s) => ({
+      label: COMPANY_SIZE_OPTIONS.find((o) => o.value === s)?.label ?? s,
+      color: '#fb923c',
+    })),
+    ...filters.empTypes.map((t) => ({
+      label: EMP_TYPE_LABELS[t as EmpType] ?? t,
+      color: '#a78bfa',
+    })),
+    ...(filters.experienceLevel ? [{
+      label: EXP_LEVEL_OPTIONS.find((o) => o.value === filters.experienceLevel)?.label ?? filters.experienceLevel,
+      color: '#4ade80',
+    }] : []),
+    ...(filters.datePosted ? [{
+      label: DATE_POSTED_OPTIONS.find((o) => o.value === filters.datePosted)?.label ?? filters.datePosted,
+      color: '#f472b6',
+    }] : []),
     ...(filters.remoteOnly ? [{ label: 'Remote only', color: '#34d399' }] : []),
   ];
 
@@ -575,12 +692,17 @@ function FilterSummaryBar({ filters }: { filters: FilterState }) {
 
 function profileTooltip(p: FilterProfile): string {
   const parts: string[] = [];
-  if (p.filters.keywords.length) parts.push(`Keywords: ${p.filters.keywords.join(', ')}`);
-  if (p.filters.locations.length) parts.push(`Locations: ${p.filters.locations.join(', ')}`);
+  if (p.filters.jobTitles.length)   parts.push(`Titles: ${p.filters.jobTitles.join(', ')}`);
+  if (p.filters.keywords.length)    parts.push(`Keywords: ${p.filters.keywords.join(', ')}`);
+  if (p.filters.locations.length)   parts.push(`Locations: ${p.filters.locations.join(', ')}`);
+  if (p.filters.companySizes.length)
+    parts.push(`Company: ${p.filters.companySizes.map((s) => COMPANY_SIZE_OPTIONS.find((o) => o.value === s)?.label ?? s).join(', ')}`);
   if (p.filters.empTypes.length)
     parts.push(`Types: ${p.filters.empTypes.map((t) => EMP_TYPE_LABELS[t as EmpType] ?? t).join(', ')}`);
+  if (p.filters.experienceLevel)
+    parts.push(EXP_LEVEL_OPTIONS.find((o) => o.value === p.filters.experienceLevel)?.label ?? '');
   if (p.filters.remoteOnly) parts.push('Remote only');
-  return parts.join(' | ') || 'Empty profile';
+  return parts.join(' · ') || 'Empty profile';
 }
 
 function FilterProfilesPanel({
@@ -662,11 +784,7 @@ function FilterProfilesPanel({
               if (e.key === 'Escape') { setShowSave(false); setNameError(''); setNewName(''); }
             }}
           />
-          <button
-            className="primary"
-            style={{ fontSize: 11, padding: '2px 8px' }}
-            onClick={handleSave}
-          >
+          <button className="primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={handleSave}>
             Save
           </button>
           <button
@@ -691,7 +809,7 @@ function FilterProfilesPanel({
   );
 }
 
-// ─── SourceBadge / StatusBadge / JobCard ──────────────────────────────────────
+// ─── SourceBadge / JobCard ────────────────────────────────────────────────────
 
 function SourceBadge({ source }: { source: string }) {
   const color = SOURCE_COLORS[source] ?? '#888';
@@ -798,12 +916,17 @@ const thStyle: React.CSSProperties = {
 };
 const tdStyle: React.CSSProperties = { padding: '5px 6px', verticalAlign: 'middle' };
 
+const EMPTY_FILTERS: FilterState = {
+  jobTitles: [], keywords: [], locations: [], companySizes: [],
+  empTypes: [], experienceLevel: '', datePosted: '', remoteOnly: false,
+};
+
 function JobAggregator({ api, settings }: WidgetProps) {
   const [tab, setTab] = useState<'search' | 'saved'>('search');
   const [filters, setFilters] = useState<FilterState>(() => ({
-    keywords: settings.defaultKeywords ? [(settings.defaultKeywords as string).trim()] : [],
-    locations: settings.defaultLocation ? [(settings.defaultLocation as string).trim()] : [],
-    empTypes: [],
+    ...EMPTY_FILTERS,
+    jobTitles:  settings.defaultKeywords ? [(settings.defaultKeywords as string).trim()] : [],
+    locations:  settings.defaultLocation ? [(settings.defaultLocation as string).trim()] : [],
     remoteOnly: Boolean(settings.remoteOnly),
   }));
   const [profiles, setProfiles] = useState<FilterProfile[]>([]);
@@ -832,12 +955,18 @@ function JobAggregator({ api, settings }: WidgetProps) {
     setProfiles(next);
   }, [api]);
 
+  const patchFilters = (patch: Partial<FilterState>) => {
+    setFilters((f) => ({ ...f, ...patch }));
+    setValidationErrors([]);
+  };
+
   useEffect(() => {
     api.sql.exec(INIT_SQL).then(() => { loadSaved(); setReady(true); });
     (async () => {
-      const saved = await api.kv.get<FilterProfile[]>(PROFILES_KV_KEY);
-      if (Array.isArray(saved)) {
-        setProfiles(saved);
+      const raw = await api.kv.get<unknown>(PROFILES_KV_KEY);
+      const normalized = normalizeLoadedProfiles(raw);
+      if (normalized.length > 0) {
+        setProfiles(normalized);
       } else {
         const seeded = await api.kv.get<boolean>(PROFILES_SEEDED_KEY);
         if (!seeded) {
@@ -871,26 +1000,21 @@ function JobAggregator({ api, settings }: WidgetProps) {
   };
 
   const handleSaveProfile = async (name: string) => {
-    const profile: FilterProfile = {
+    await persistProfiles([...profiles, {
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       name,
-      filters: { ...filters, keywords: [...filters.keywords], locations: [...filters.locations], empTypes: [...filters.empTypes] },
       createdAt: Date.now(),
-    };
-    await persistProfiles([...profiles, profile]);
-  };
-
-  const handleDeleteProfile = async (id: string) => {
-    await persistProfiles(profiles.filter((p) => p.id !== id));
+      filters: JSON.parse(JSON.stringify(filters)) as FilterState,
+    }]);
   };
 
   const handleApplyProfile = (p: FilterProfile) => {
-    setFilters({ ...p.filters, keywords: [...p.filters.keywords], locations: [...p.filters.locations], empTypes: [...p.filters.empTypes] });
+    setFilters(JSON.parse(JSON.stringify(p.filters)) as FilterState);
     setActiveProfile(p);
     setValidationErrors([]);
   };
 
-  const handleSave = async (job: JobListing) => {
+  const handleSaveJob = async (job: JobListing) => {
     await api.sql.run(
       `INSERT OR IGNORE INTO saved_jobs
         (job_id,title,company,location,is_remote,employment_type,
@@ -957,7 +1081,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
       {/* ── Search tab ── */}
       {tab === 'search' && (
         <>
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {!apiKey && (
               <div style={{
                 fontSize: 11, padding: '5px 8px', borderRadius: 4,
@@ -972,32 +1096,79 @@ function JobAggregator({ api, settings }: WidgetProps) {
               profiles={profiles}
               onApply={handleApplyProfile}
               onSave={handleSaveProfile}
-              onDelete={handleDeleteProfile}
+              onDelete={(id) => void persistProfiles(profiles.filter((p) => p.id !== id))}
             />
 
-            <TagInput
-              label="Keywords"
-              values={filters.keywords}
-              onChange={(keywords) => { setFilters((f) => ({ ...f, keywords })); setValidationErrors([]); }}
-              placeholder="e.g. Software Engineer  (Enter or , to add)"
-            />
+            {/* Job Title + Location */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <FilterSection label="Job Title">
+                <TagInput
+                  values={filters.jobTitles}
+                  onChange={(jobTitles) => patchFilters({ jobTitles })}
+                  placeholder="e.g. Software Engineer"
+                />
+              </FilterSection>
 
-            {apiKey && (
+              <FilterSection label="Location">
+                <TagInput
+                  values={filters.locations}
+                  onChange={(locations) => patchFilters({ locations })}
+                  placeholder={apiKey ? 'e.g. New York, Dallas' : 'N/A without API key'}
+                />
+              </FilterSection>
+            </div>
+
+            {/* Keywords */}
+            <FilterSection label="Keywords">
               <TagInput
-                label="Locations"
-                values={filters.locations}
-                onChange={(locations) => { setFilters((f) => ({ ...f, locations })); setValidationErrors([]); }}
-                placeholder="e.g. New York  (Enter or , to add multiple)"
+                values={filters.keywords}
+                onChange={(keywords) => patchFilters({ keywords })}
+                placeholder="e.g. React, Python, TypeScript"
               />
-            )}
+            </FilterSection>
 
+            {/* API-key-gated filters */}
             {apiKey && (
-              <EmpTypeSelector
-                selected={filters.empTypes}
-                onChange={(empTypes) => setFilters((f) => ({ ...f, empTypes }))}
-              />
+              <>
+                <FilterSection label="Company Size">
+                  <ChipGroup
+                    options={[{ value: '', label: 'Any' }, ...COMPANY_SIZE_OPTIONS]}
+                    selected={filters.companySizes}
+                    onChange={(v) => patchFilters({ companySizes: v as string[] })}
+                    multiSelect
+                  />
+                </FilterSection>
+
+                <FilterSection label="Employment Type">
+                  <ChipGroup
+                    options={[{ value: '', label: 'All' }, ...EMP_TYPES.map((t) => ({ value: t, label: EMP_TYPE_LABELS[t] }))]}
+                    selected={filters.empTypes}
+                    onChange={(v) => patchFilters({ empTypes: v as string[] })}
+                    multiSelect
+                  />
+                </FilterSection>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <FilterSection label="Experience Level">
+                    <ChipGroup
+                      options={EXP_LEVEL_OPTIONS}
+                      selected={filters.experienceLevel}
+                      onChange={(v) => patchFilters({ experienceLevel: v as string })}
+                    />
+                  </FilterSection>
+
+                  <FilterSection label="Date Posted">
+                    <ChipGroup
+                      options={DATE_POSTED_OPTIONS}
+                      selected={filters.datePosted}
+                      onChange={(v) => patchFilters({ datePosted: v as string })}
+                    />
+                  </FilterSection>
+                </div>
+              </>
             )}
 
+            {/* Remote + Search */}
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <label style={{
                 fontSize: 12, display: 'flex', gap: 4,
@@ -1006,7 +1177,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
                 <input
                   type="checkbox"
                   checked={filters.remoteOnly}
-                  onChange={(e) => setFilters((f) => ({ ...f, remoteOnly: e.target.checked }))}
+                  onChange={(e) => patchFilters({ remoteOnly: e.target.checked })}
                 />
                 Remote only
               </label>
@@ -1049,9 +1220,9 @@ function JobAggregator({ api, settings }: WidgetProps) {
                 color: 'var(--text-dim)', fontSize: 13,
                 textAlign: 'center', padding: '32px 0',
               }}>
-                {filters.keywords.length > 0
-                  ? 'No results — try different keywords or remove filters.'
-                  : 'Enter keywords and press Search to find jobs.'}
+                {filters.jobTitles.length > 0 || filters.keywords.length > 0
+                  ? 'No results — try different filters.'
+                  : 'Enter a job title or keyword and press Search.'}
               </div>
             )}
             {scoredResults.map(({ job, score }) => (
@@ -1060,7 +1231,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
                 job={job}
                 matchScore={score >= 0 ? score : undefined}
                 isSaved={savedIds.has(job.id)}
-                onSave={() => void handleSave(job)}
+                onSave={() => void handleSaveJob(job)}
                 onApply={() => job.applyLink && void api.shell.openExternal(job.applyLink)}
               />
             ))}
@@ -1132,7 +1303,6 @@ function JobAggregator({ api, settings }: WidgetProps) {
                       <td style={tdStyle}>
                         <select
                           style={{
-                            ...thStyle,
                             background: 'transparent', border: 'none', cursor: 'pointer',
                             color: STATUS_COLORS[job.status], fontWeight: 600, fontSize: 11,
                             padding: 0,
@@ -1188,10 +1358,10 @@ const widget: Widget = {
     id: 'job-aggregator',
     name: 'Job Aggregator',
     description: 'Search LinkedIn, Indeed, ZipRecruiter, Glassdoor, and more. Save and track interesting listings.',
-    version: '0.2.0',
+    version: '0.3.0',
     icon: '🔍',
-    defaultSize: { w: 8, h: 10 },
-    minSize:     { w: 5, h: 7 },
+    defaultSize: { w: 8, h: 12 },
+    minSize:     { w: 5, h: 8 },
     permissions: { sqlite: true },
     settings: [
       {
@@ -1203,7 +1373,7 @@ const widget: Widget = {
       {
         kind: 'string',
         key: 'defaultKeywords',
-        label: 'Default search keywords',
+        label: 'Default job title',
         placeholder: 'e.g. Software Engineer',
       },
       {
