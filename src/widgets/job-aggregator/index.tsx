@@ -118,19 +118,75 @@ const EMP_TYPES = [
   { value: 'intern',     label: 'Internship' },
 ];
 
-// Pre-seeded company feeds:
-// - Lever/Greenhouse: direct public job feeds (no key needed)
-// - search: uses JSearch to aggregate from LinkedIn/Indeed/etc (requires API key)
+// Pre-seeded company feeds. Bump SEED_VERSION whenever new entries are added —
+// the idempotent seeder will insert only names that don't already exist.
+//
+// Feed types:
+//   lever       – public XML at api.lever.co/v0/postings/{handle}?mode=xml (no key)
+//   greenhouse  – public JSON at api.greenhouse.io/v1/boards/{token}/jobs   (no key)
+//   search      – JSearch keyword search (requires RapidAPI key in settings)
+//                 Used for large enterprises on Workday/Taleo/proprietary ATS
+//                 with no public feed endpoints.
+export const SEED_VERSION = 2;
+
 const DEFAULT_FEEDS: Array<{ name: string; url: string; feed_type: FeedType }> = [
-  { name: 'Netflix',            url: 'netflix',            feed_type: 'lever' },
-  { name: 'Shopify',            url: 'shopify',            feed_type: 'lever' },
-  { name: 'KPMG',               url: 'kpmg',               feed_type: 'lever' },
-  { name: 'Eventbrite',         url: 'eventbrite',         feed_type: 'lever' },
-  // Toyota/AA/BofA use Workday / proprietary ATS with no public feeds.
-  // These use JSearch to aggregate their postings from LinkedIn, Indeed, etc.
-  { name: 'Toyota',             url: 'Toyota Motor',       feed_type: 'search' },
-  { name: 'American Airlines',  url: 'American Airlines',  feed_type: 'search' },
-  { name: 'Bank of America',    url: 'Bank of America',    feed_type: 'search' },
+  // ── Tech / SaaS — Lever (verified handles) ────────────────────────────────
+  { name: 'Eventbrite',          url: 'eventbrite',          feed_type: 'lever' },
+  { name: 'KPMG',                url: 'kpmg',                feed_type: 'lever' },
+  { name: 'Netflix',             url: 'netflix',             feed_type: 'lever' },
+  { name: 'Palantir',            url: 'palantir',            feed_type: 'lever' },
+  { name: 'Shield AI',           url: 'shieldai',            feed_type: 'lever' },
+  { name: 'Shopify',             url: 'shopify',             feed_type: 'lever' },
+
+  // ── Texas Tech — Lever (verified) ─────────────────────────────────────────
+  { name: 'HighLevel (Dallas)',   url: 'gohighlevel',         feed_type: 'lever' },
+
+  // ── Gaming — Greenhouse (verified tokens) ─────────────────────────────────
+  { name: '2K Games',             url: '2k',                             feed_type: 'greenhouse' },
+  { name: 'Bungie',               url: 'bungie',                         feed_type: 'greenhouse' },
+  { name: 'Digital Extremes',     url: 'digitalextremes',                feed_type: 'greenhouse' },
+  { name: 'Epic Games',           url: 'epicgames',                      feed_type: 'greenhouse' },
+  { name: 'Insomniac Games',      url: 'insomniac',                      feed_type: 'greenhouse' },
+  { name: 'Naughty Dog',          url: 'naughtydog',                     feed_type: 'greenhouse' },
+  { name: 'PlayStation / Sony IE', url: 'sonyinteractiveentertainmentglobal', feed_type: 'greenhouse' },
+  { name: 'Riot Games',           url: 'riotgames',                      feed_type: 'greenhouse' },
+  { name: 'Rockstar Games',       url: 'rockstargames',                  feed_type: 'greenhouse' },
+  { name: 'Take-Two Interactive', url: 'taketwo',                        feed_type: 'greenhouse' },
+
+  // ── Tech — Greenhouse (verified tokens) ───────────────────────────────────
+  { name: 'Anthropic',            url: 'anthropic',           feed_type: 'greenhouse' },
+  { name: 'GitLab',               url: 'gitlab',              feed_type: 'greenhouse' },
+  { name: 'Reddit',               url: 'reddit',              feed_type: 'greenhouse' },
+
+  // ── Texas Fortune 500 — JSearch (Workday / proprietary ATS) ───────────────
+  { name: 'American Airlines',    url: 'American Airlines',              feed_type: 'search' },
+  { name: 'AT&T',                 url: 'AT&T software engineer jobs',    feed_type: 'search' },
+  { name: 'Bank of America',      url: 'Bank of America',                feed_type: 'search' },
+  { name: 'Dell Technologies',    url: 'Dell Technologies',              feed_type: 'search' },
+  { name: 'ExxonMobil',           url: 'ExxonMobil Houston Texas',       feed_type: 'search' },
+  { name: 'Southwest Airlines',   url: 'Southwest Airlines Dallas',      feed_type: 'search' },
+  { name: 'Texas Instruments',    url: 'Texas Instruments Dallas',       feed_type: 'search' },
+  { name: 'Toyota',               url: 'Toyota Motor',                   feed_type: 'search' },
+  { name: 'USAA',                 url: 'USAA San Antonio Texas',         feed_type: 'search' },
+
+  // ── Defense / Aerospace Texas — JSearch ───────────────────────────────────
+  { name: 'Boeing',               url: 'Boeing engineer Texas',          feed_type: 'search' },
+  { name: 'L3Harris',             url: 'L3Harris engineer Texas',        feed_type: 'search' },
+  { name: 'Lockheed Martin',      url: 'Lockheed Martin Fort Worth Texas', feed_type: 'search' },
+  { name: 'Raytheon',             url: 'Raytheon Texas',                 feed_type: 'search' },
+
+  // ── Cybersecurity (Texas presence) — JSearch ──────────────────────────────
+  { name: 'CrowdStrike',          url: 'CrowdStrike Austin Texas',       feed_type: 'search' },
+  { name: 'Forcepoint',           url: 'Forcepoint Austin Texas',        feed_type: 'search' },
+  { name: 'Palo Alto Networks',   url: 'Palo Alto Networks cybersecurity', feed_type: 'search' },
+  { name: 'SentinelOne',          url: 'SentinelOne cybersecurity',      feed_type: 'search' },
+  { name: 'Trellix',              url: 'Trellix Plano Texas cybersecurity', feed_type: 'search' },
+
+  // ── Gaming Publishers — JSearch (own career portals) ──────────────────────
+  { name: 'Activision Blizzard',  url: 'Activision Blizzard',            feed_type: 'search' },
+  { name: 'Electronic Arts (EA)', url: 'Electronic Arts',                feed_type: 'search' },
+  { name: 'Gearbox Software',     url: 'Gearbox Software Frisco Texas',  feed_type: 'search' },
+  { name: 'Ubisoft',              url: 'Ubisoft',                        feed_type: 'search' },
 ];
 
 // ─── SQL ──────────────────────────────────────────────────────────────────────
@@ -689,29 +745,31 @@ function JobAggregator({ api, settings }: WidgetProps) {
   const loadFeeds = useCallback(async () => {
     const rows = await api.sql.all<CompanyFeed>('SELECT * FROM company_feeds ORDER BY name ASC');
     setFeeds(rows);
-    const jobs: Record<number, FeedJob[]> = {};
-    for (const feed of rows) {
-      jobs[feed.id] = await api.sql.all<FeedJob>(
-        'SELECT * FROM feed_jobs WHERE feed_id=? ORDER BY date_posted DESC, fetched_at DESC',
-        [feed.id],
-      );
-    }
-    setFeedJobs(jobs);
+    // Single query for all feed jobs, then group by feed_id in JS
+    const allJobs = await api.sql.all<FeedJob>(
+      'SELECT * FROM feed_jobs ORDER BY feed_id, date_posted DESC, fetched_at DESC',
+    );
+    const grouped: Record<number, FeedJob[]> = {};
+    for (const job of allJobs) (grouped[job.feed_id] ??= []).push(job);
+    setFeedJobs(grouped);
   }, [api]);
 
+  // Idempotent: inserts a default feed only if no feed with that name already exists.
+  // Run on every mount so new entries added in future code updates are picked up.
   const seedDefaultFeeds = useCallback(async () => {
     for (const f of DEFAULT_FEEDS) {
       await api.sql.run(
-        'INSERT INTO company_feeds (name, url, feed_type, enabled, added_at) VALUES (?,?,?,1,?)',
-        [f.name, f.url, f.feed_type, Date.now()],
+        `INSERT INTO company_feeds (name, url, feed_type, enabled, added_at)
+         SELECT ?, ?, ?, 1, ? WHERE NOT EXISTS
+           (SELECT 1 FROM company_feeds WHERE name = ?)`,
+        [f.name, f.url, f.feed_type, Date.now(), f.name],
       );
     }
   }, [api]);
 
   useEffect(() => {
     api.sql.exec(INIT_SQL).then(async () => {
-      const count = (await api.sql.get<{ c: number }>('SELECT COUNT(*) as c FROM company_feeds')) ?? { c: 0 };
-      if (count.c === 0) await seedDefaultFeeds();
+      await seedDefaultFeeds(); // idempotent — safe to run every mount
       await Promise.all([loadSaved(), loadFeeds()]);
       setReady(true);
     });
@@ -1049,8 +1107,8 @@ const widget: Widget = {
   manifest: {
     id: 'job-aggregator',
     name: 'Job Aggregator',
-    description: 'Search LinkedIn, Indeed, ZipRecruiter, and more. Monitor company boards (Lever, Greenhouse, RSS). Save and track listings.',
-    version: '0.2.0',
+    description: 'Search LinkedIn, Indeed, ZipRecruiter, and more. Monitor 40+ company boards (Lever, Greenhouse, RSS, JSearch). Save and track listings.',
+    version: '0.3.0',
     icon: '🔍',
     defaultSize: { w: 8, h: 10 },
     minSize:     { w: 5, h: 7 },
