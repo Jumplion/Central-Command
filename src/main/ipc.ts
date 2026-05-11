@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import { ipcMain, shell, dialog, net } from 'electron';
 import { IPC } from '@shared/ipc';
 import type { AppState, DialogOpenPathOptions, NetFetchInit } from '@shared/types';
@@ -44,8 +45,15 @@ export function registerIpc(storage: Storage): void {
     return storage.sqlite.exec(widgetId, sql);
   });
 
+  const isWsl = !!(process.env['WSL_DISTRO_NAME'] ?? process.env['WSL_INTEROP']);
+
   ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, (_e, url: unknown) => {
     if (!isString(url) || !/^(https?|mailto):/.test(url)) throw new Error('openExternal: url must be http(s) or mailto');
+    if (isWsl) {
+      return new Promise<void>((resolve) => {
+        spawn('cmd.exe', ['/c', 'start', '', url], { stdio: 'ignore' }).on('close', () => resolve());
+      });
+    }
     return shell.openExternal(url);
   });
 
