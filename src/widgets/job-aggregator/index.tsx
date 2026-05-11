@@ -824,12 +824,13 @@ function SourceBadge({ source }: { source: string }) {
 }
 
 function JobCard({
-  job, isSaved, onSave, onApply, matchScore,
+  job, isSaved, onSave, onApply, onIgnore, matchScore,
 }: {
   job: JobListing;
   isSaved: boolean;
   onSave: () => void;
   onApply: () => void;
+  onIgnore: () => void;
   matchScore?: number;
 }) {
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryPeriod);
@@ -902,6 +903,14 @@ function JobCard({
           >
             {isSaved ? 'Saved ✓' : 'Save'}
           </button>
+          <button
+            className="ghost"
+            style={{ fontSize: 11, padding: '2px 8px', color: 'var(--text-dim)', opacity: 0.6 }}
+            onClick={onIgnore}
+            title="Hide this job and never show it again"
+          >
+            Ignore
+          </button>
         </div>
       </div>
     </div>
@@ -939,6 +948,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
   const [activeFilters, setActiveFilters] = useState<FilterState | null>(null);
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [savedFilter, setSavedFilter] = useState<SavedStatus | 'All'>('All');
   const [ready, setReady] = useState(false);
 
@@ -961,7 +971,12 @@ function JobAggregator({ api, settings }: WidgetProps) {
   };
 
   useEffect(() => {
-    api.sql.exec(INIT_SQL).then(() => { loadSaved(); setReady(true); });
+    api.sql.exec(INIT_SQL).then(async () => {
+      await loadSaved();
+      const raw = await api.kv.get<string[]>('dismissedJobIds');
+      if (Array.isArray(raw)) setDismissedIds(new Set(raw));
+      setReady(true);
+    });
     (async () => {
       const raw = await api.kv.get<unknown>(PROFILES_KV_KEY);
       const normalized = normalizeLoadedProfiles(raw);
@@ -1031,8 +1046,53 @@ function JobAggregator({ api, settings }: WidgetProps) {
     await loadSaved();
   };
 
+  const handleIgnoreJob = async (jobId: string) => {
+    const nextDismissed = [...dismissedIds, jobId];
+    await api.kv.set('dismissedJobIds', nextDismissed);
+    setDismissedIds(new Set(nextDismissed));
+  };
+
+  const TRACKER_WIDGET_ID = 'job-tracker';
+  const TRACKER_INIT_SQL = `
+    CREATE TABLE IF NOT EXISTS applications (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      company      TEXT    NOT NULL,
+      role         TEXT    NOT NULL,
+      status       TEXT    NOT NULL DEFAULT 'Applied',
+      applied_at   TEXT    NOT NULL,
+      source       TEXT    NOT NULL DEFAULT '',
+      link         TEXT    NOT NULL DEFAULT '',
+      notes        TEXT    NOT NULL DEFAULT '',
+      last_updated INTEGER NOT NULL
+    );
+  `;
+
   const handleStatusChange = async (id: number, status: SavedStatus) => {
-    await api.sql.run('UPDATE saved_jobs SET status=? WHERE id=?', [status, id]);
+    if (status === 'Interested') {
+      await api.sql.run('UPDATE saved_jobs SET status=? WHERE id=?', [status, id]);
+      await loadSaved();
+      return;
+    }
+
+    const job = savedJobs.find((j) => j.id === id);
+    if (!job) return;
+
+    // Ensure tracker table exists, then insert
+    await window.cc.sql.exec(TRACKER_WIDGET_ID, TRACKER_INIT_SQL);
+    await window.cc.sql.run(
+      TRACKER_WIDGET_ID,
+      'INSERT OR IGNORE INTO applications (company,role,status,applied_at,source,link,notes,last_updated) VALUES (?,?,?,?,?,?,?,?)',
+      [job.company, job.title, status, new Date().toISOString().slice(0, 10), job.source, job.apply_link, job.notes, Date.now()]
+    );
+
+    // Remove from aggregator saved list
+    await api.sql.run('DELETE FROM saved_jobs WHERE id=?', [id]);
+
+    // Blacklist from future searches
+    const nextDismissed = [...dismissedIds, job.job_id];
+    await api.kv.set('dismissedJobIds', nextDismissed);
+    setDismissedIds(new Set(nextDismissed));
+
     await loadSaved();
   };
 
@@ -1042,12 +1102,13 @@ function JobAggregator({ api, settings }: WidgetProps) {
   };
 
   const scoredResults = useMemo(() => {
+    const visible = results.filter((j) => !dismissedIds.has(j.id));
     const keywords = resultsProfile?.resumeKeywords;
-    if (!keywords?.length) return results.map((j) => ({ job: j, score: -1 }));
-    return [...results]
+    if (!keywords?.length) return visible.map((j) => ({ job: j, score: -1 }));
+    return [...visible]
       .map((j) => ({ job: j, score: scoreJob(j, keywords) }))
       .sort((a, b) => b.score - a.score);
-  }, [results, resultsProfile]);
+  }, [results, resultsProfile, dismissedIds]);
 
   const filteredSaved = savedFilter === 'All'
     ? savedJobs
@@ -1233,6 +1294,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
                 isSaved={savedIds.has(job.id)}
                 onSave={() => void handleSaveJob(job)}
                 onApply={() => job.applyLink && void api.shell.openExternal(job.applyLink)}
+                onIgnore={() => void handleIgnoreJob(job.id)}
               />
             ))}
           </div>
