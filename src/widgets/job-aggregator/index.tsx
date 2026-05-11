@@ -412,12 +412,14 @@ function scoreJob(job: JobListing, keywords: ResumeKeyword[]): number {
 async function searchJSearch(
   fetch: NetFetcher,
   key: string,
-  filters: FilterState
+  filters: FilterState,
+  limit: number
 ): Promise<JobListing[]> {
   const query = buildJSearchQuery(filters);
   if (!query.trim()) throw new Error('Search query is empty.');
 
-  const p = new URLSearchParams({ query, num_pages: '1', page: '1' });
+  const numPages = String(Math.max(1, Math.ceil(limit / 10)));
+  const p = new URLSearchParams({ query, num_pages: numPages, page: '1' });
   if (filters.remoteOnly) p.set('remote_jobs_only', 'true');
   if (filters.empTypes.length) p.set('employment_types', filters.empTypes.map((t) => t.toUpperCase()).join(','));
   if (filters.experienceLevel) p.set('job_requirements', filters.experienceLevel);
@@ -434,7 +436,7 @@ async function searchJSearch(
   }
 
   const data = JSON.parse(resp.body) as { data?: Record<string, unknown>[] };
-  return (data.data ?? []).map((j): JobListing => ({
+  return (data.data ?? []).slice(0, limit).map((j): JobListing => ({
     id:             String(j.job_id ?? Math.random()),
     title:          String(j.job_title ?? ''),
     company:        String(j.employer_name ?? ''),
@@ -454,7 +456,8 @@ async function searchJSearch(
 
 async function searchArbeitnow(
   fetch: NetFetcher,
-  filters: FilterState
+  filters: FilterState,
+  limit: number
 ): Promise<JobListing[]> {
   const p = new URLSearchParams({ search: [...filters.jobTitles, ...filters.keywords].join(' ') });
   if (filters.remoteOnly) p.set('remote', 'true');
@@ -463,7 +466,7 @@ async function searchArbeitnow(
   if (!resp.ok) throw new Error(`Arbeitnow error ${resp.status}`);
 
   const data = JSON.parse(resp.body) as { data?: Record<string, unknown>[] };
-  return (data.data ?? []).slice(0, 25).map((j): JobListing => ({
+  return (data.data ?? []).slice(0, limit).map((j): JobListing => ({
     id:             `arbeitnow-${j.slug ?? Math.random()}`,
     title:          String(j.title ?? ''),
     company:        String(j.company_name ?? ''),
@@ -950,6 +953,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [savedFilter, setSavedFilter] = useState<SavedStatus | 'All'>('All');
+  const [resultLimit, setResultLimit] = useState(10);
   const [ready, setReady] = useState(false);
 
   const apiKey = (settings.rapidApiKey as string) || '';
@@ -1004,8 +1008,8 @@ function JobAggregator({ api, settings }: WidgetProps) {
     setActiveFilters({ ...filters });
     try {
       const jobs = apiKey
-        ? await searchJSearch(api.net.fetch, apiKey, filters)
-        : await searchArbeitnow(api.net.fetch, filters);
+        ? await searchJSearch(api.net.fetch, apiKey, filters, resultLimit)
+        : await searchArbeitnow(api.net.fetch, filters, resultLimit);
       setResults(jobs);
     } catch (e) {
       setSearchError(e instanceof Error ? e.message : 'Search failed');
@@ -1229,8 +1233,8 @@ function JobAggregator({ api, settings }: WidgetProps) {
               </>
             )}
 
-            {/* Remote + Search */}
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {/* Remote + Result limit + Search */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <label style={{
                 fontSize: 12, display: 'flex', gap: 4,
                 alignItems: 'center', color: 'var(--text-dim)', cursor: 'pointer',
@@ -1242,9 +1246,28 @@ function JobAggregator({ api, settings }: WidgetProps) {
                 />
                 Remote only
               </label>
+
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginLeft: 8 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>Show</span>
+                {[10, 20, 30, 50].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setResultLimit(n)}
+                    style={{
+                      fontSize: 11, padding: '2px 6px', borderRadius: 4, cursor: 'pointer',
+                      background: resultLimit === n ? 'var(--accent)22' : 'transparent',
+                      border: resultLimit === n ? '1px solid var(--accent)55' : '1px solid var(--border)',
+                      color: resultLimit === n ? 'var(--accent)' : 'var(--text-dim)',
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+
               {results.length > 0 && (
-                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                  {results.length} result{results.length !== 1 ? 's' : ''}
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 4 }}>
+                  {scoredResults.length} result{scoredResults.length !== 1 ? 's' : ''}
                   {resultsProfile?.resumeKeywords?.length ? ' · ranked by match' : ''}
                 </span>
               )}
