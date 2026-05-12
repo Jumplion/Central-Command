@@ -11,6 +11,15 @@ const OAUTH_CREDS_KEY = 'google_oauth_creds';
 const OAUTH_TOKEN_KEY = 'google_oauth_token';
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface StoredCreds {
   clientId: string;
   clientSecret: string;
@@ -196,7 +205,7 @@ export class OAuthManager {
 
         const html = code
           ? '<html><body style="font-family:sans-serif;padding:40px"><h2>✓ Authorization successful</h2><p>You may close this tab and return to Central Command.</p></body></html>'
-          : `<html><body style="font-family:sans-serif;padding:40px"><h2>✗ Authorization failed</h2><p>${error ?? 'Unknown error'}. You may close this tab.</p></body></html>`;
+          : `<html><body style="font-family:sans-serif;padding:40px"><h2>✗ Authorization failed</h2><p>${escapeHtml(error ?? 'Unknown error')}. You may close this tab.</p></body></html>`;
 
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(html);

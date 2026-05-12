@@ -293,7 +293,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
           {connecting ? 'Waiting for browser…' : 'Connect with Google'}
         </button>
         {error && (
-          <p style={{ fontSize: 11, color: '#ff6e6e', textAlign: 'center', margin: 0 }}>
+          <p style={{ fontSize: 11, color: 'var(--danger)', textAlign: 'center', margin: 0 }}>
             {error}
           </p>
         )}
@@ -334,7 +334,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
       </div>
 
       {error && (
-        <div style={{ fontSize: 11, color: '#ff6e6e', flexShrink: 0 }}>{error}</div>
+        <div style={{ fontSize: 11, color: 'var(--danger)', flexShrink: 0 }}>{error}</div>
       )}
 
       <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
