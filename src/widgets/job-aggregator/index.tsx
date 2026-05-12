@@ -59,10 +59,6 @@ function JobAggregator({ api, settings }: WidgetProps) {
 
   useEffect(() => {
     api.sql.exec(INIT_SQL).then(async () => {
-      // Migration: add company_type column for existing installs (safe to ignore if already present)
-      try {
-        await api.sql.run("ALTER TABLE company_feeds ADD COLUMN company_type TEXT NOT NULL DEFAULT 'other'");
-      } catch { /* column already exists */ }
       await seedDefaultFeeds();
       await Promise.all([loadSaved(), loadFeeds()]);
       setReady(true);
