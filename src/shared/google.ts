@@ -23,7 +23,7 @@ export const GOOGLE_SERVICES = {
   notes: {
     id: 'notes',
     name: 'Google Notes',
-    description: 'Notes via the Google Keep API.',
+    description: 'Notes via Google Keep-compatible APIs when Google account access allows it.',
     apiBaseUrl: 'https://keep.googleapis.com/v1/',
     defaultScopes: ['https://www.googleapis.com/auth/keep.readonly'],
   },

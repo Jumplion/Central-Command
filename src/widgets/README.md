@@ -174,8 +174,9 @@ as base64 — avoid storing sensitive data on shared/headless machines.
 
 `api.google` provides a PKCE + loopback-redirect OAuth 2.0 helper for Google
 services. Built-in service presets are available for Gmail, Google Calendar,
-Google Drive, and Google Notes (Google Keep). Credentials and tokens are stored
-securely in the widget's `secrets` vault and auto-refresh expired access tokens.
+Google Drive, and Google Notes (Google Keep, where the Keep API/scopes are
+available for the signed-in account). Credentials and tokens are stored securely
+in the widget's `secrets` vault and auto-refresh expired access tokens.
 
 Declare `permissions: { google: true }` in your manifest.
 

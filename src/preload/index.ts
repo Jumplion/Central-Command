@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipc';
 import type { AppState, CCApi, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
 import { GOOGLE_SERVICES } from '../shared/google';
+import type { GoogleServiceId } from '../shared/google';
 
 const api: CCApi = {
   state: {
@@ -49,11 +50,11 @@ const api: CCApi = {
     services: GOOGLE_SERVICES,
     connect: (widgetId: string, options: GoogleConnectOptions): Promise<void> =>
       ipcRenderer.invoke(IPC.GOOGLE_CONNECT, widgetId, options),
-    getToken: (widgetId: string, service?) =>
+    getToken: (widgetId: string, service?: GoogleServiceId) =>
       ipcRenderer.invoke(IPC.GOOGLE_GET_TOKEN, widgetId, service),
-    disconnect: (widgetId: string, service?) =>
+    disconnect: (widgetId: string, service?: GoogleServiceId) =>
       ipcRenderer.invoke(IPC.GOOGLE_DISCONNECT, widgetId, service),
-    isConnected: (widgetId: string, service?) =>
+    isConnected: (widgetId: string, service?: GoogleServiceId) =>
       ipcRenderer.invoke(IPC.GOOGLE_IS_CONNECTED, widgetId, service)
   }
 };
