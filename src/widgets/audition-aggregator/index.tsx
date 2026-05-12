@@ -58,9 +58,58 @@ const INIT_SQL = `
     notes               TEXT    NOT NULL DEFAULT '',
     last_updated        INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS site_checks (
+    site_id      TEXT    PRIMARY KEY,
+    last_checked INTEGER NOT NULL
+  );
 `;
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+// ─── Casting sites ─────────────────────────────────────────────────────────
+
+interface CastingSite {
+  id: string;
+  name: string;
+  url: string;
+}
+
+const CASTING_SITES: CastingSite[] = [
+  { id: 'actors-access',    name: 'Actors Access',    url: 'https://actorsaccess.com/' },
+  { id: 'backstage',        name: 'Backstage',        url: 'https://www.backstage.com/casting/' },
+  { id: 'casting-networks', name: 'Casting Networks', url: 'https://www.castingnetworks.com/' },
+  { id: 'casting-frontier', name: 'Casting Frontier', url: 'https://castingfrontier.com/' },
+  { id: 'project-casting',  name: 'Project Casting',  url: 'https://www.projectcasting.com/' },
+  { id: 'nycastings',       name: 'NYCastings',       url: 'https://www.nycastings.com/casting-calls/' },
+  { id: 'playbill',         name: 'Playbill Jobs',    url: 'https://playbill.com/jobs' },
+  { id: 'voice123',         name: 'Voice123',         url: 'https://voice123.com/' },
+  { id: 'voices',           name: 'Voices.com',       url: 'https://www.voices.com/' },
+];
+
+// Format ms-since-checked as a compact relative string.
+function formatAgo(ts: number | undefined): string {
+  if (!ts) return 'never';
+  const delta = Date.now() - ts;
+  const min = Math.floor(delta / 60_000);
+  if (min < 1) return 'now';
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}d`;
+  const mo = Math.floor(day / 30);
+  return `${mo}mo`;
+}
+
+// Color tier by recency.
+function recencyColor(ts: number | undefined): string {
+  if (!ts) return 'var(--text-dim)';
+  const hr = (Date.now() - ts) / 3_600_000;
+  if (hr < 24) return '#34d399';        // green: checked today
+  if (hr < 24 * 4) return 'var(--text)'; // neutral: 1-3 days
+  if (hr < 24 * 7) return '#f59e0b';    // amber: 4-6 days
+  return '#ff6e6e';                      // red: 7+ days
+}
 
 // ─── CSV helpers ───────────────────────────────────────────────────────────
 
@@ -114,6 +163,46 @@ function Chip({ active, color, onClick, children }: {
     >
       {children}
     </button>
+  );
+}
+
+function SiteRow({
+  checks, onVisit,
+}: {
+  checks: Record<string, number>;
+  onVisit: (site: CastingSite) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
+      {CASTING_SITES.map((site) => {
+        const ts = checks[site.id];
+        const color = recencyColor(ts);
+        return (
+          <button
+            key={site.id}
+            onClick={() => onVisit(site)}
+            title={ts
+              ? `Last checked ${new Date(ts).toLocaleString()}`
+              : 'Not yet checked — click to open and mark checked'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: 11,
+              padding: '3px 8px',
+              background: 'var(--panel-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 4,
+              cursor: 'pointer',
+              color: 'var(--text)',
+            }}
+          >
+            <span>{site.name}</span>
+            <span style={{ color, fontWeight: 600, fontSize: 10 }}>{formatAgo(ts)}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -395,6 +484,7 @@ function DeadlineCell({ date }: { date: string }) {
 
 function AuditionAggregator({ api }: WidgetProps) {
   const [auds, setAuds] = useState<Audition[]>([]);
+  const [siteChecks, setSiteChecks] = useState<Record<string, number>>({});
   const [statusFilter, setStatusFilter] = useState<Status | 'All'>('All');
   const [typeFilter, setTypeFilter] = useState<ProjectType | 'All'>('All');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -411,12 +501,30 @@ function AuditionAggregator({ api }: WidgetProps) {
     setAuds(rows);
   }, [api]);
 
+  const loadSiteChecks = useCallback(async () => {
+    const rows = await api.sql.all<{ site_id: string; last_checked: number }>(
+      'SELECT site_id, last_checked FROM site_checks'
+    );
+    setSiteChecks(Object.fromEntries(rows.map((r) => [r.site_id, r.last_checked])));
+  }, [api]);
+
   useEffect(() => {
-    api.sql.exec(INIT_SQL).then(() => {
-      load();
+    api.sql.exec(INIT_SQL).then(async () => {
+      await Promise.all([load(), loadSiteChecks()]);
       setReady(true);
     });
   }, []);
+
+  const handleVisitSite = useCallback(async (site: CastingSite) => {
+    const now = Date.now();
+    setSiteChecks((prev) => ({ ...prev, [site.id]: now }));
+    await api.shell.openExternal(site.url);
+    await api.sql.run(
+      `INSERT INTO site_checks (site_id, last_checked) VALUES (?, ?)
+       ON CONFLICT(site_id) DO UPDATE SET last_checked = excluded.last_checked`,
+      [site.id, now]
+    );
+  }, [api]);
 
   const statusCounts = STATUSES.reduce<Record<Status, number>>(
     (acc, s) => { acc[s] = auds.filter((a) => a.status === s).length; return acc; },
@@ -526,6 +634,7 @@ function AuditionAggregator({ api }: WidgetProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>
+      <SiteRow checks={siteChecks} onVisit={handleVisitSite} />
       <StatusBar counts={statusCounts} total={auds.length} filter={statusFilter} onFilter={setStatusFilter} />
       <TypeBar counts={typeCounts} filter={typeFilter} onFilter={setTypeFilter} />
 
