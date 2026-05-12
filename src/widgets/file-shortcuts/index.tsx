@@ -117,7 +117,7 @@ function FileShortcuts({ api }: WidgetProps) {
     setDragging(false);
     const files = Array.from(e.dataTransfer.files) as ElectronFile[];
     const added = files.filter((f) => f.path).map((f) => makeShortcut(f.path!, guessKind(f)));
-    if (added.length > 0) void persist([...shortcuts, ...added]);
+    if (added.length > 0) persist([...shortcuts, ...added]).catch(console.error);
   };
 
   const handleRemove = (id: string) => persist(shortcuts.filter((s) => s.id !== id));
@@ -135,10 +135,10 @@ function FileShortcuts({ api }: WidgetProps) {
       onDrop={handleDrop}
     >
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => void browse('file')}>
+        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => browse('file').catch(console.error)}>
           + File
         </button>
-        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => void browse('dir')}>
+        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => browse('dir').catch(console.error)}>
           + Folder
         </button>
       </div>
