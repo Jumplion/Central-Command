@@ -72,6 +72,16 @@ export function SavedTab({ api, savedJobs, onSavedChange }: Props) {
                     {relativeDate(new Date(job.saved_at).toISOString().slice(0, 10))}
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {job.status !== 'Applied' && (
+                      <button
+                        className="ghost"
+                        style={{ fontSize: 11, padding: '1px 6px', color: STATUS_COLORS['Applied'], borderColor: `${STATUS_COLORS['Applied']}55` }}
+                        title="Mark as Applied"
+                        onClick={() => void handleStatusChange(job.id, 'Applied')}
+                      >
+                        ✓ Applied
+                      </button>
+                    )}
                     {job.apply_link && (
                       <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={() => void api.shell.openExternal(job.apply_link)}>↗</button>
                     )}
