@@ -3,12 +3,12 @@ import { randomBytes, createHash } from 'node:crypto';
 import { shell } from 'electron';
 import type { SecretsStore } from './secrets';
 import type { GoogleConnectOptions } from '@shared/types';
+import { getGoogleCredsKey, getGoogleTokenKey, getGoogleConnectionId, resolveGoogleScopes } from '@shared/google';
+import type { GoogleServiceId } from '@shared/google';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
-const OAUTH_CREDS_KEY = 'google_oauth_creds';
-const OAUTH_TOKEN_KEY = 'google_oauth_token';
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const TOKEN_EXPIRY_BUFFER_SECONDS = 60;
 
@@ -42,11 +42,13 @@ export class OAuthManager {
   constructor(private secrets: SecretsStore) {}
 
   async connect(widgetId: string, options: GoogleConnectOptions): Promise<void> {
-    const { clientId, clientSecret, scopes } = options;
-    if (this.pending.has(widgetId)) {
+    const { clientId, clientSecret, service } = options;
+    const scopes = resolveGoogleScopes(options);
+    const connectionId = `${widgetId}:${getGoogleConnectionId(service)}`;
+    if (this.pending.has(connectionId)) {
       throw new Error('A Google OAuth flow is already in progress for this widget');
     }
-    this.pending.add(widgetId);
+    this.pending.add(connectionId);
     try {
       const codeVerifier = base64url(randomBytes(32));
       const codeChallenge = base64url(createHash('sha256').update(codeVerifier).digest());
@@ -100,22 +102,24 @@ export class OAuthManager {
         expiresAt: Date.now() + (data.expires_in - TOKEN_EXPIRY_BUFFER_SECONDS) * 1000,
       };
 
-      await this.secrets.set(widgetId, OAUTH_CREDS_KEY, JSON.stringify(creds));
-      await this.secrets.set(widgetId, OAUTH_TOKEN_KEY, JSON.stringify(tokens));
+      await this.secrets.set(widgetId, getGoogleCredsKey(service), JSON.stringify(creds));
+      await this.secrets.set(widgetId, getGoogleTokenKey(service), JSON.stringify(tokens));
     } finally {
-      this.pending.delete(widgetId);
+      this.pending.delete(connectionId);
     }
   }
 
-  async getToken(widgetId: string): Promise<string | null> {
-    const tokenRaw = await this.secrets.get(widgetId, OAUTH_TOKEN_KEY);
+  async getToken(widgetId: string, service?: GoogleServiceId): Promise<string | null> {
+    const tokenKey = getGoogleTokenKey(service);
+    const credsKey = getGoogleCredsKey(service);
+    const tokenRaw = await this.secrets.get(widgetId, tokenKey);
     if (!tokenRaw) return null;
 
     let tokens: StoredTokens;
     try {
       tokens = JSON.parse(tokenRaw) as StoredTokens;
     } catch {
-      await this.secrets.del(widgetId, OAUTH_TOKEN_KEY);
+      await this.secrets.del(widgetId, tokenKey);
       return null;
     }
 
@@ -124,13 +128,13 @@ export class OAuthManager {
     }
 
     if (!tokens.refreshToken) {
-      await this.secrets.del(widgetId, OAUTH_TOKEN_KEY);
+      await this.secrets.del(widgetId, tokenKey);
       return null;
     }
 
-    const credsRaw = await this.secrets.get(widgetId, OAUTH_CREDS_KEY);
+    const credsRaw = await this.secrets.get(widgetId, credsKey);
     if (!credsRaw) {
-      await this.secrets.del(widgetId, OAUTH_TOKEN_KEY);
+      await this.secrets.del(widgetId, tokenKey);
       return null;
     }
 
@@ -138,7 +142,7 @@ export class OAuthManager {
     try {
       creds = JSON.parse(credsRaw) as StoredCreds;
     } catch {
-      await this.secrets.del(widgetId, OAUTH_TOKEN_KEY);
+      await this.secrets.del(widgetId, tokenKey);
       return null;
     }
 
@@ -154,7 +158,7 @@ export class OAuthManager {
     });
 
     if (!res.ok) {
-      await this.secrets.del(widgetId, OAUTH_TOKEN_KEY);
+      await this.secrets.del(widgetId, tokenKey);
       return null;
     }
 
@@ -168,17 +172,17 @@ export class OAuthManager {
     tokens.expiresAt = Date.now() + (data.expires_in - TOKEN_EXPIRY_BUFFER_SECONDS) * 1000;
     if (data.refresh_token) tokens.refreshToken = data.refresh_token;
 
-    await this.secrets.set(widgetId, OAUTH_TOKEN_KEY, JSON.stringify(tokens));
+    await this.secrets.set(widgetId, tokenKey, JSON.stringify(tokens));
     return tokens.accessToken;
   }
 
-  async disconnect(widgetId: string): Promise<void> {
-    await this.secrets.del(widgetId, OAUTH_CREDS_KEY);
-    await this.secrets.del(widgetId, OAUTH_TOKEN_KEY);
+  async disconnect(widgetId: string, service?: GoogleServiceId): Promise<void> {
+    await this.secrets.del(widgetId, getGoogleCredsKey(service));
+    await this.secrets.del(widgetId, getGoogleTokenKey(service));
   }
 
-  async isConnected(widgetId: string): Promise<boolean> {
-    return this.secrets.has(widgetId, OAUTH_TOKEN_KEY);
+  async isConnected(widgetId: string, service?: GoogleServiceId): Promise<boolean> {
+    return this.secrets.has(widgetId, getGoogleTokenKey(service));
   }
 
   private startRedirectServer(): Promise<{ port: number; waitForCode: Promise<string> }> {

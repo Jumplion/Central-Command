@@ -1,4 +1,5 @@
 import type { DialogOpenPathOptions, GoogleConnectOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
+import type { GoogleServiceDefinition, GoogleServiceId } from '@shared/google';
 import { emitApiCall } from './apiEvents';
 
 export interface WidgetApi {
@@ -53,10 +54,11 @@ export interface WidgetApi {
    * Requires `permissions: { google: true }` in the widget manifest.
    */
   google: {
+    services: Record<GoogleServiceId, GoogleServiceDefinition>;
     connect(options: GoogleConnectOptions): Promise<void>;
-    getToken(): Promise<string | null>;
-    disconnect(): Promise<void>;
-    isConnected(): Promise<boolean>;
+    getToken(service?: GoogleServiceId): Promise<string | null>;
+    disconnect(service?: GoogleServiceId): Promise<void>;
+    isConnected(service?: GoogleServiceId): Promise<boolean>;
   };
 }
 
@@ -115,10 +117,11 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
       has: (key) => window.cc.secrets.has(widgetId, key),
     },
     google: {
+      services: window.cc.google.services,
       connect: (options) => window.cc.google.connect(widgetId, options),
-      getToken: () => window.cc.google.getToken(widgetId),
-      disconnect: () => window.cc.google.disconnect(widgetId),
-      isConnected: () => window.cc.google.isConnected(widgetId),
+      getToken: (service) => window.cc.google.getToken(widgetId, service),
+      disconnect: (service) => window.cc.google.disconnect(widgetId, service),
+      isConnected: (service) => window.cc.google.isConnected(widgetId, service),
     },
   };
 }

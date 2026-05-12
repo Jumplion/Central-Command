@@ -1,3 +1,5 @@
+import type { GoogleConnectOptions, GoogleServiceDefinition, GoogleServiceId } from './google';
+
 export type WidgetId = string;
 export type InstanceId = string;
 export type DashboardId = string;
@@ -87,12 +89,6 @@ export interface NetFetchResponse {
   body: string;
 }
 
-export interface GoogleConnectOptions {
-  clientId: string;
-  clientSecret: string;
-  scopes: string[];
-}
-
 export interface CCApi {
   state: {
     load(): Promise<AppState>;
@@ -129,9 +125,10 @@ export interface CCApi {
     has(widgetId: string, key: string): Promise<boolean>;
   };
   google: {
+    services: Record<GoogleServiceId, GoogleServiceDefinition>;
     connect(widgetId: string, options: GoogleConnectOptions): Promise<void>;
-    getToken(widgetId: string): Promise<string | null>;
-    disconnect(widgetId: string): Promise<void>;
-    isConnected(widgetId: string): Promise<boolean>;
+    getToken(widgetId: string, service?: GoogleServiceId): Promise<string | null>;
+    disconnect(widgetId: string, service?: GoogleServiceId): Promise<void>;
+    isConnected(widgetId: string, service?: GoogleServiceId): Promise<boolean>;
   };
 }
