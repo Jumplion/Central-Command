@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipc';
-import type { AppState, CCApi, DialogOpenPathOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
+import type { AppState, CCApi, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
 
 const api: CCApi = {
   state: {
@@ -33,6 +33,26 @@ const api: CCApi = {
   net: {
     fetch: (url: string, init?: NetFetchInit): Promise<NetFetchResponse> =>
       ipcRenderer.invoke(IPC.NET_FETCH, url, init)
+  },
+  secrets: {
+    get: (widgetId: string, key: string): Promise<string | null> =>
+      ipcRenderer.invoke(IPC.SECRETS_GET, widgetId, key),
+    set: (widgetId: string, key: string, value: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.SECRETS_SET, widgetId, key, value),
+    del: (widgetId: string, key: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.SECRETS_DEL, widgetId, key),
+    has: (widgetId: string, key: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.SECRETS_HAS, widgetId, key)
+  },
+  google: {
+    connect: (widgetId: string, options: GoogleConnectOptions): Promise<void> =>
+      ipcRenderer.invoke(IPC.GOOGLE_CONNECT, widgetId, options),
+    getToken: (widgetId: string): Promise<string | null> =>
+      ipcRenderer.invoke(IPC.GOOGLE_GET_TOKEN, widgetId),
+    disconnect: (widgetId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.GOOGLE_DISCONNECT, widgetId),
+    isConnected: (widgetId: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.GOOGLE_IS_CONNECTED, widgetId)
   }
 };
 

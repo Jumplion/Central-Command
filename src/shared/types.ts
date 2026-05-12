@@ -39,7 +39,7 @@ export interface WidgetManifest {
   defaultSize: { w: number; h: number };
   minSize?: { w: number; h: number };
   settings?: SettingsField[];
-  permissions?: { sqlite?: boolean };
+  permissions?: { sqlite?: boolean; google?: boolean };
 }
 
 export type WidgetSettings = Record<string, unknown>;
@@ -87,6 +87,12 @@ export interface NetFetchResponse {
   body: string;
 }
 
+export interface GoogleConnectOptions {
+  clientId: string;
+  clientSecret: string;
+  scopes: string[];
+}
+
 export interface CCApi {
   state: {
     load(): Promise<AppState>;
@@ -115,5 +121,17 @@ export interface CCApi {
   };
   net: {
     fetch(url: string, init?: NetFetchInit): Promise<NetFetchResponse>;
+  };
+  secrets: {
+    get(widgetId: string, key: string): Promise<string | null>;
+    set(widgetId: string, key: string, value: string): Promise<void>;
+    del(widgetId: string, key: string): Promise<void>;
+    has(widgetId: string, key: string): Promise<boolean>;
+  };
+  google: {
+    connect(widgetId: string, options: GoogleConnectOptions): Promise<void>;
+    getToken(widgetId: string): Promise<string | null>;
+    disconnect(widgetId: string): Promise<void>;
+    isConnected(widgetId: string): Promise<boolean>;
   };
 }

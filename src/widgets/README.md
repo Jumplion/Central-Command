@@ -149,12 +149,77 @@ const paths = await api.dialog.openPath({
 
 The `manifest.permissions` field gates optional capabilities:
 
-| Key      | Type      | Description                         |
-| -------- | --------- | ----------------------------------- |
-| `sqlite` | `boolean` | Declare that this widget uses `api.sql` |
+| Key      | Type      | Description                                   |
+| -------- | --------- | --------------------------------------------- |
+| `sqlite` | `boolean` | Declare that this widget uses `api.sql`        |
+| `google` | `boolean` | Declare that this widget uses `api.google`     |
 
-Future gated capabilities (process spawn, pty, etc.) will use additional keys
-here.
+## Secrets API
+
+`api.secrets` provides a per-widget encrypted key/value store backed by
+Electron's `safeStorage` (OS keychain on macOS/Windows, libsecret on Linux).
+Keys are scoped to the widget type — all instances share the same vault.
+
+```ts
+await api.secrets.set('apiKey', 'super-secret-value');
+const key = await api.secrets.get('apiKey');   // string | null
+await api.secrets.has('apiKey');               // boolean
+await api.secrets.del('apiKey');
+```
+
+On headless Linux systems where `safeStorage` is unavailable, values are stored
+as base64 — avoid storing sensitive data on shared/headless machines.
+
+## Google OAuth API
+
+`api.google` provides a PKCE + loopback-redirect OAuth 2.0 helper for Google
+services (Gmail, Drive, YouTube, etc.). It stores credentials and tokens
+securely in the widget's `secrets` vault and auto-refreshes expired tokens.
+
+Declare `permissions: { google: true }` in your manifest.
+
+### Setup (one-time, per user)
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
+2. Enable the relevant Google API (e.g. Gmail API).
+3. Create **OAuth 2.0 credentials** → Application type: **Desktop app**.
+4. Add yourself as a test user on the OAuth consent screen.
+5. Expose the Client ID and Client Secret via widget settings so the user can
+   paste them in.
+
+### Usage
+
+```ts
+// In settings: { googleClientId: string; googleClientSecret: string }
+const clientId = settings.googleClientId as string;
+const clientSecret = settings.googleClientSecret as string;
+
+// Check if already authenticated
+const already = await api.google.isConnected();
+
+// Trigger the consent screen (opens the default browser; awaits the redirect)
+await api.google.connect({
+  clientId,
+  clientSecret,
+  scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
+});
+
+// Get a valid access token (auto-refreshes when expired)
+const token = await api.google.getToken(); // string | null
+
+// Use the token with api.net.fetch (routed through Electron's net stack)
+const res = await api.net.fetch(
+  'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&labelIds=INBOX',
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+const data = JSON.parse(res.body);
+
+// Revoke stored credentials and tokens
+await api.google.disconnect();
+```
+
+`api.google.connect()` blocks until the user completes the browser flow (up to
+5 minutes), so call it from an event handler, not top-level render code.
 
 ## Tips
 
