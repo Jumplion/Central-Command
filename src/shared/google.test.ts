@@ -9,6 +9,17 @@ describe('GOOGLE_SERVICES', () => {
     expect(GOOGLE_SERVICES.notes.apiBaseUrl).toBe('https://keep.googleapis.com/v1/');
   });
 
+  it('keeps every service definition structurally complete', () => {
+    for (const [serviceId, definition] of Object.entries(GOOGLE_SERVICES)) {
+      expect(definition.id).toBe(serviceId);
+      expect(definition.name.length).toBeGreaterThan(0);
+      expect(definition.description.length).toBeGreaterThan(0);
+      expect(definition.apiBaseUrl).toMatch(/^https:\/\/.+\/$/);
+      expect(definition.defaultScopes.length).toBeGreaterThan(0);
+      expect(definition.defaultScopes.every((scope) => scope.startsWith('https://'))).toBe(true);
+    }
+  });
+
   it('uses least-privilege default scopes for built-in services', () => {
     expect(GOOGLE_SERVICES.gmail.defaultScopes).toEqual(['https://www.googleapis.com/auth/gmail.readonly']);
     expect(GOOGLE_SERVICES.calendar.defaultScopes).toEqual(['https://www.googleapis.com/auth/calendar.readonly']);

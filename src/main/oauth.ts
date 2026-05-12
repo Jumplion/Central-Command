@@ -44,7 +44,7 @@ export class OAuthManager {
   async connect(widgetId: string, options: GoogleConnectOptions): Promise<void> {
     const { clientId, clientSecret, service } = options;
     const scopes = resolveGoogleScopes(options);
-    const connectionId = JSON.stringify([widgetId, getGoogleConnectionId(service)]);
+    const connectionId = `${widgetId}::${getGoogleConnectionId(service)}`;
     if (this.pending.has(connectionId)) {
       throw new Error('A Google OAuth flow is already in progress for this widget');
     }
