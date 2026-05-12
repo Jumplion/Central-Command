@@ -1,4 +1,5 @@
 import type { GoogleConnectOptions, GoogleServiceDefinition, GoogleServiceId } from './google';
+export type { GoogleConnectOptions, GoogleServiceDefinition, GoogleServiceId } from './google';
 
 export type WidgetId = string;
 export type InstanceId = string;
