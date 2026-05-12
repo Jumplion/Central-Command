@@ -28,6 +28,8 @@ which holds the dashboard state and per-widget storage.
 | ------------------- | ----------------------------------------- |
 | `npm run dev`       | Start Electron + Vite dev server with HMR |
 | `npm run build`     | Build main, preload, and renderer bundles |
+| `npm run test`      | Run unit tests with Vitest                |
+| `npm run test:coverage` | Run unit tests with coverage output  |
 | `npm run typecheck` | Typecheck both Node and Web projects      |
 | `npm run package`   | Build + run electron-builder              |
 
