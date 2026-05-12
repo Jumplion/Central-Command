@@ -1,13 +1,15 @@
 import { spawn } from 'child_process';
 import { ipcMain, shell, dialog, net } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { AppState, DialogOpenPathOptions, NetFetchInit } from '@shared/types';
+import type { AppState, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit } from '@shared/types';
 import type { Storage } from './storage';
+import type { SecretsStore } from './secrets';
+import type { OAuthManager } from './oauth';
 
 const isString = (x: unknown): x is string => typeof x === 'string';
 const isParams = (x: unknown): x is unknown[] => Array.isArray(x);
 
-export function registerIpc(storage: Storage): void {
+export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAuthManager): void {
   ipcMain.handle(IPC.STATE_LOAD, () => storage.loadState());
   ipcMain.handle(IPC.STATE_SAVE, (_e, state: AppState) => storage.saveState(state));
 
@@ -90,5 +92,54 @@ export function registerIpc(storage: Storage): void {
     const resp = await net.fetch(url, options);
     const body = await resp.text();
     return { ok: resp.ok, status: resp.status, body };
+  });
+
+  // ─── Secrets handlers ─────────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.SECRETS_GET, (_e, widgetId: unknown, key: unknown) => {
+    if (!isString(widgetId) || !isString(key)) throw new Error('secrets.get: invalid arguments');
+    return secrets.get(widgetId, key);
+  });
+
+  ipcMain.handle(IPC.SECRETS_SET, (_e, widgetId: unknown, key: unknown, value: unknown) => {
+    if (!isString(widgetId) || !isString(key) || !isString(value))
+      throw new Error('secrets.set: invalid arguments');
+    return secrets.set(widgetId, key, value);
+  });
+
+  ipcMain.handle(IPC.SECRETS_DEL, (_e, widgetId: unknown, key: unknown) => {
+    if (!isString(widgetId) || !isString(key)) throw new Error('secrets.del: invalid arguments');
+    return secrets.del(widgetId, key);
+  });
+
+  ipcMain.handle(IPC.SECRETS_HAS, (_e, widgetId: unknown, key: unknown) => {
+    if (!isString(widgetId) || !isString(key)) throw new Error('secrets.has: invalid arguments');
+    return secrets.has(widgetId, key);
+  });
+
+  // ─── Google OAuth handlers ─────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.GOOGLE_CONNECT, (_e, widgetId: unknown, options: unknown) => {
+    if (!isString(widgetId) || !options || typeof options !== 'object')
+      throw new Error('google.connect: invalid arguments');
+    const o = options as Record<string, unknown>;
+    if (!isString(o.clientId) || !isString(o.clientSecret) || !Array.isArray(o.scopes))
+      throw new Error('google.connect: invalid options');
+    return oauth.connect(widgetId, options as GoogleConnectOptions);
+  });
+
+  ipcMain.handle(IPC.GOOGLE_GET_TOKEN, (_e, widgetId: unknown) => {
+    if (!isString(widgetId)) throw new Error('google.getToken: invalid arguments');
+    return oauth.getToken(widgetId);
+  });
+
+  ipcMain.handle(IPC.GOOGLE_DISCONNECT, (_e, widgetId: unknown) => {
+    if (!isString(widgetId)) throw new Error('google.disconnect: invalid arguments');
+    return oauth.disconnect(widgetId);
+  });
+
+  ipcMain.handle(IPC.GOOGLE_IS_CONNECTED, (_e, widgetId: unknown) => {
+    if (!isString(widgetId)) throw new Error('google.isConnected: invalid arguments');
+    return oauth.isConnected(widgetId);
   });
 }

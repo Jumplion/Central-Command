@@ -19,6 +19,16 @@ export const IPC = {
   DIALOG_OPEN_PATH: 'cc:dialog:openPath',
 
   NET_FETCH: 'cc:net:fetch',
+
+  SECRETS_GET: 'cc:secrets:get',
+  SECRETS_SET: 'cc:secrets:set',
+  SECRETS_DEL: 'cc:secrets:del',
+  SECRETS_HAS: 'cc:secrets:has',
+
+  GOOGLE_CONNECT: 'cc:google:connect',
+  GOOGLE_GET_TOKEN: 'cc:google:get-token',
+  GOOGLE_DISCONNECT: 'cc:google:disconnect',
+  GOOGLE_IS_CONNECTED: 'cc:google:is-connected',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

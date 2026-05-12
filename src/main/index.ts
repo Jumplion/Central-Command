@@ -1,6 +1,8 @@
 import { app, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import { Storage } from './storage';
+import { SecretsStore } from './secrets';
+import { OAuthManager } from './oauth';
 import { registerIpc } from './ipc';
 
 let storage: Storage | null = null;
@@ -37,8 +39,11 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  const userData = app.getPath('userData');
   storage = new Storage();
-  registerIpc(storage);
+  const secrets = new SecretsStore(userData);
+  const oauth = new OAuthManager(secrets);
+  registerIpc(storage, secrets, oauth);
   createWindow();
 
   app.on('activate', () => {

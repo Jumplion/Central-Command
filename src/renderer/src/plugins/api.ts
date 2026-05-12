@@ -1,4 +1,4 @@
-import type { DialogOpenPathOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
+import type { DialogOpenPathOptions, GoogleConnectOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
 import { emitApiCall } from './apiEvents';
 
 export interface WidgetApi {
@@ -35,6 +35,28 @@ export interface WidgetApi {
   };
   net: {
     fetch(url: string, init?: NetFetchInit): Promise<NetFetchResponse>;
+  };
+  /**
+   * Per-widget encrypted secret store. Keys are scoped to this widget type
+   * and persisted using Electron safeStorage (OS keychain where available).
+   */
+  secrets: {
+    get(key: string): Promise<string | null>;
+    set(key: string, value: string): Promise<void>;
+    del(key: string): Promise<void>;
+    has(key: string): Promise<boolean>;
+  };
+  /**
+   * Google OAuth helper. Call `connect` once to run the PKCE loopback flow;
+   * `getToken` returns a fresh access token (auto-refreshes when expired).
+   * Credentials and tokens are stored in the widget's secrets vault.
+   * Requires `permissions: { google: true }` in the widget manifest.
+   */
+  google: {
+    connect(options: GoogleConnectOptions): Promise<void>;
+    getToken(): Promise<string | null>;
+    disconnect(): Promise<void>;
+    isConnected(): Promise<boolean>;
   };
 }
 
@@ -85,6 +107,18 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
         });
         return res;
       }
-    }
+    },
+    secrets: {
+      get: (key) => window.cc.secrets.get(widgetId, key),
+      set: (key, value) => window.cc.secrets.set(widgetId, key, value),
+      del: (key) => window.cc.secrets.del(widgetId, key),
+      has: (key) => window.cc.secrets.has(widgetId, key),
+    },
+    google: {
+      connect: (options) => window.cc.google.connect(widgetId, options),
+      getToken: () => window.cc.google.getToken(widgetId),
+      disconnect: () => window.cc.google.disconnect(widgetId),
+      isConnected: () => window.cc.google.isConnected(widgetId),
+    },
   };
 }
