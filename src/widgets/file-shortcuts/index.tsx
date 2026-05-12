@@ -97,54 +97,27 @@ function FileShortcuts({ api }: WidgetProps) {
     await api.kv.set('shortcuts', next);
   };
 
-  const addPath = (filePath: string, kind: 'file' | 'dir') => {
-    const newShortcut: Shortcut = {
-      id: makeId(),
-      path: filePath,
-      label: basename(filePath),
-      kind,
-    };
-    return persist([...shortcuts, newShortcut]);
-  };
+  const makeShortcut = (filePath: string, kind: 'file' | 'dir'): Shortcut => ({
+    id: makeId(),
+    path: filePath,
+    label: basename(filePath),
+    kind,
+  });
 
-  const handleBrowseFile = async () => {
+  const browse = async (kind: 'file' | 'dir') => {
     const paths = await api.dialog.openPath({
-      title: 'Add file shortcut',
-      properties: ['openFile', 'multiSelections'],
+      title: kind === 'file' ? 'Add file shortcut' : 'Add folder shortcut',
+      properties: [kind === 'file' ? 'openFile' : 'openDirectory', 'multiSelections'],
     });
-    if (paths) {
-      let next = shortcuts;
-      for (const p of paths) {
-        next = [...next, { id: makeId(), path: p, label: basename(p), kind: 'file' }];
-      }
-      await persist(next);
-    }
-  };
-
-  const handleBrowseDir = async () => {
-    const paths = await api.dialog.openPath({
-      title: 'Add folder shortcut',
-      properties: ['openDirectory', 'multiSelections'],
-    });
-    if (paths) {
-      let next = shortcuts;
-      for (const p of paths) {
-        next = [...next, { id: makeId(), path: p, label: basename(p), kind: 'dir' }];
-      }
-      await persist(next);
-    }
+    if (paths) await persist([...shortcuts, ...paths.map((p) => makeShortcut(p, kind))]);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     const files = Array.from(e.dataTransfer.files) as ElectronFile[];
-    let next = shortcuts;
-    for (const file of files) {
-      if (!file.path) continue;
-      next = [...next, { id: makeId(), path: file.path, label: basename(file.path), kind: guessKind(file) }];
-    }
-    if (next !== shortcuts) persist(next);
+    const added = files.filter((f) => f.path).map((f) => makeShortcut(f.path!, guessKind(f)));
+    if (added.length > 0) void persist([...shortcuts, ...added]);
   };
 
   const handleRemove = (id: string) => persist(shortcuts.filter((s) => s.id !== id));
@@ -162,10 +135,10 @@ function FileShortcuts({ api }: WidgetProps) {
       onDrop={handleDrop}
     >
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleBrowseFile}>
+        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => void browse('file')}>
           + File
         </button>
-        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleBrowseDir}>
+        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => void browse('dir')}>
           + Folder
         </button>
       </div>
