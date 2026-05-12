@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GOOGLE_SERVICES, getGoogleCredsKey, getGoogleTokenKey, resolveGoogleScopes } from './google';
 
 describe('GOOGLE_SERVICES', () => {
-  it('includes the built-in service presets for future widgets', () => {
+  it('defines API base URLs for all built-in services', () => {
     expect(GOOGLE_SERVICES.gmail.apiBaseUrl).toBe('https://gmail.googleapis.com/gmail/v1/');
     expect(GOOGLE_SERVICES.calendar.apiBaseUrl).toBe('https://www.googleapis.com/calendar/v3/');
     expect(GOOGLE_SERVICES.drive.apiBaseUrl).toBe('https://www.googleapis.com/drive/v3/');
