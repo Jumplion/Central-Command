@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { WidgetManifest, WidgetSettings } from '@shared/types';
+import { isValidWidgetId } from '@shared/validation';
 import type { WidgetApi } from './api';
 
 export interface WidgetProps {
@@ -12,8 +13,6 @@ export interface Widget {
   manifest: WidgetManifest;
   Component: ComponentType<WidgetProps>;
 }
-
-const VALID_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 const modules = import.meta.glob<{ default: Widget }>('../../../widgets/*/index.tsx', {
   eager: true
@@ -29,7 +28,7 @@ for (const filePath in modules) {
     continue;
   }
   const id = widget.manifest.id;
-  if (!VALID_ID.test(id)) {
+  if (!isValidWidgetId(id)) {
     console.warn(`[plugins] invalid widget id "${id}" at ${filePath}`);
     continue;
   }

@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
-import { assertValidWidgetId } from './json';
+import { assertValidWidgetId } from '@shared/validation';
 import type { SqlRunResult } from '@shared/types';
 
 export class SqliteStore {
