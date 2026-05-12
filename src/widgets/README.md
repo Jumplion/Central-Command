@@ -214,8 +214,9 @@ await api.google.connect({
 const token = await api.google.getToken('calendar'); // string | null
 
 // Use the token with api.net.fetch (routed through Electron's net stack)
+const calendarListUrl = new URL('users/me/calendarList', calendar.apiBaseUrl).toString();
 const res = await api.net.fetch(
-  `${calendar.apiBaseUrl}users/me/calendarList`,
+  calendarListUrl,
   { headers: { Authorization: `Bearer ${token}` } }
 );
 const data = JSON.parse(res.body);
