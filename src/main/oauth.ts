@@ -10,6 +10,7 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const OAUTH_CREDS_KEY = 'google_oauth_creds';
 const OAUTH_TOKEN_KEY = 'google_oauth_token';
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
+const TOKEN_EXPIRY_BUFFER_SECONDS = 60;
 
 function escapeHtml(str: string): string {
   return str
@@ -96,7 +97,7 @@ export class OAuthManager {
       const tokens: StoredTokens = {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
-        expiresAt: Date.now() + (data.expires_in - 60) * 1000,
+        expiresAt: Date.now() + (data.expires_in - TOKEN_EXPIRY_BUFFER_SECONDS) * 1000,
       };
 
       await this.secrets.set(widgetId, OAUTH_CREDS_KEY, JSON.stringify(creds));
@@ -164,7 +165,7 @@ export class OAuthManager {
     };
 
     tokens.accessToken = data.access_token;
-    tokens.expiresAt = Date.now() + (data.expires_in - 60) * 1000;
+    tokens.expiresAt = Date.now() + (data.expires_in - TOKEN_EXPIRY_BUFFER_SECONDS) * 1000;
     if (data.refresh_token) tokens.refreshToken = data.refresh_token;
 
     await this.secrets.set(widgetId, OAUTH_TOKEN_KEY, JSON.stringify(tokens));
@@ -182,8 +183,8 @@ export class OAuthManager {
 
   private startRedirectServer(): Promise<{ port: number; waitForCode: Promise<string> }> {
     return new Promise((resolveSetup, rejectSetup) => {
-      let resolveCode!: (code: string) => void;
-      let rejectCode!: (err: Error) => void;
+      let resolveCode: (code: string) => void = () => { /* assigned below */ };
+      let rejectCode: (err: Error) => void = () => { /* assigned below */ };
 
       const waitForCode = new Promise<string>((res, rej) => {
         resolveCode = res;

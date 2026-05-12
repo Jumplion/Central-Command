@@ -146,8 +146,13 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
         return;
       }
 
+      const listParams = new URLSearchParams({
+        maxResults: String(maxMessages),
+        labelIds: 'INBOX',
+        fields: 'messages(id,threadId)',
+      });
       const listRes = await api.net.fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxMessages}&labelIds=INBOX&fields=messages(id,threadId)`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
