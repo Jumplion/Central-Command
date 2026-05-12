@@ -321,6 +321,7 @@ export const INIT_SQL = `
     apply_link  TEXT    NOT NULL DEFAULT '',
     description TEXT    NOT NULL DEFAULT '',
     fetched_at  INTEGER NOT NULL,
+    ignored     INTEGER NOT NULL DEFAULT 0,
     UNIQUE(feed_id, ext_id)
   );
 `;

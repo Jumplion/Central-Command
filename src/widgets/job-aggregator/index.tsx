@@ -31,7 +31,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
     const rows = await api.sql.all<CompanyFeed>('SELECT * FROM company_feeds ORDER BY name ASC');
     setFeeds(rows);
     const allJobs = await api.sql.all<FeedJob>(
-      'SELECT * FROM feed_jobs ORDER BY feed_id, date_posted DESC, fetched_at DESC',
+      'SELECT * FROM feed_jobs WHERE ignored = 0 ORDER BY feed_id, date_posted DESC, fetched_at DESC',
     );
     const grouped: Record<number, FeedJob[]> = {};
     for (const job of allJobs) (grouped[job.feed_id] ??= []).push(job);
@@ -59,6 +59,9 @@ function JobAggregator({ api, settings }: WidgetProps) {
 
   useEffect(() => {
     api.sql.exec(INIT_SQL).then(async () => {
+      // Migrations for columns added after initial release
+      try { await api.sql.run("ALTER TABLE company_feeds ADD COLUMN company_type TEXT NOT NULL DEFAULT 'other'", []); } catch { /* already exists */ }
+      try { await api.sql.run('ALTER TABLE feed_jobs ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0', []); } catch { /* already exists */ }
       await seedDefaultFeeds();
       await Promise.all([loadSaved(), loadFeeds()]);
       setReady(true);

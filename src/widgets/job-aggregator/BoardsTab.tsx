@@ -82,6 +82,11 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
     onSaved();
   };
 
+  const handleIgnoreJob = async (job: FeedJob) => {
+    await api.sql.run('UPDATE feed_jobs SET ignored = 1 WHERE id = ?', [job.id]);
+    onFeedsChange();
+  };
+
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const visibleFeeds = useMemo(() => feeds.filter((f) => {
@@ -281,6 +286,7 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
                     onDelete={() => void handleDeleteFeed(feed.id)}
                     onSave={(job) => void handleSaveFeedJob(job, feed)}
                     onApply={(url) => void api.shell.openExternal(url)}
+                    onIgnore={(job) => void handleIgnoreJob(job)}
                   />
                 ))}
               </div>

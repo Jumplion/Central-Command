@@ -155,7 +155,7 @@ export function AddFeedForm({ onSave, onCancel }: {
 
 export function BoardSection({
   feed, jobs, loading, error, savedIds,
-  onRefresh, onDelete, onSave, onApply,
+  onRefresh, onDelete, onSave, onApply, onIgnore,
 }: {
   feed: CompanyFeed;
   jobs: FeedJob[];
@@ -166,6 +166,7 @@ export function BoardSection({
   onDelete: () => void;
   onSave: (job: FeedJob) => void;
   onApply: (url: string) => void;
+  onIgnore: (job: FeedJob) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const lastFetch = jobs[0]?.fetched_at;
@@ -245,6 +246,12 @@ export function BoardSection({
                   >
                     {savedIds.has(savedKey) ? '✓' : 'Save'}
                   </button>
+                  <button
+                    className="ghost"
+                    style={{ fontSize: 11, padding: '1px 6px', color: 'var(--text-dim)' }}
+                    onClick={() => onIgnore(job)}
+                    title="Ignore this job"
+                  >🚫</button>
                 </div>
               </div>
             );
