@@ -6,6 +6,7 @@ describe('GOOGLE_SERVICES', () => {
     expect(GOOGLE_SERVICES.gmail.apiBaseUrl).toBe('https://gmail.googleapis.com/gmail/v1/');
     expect(GOOGLE_SERVICES.calendar.apiBaseUrl).toBe('https://www.googleapis.com/calendar/v3/');
     expect(GOOGLE_SERVICES.drive.apiBaseUrl).toBe('https://www.googleapis.com/drive/v3/');
+    expect(GOOGLE_SERVICES.contacts.apiBaseUrl).toBe('https://people.googleapis.com/v1/');
     expect(GOOGLE_SERVICES.notes.apiBaseUrl).toBe('https://keep.googleapis.com/v1/');
   });
 
@@ -24,6 +25,7 @@ describe('GOOGLE_SERVICES', () => {
     expect(GOOGLE_SERVICES.gmail.defaultScopes).toEqual(['https://www.googleapis.com/auth/gmail.readonly']);
     expect(GOOGLE_SERVICES.calendar.defaultScopes).toEqual(['https://www.googleapis.com/auth/calendar.readonly']);
     expect(GOOGLE_SERVICES.drive.defaultScopes).toEqual(['https://www.googleapis.com/auth/drive.readonly']);
+    expect(GOOGLE_SERVICES.contacts.defaultScopes).toEqual(['https://www.googleapis.com/auth/contacts.readonly']);
     expect(GOOGLE_SERVICES.notes.defaultScopes).toEqual(['https://www.googleapis.com/auth/keep.readonly']);
   });
 });
@@ -45,9 +47,9 @@ describe('resolveGoogleScopes', () => {
       resolveGoogleScopes({
         clientId: 'id',
         clientSecret: 'secret',
-        service: 'drive',
+        service: 'contacts',
       }),
-    ).toEqual(['https://www.googleapis.com/auth/drive.readonly']);
+    ).toEqual(['https://www.googleapis.com/auth/contacts.readonly']);
   });
 
   it('rejects missing scopes for ad-hoc connections', () => {

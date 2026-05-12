@@ -20,6 +20,13 @@ export const GOOGLE_SERVICES = {
     apiBaseUrl: 'https://www.googleapis.com/drive/v3/',
     defaultScopes: ['https://www.googleapis.com/auth/drive.readonly'],
   },
+  contacts: {
+    id: 'contacts',
+    name: 'Google Contacts',
+    description: 'Contacts via the Google People API.',
+    apiBaseUrl: 'https://people.googleapis.com/v1/',
+    defaultScopes: ['https://www.googleapis.com/auth/contacts.readonly'],
+  },
   notes: {
     id: 'notes',
     name: 'Google Notes',
