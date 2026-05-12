@@ -39,10 +39,12 @@ for (const filePath in modules) {
   registry.set(id, widget);
 }
 
+const sortedWidgets: Widget[] = Array.from(registry.values()).sort((a, b) =>
+  a.manifest.name.localeCompare(b.manifest.name)
+);
+
 export function listWidgets(): Widget[] {
-  return Array.from(registry.values()).sort((a, b) =>
-    a.manifest.name.localeCompare(b.manifest.name)
-  );
+  return sortedWidgets;
 }
 
 export function getWidget(id: string): Widget | undefined {
