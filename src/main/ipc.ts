@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import { ipcMain, shell, dialog, net } from 'electron';
 import { IPC } from '@shared/ipc';
 import type { AppState, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit } from '@shared/types';
+import { isGoogleServiceId } from '@shared/google';
 import type { Storage } from './storage';
 import type { SecretsStore } from './secrets';
 import type { OAuthManager } from './oauth';
@@ -123,23 +124,28 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
     if (!isString(widgetId) || !options || typeof options !== 'object')
       throw new Error('google.connect: invalid arguments');
     const o = options as Record<string, unknown>;
-    if (!isString(o.clientId) || !isString(o.clientSecret) || !Array.isArray(o.scopes))
+    if (!isString(o.clientId) || !isString(o.clientSecret))
       throw new Error('google.connect: invalid options');
+    if (o.scopes !== undefined && !Array.isArray(o.scopes)) throw new Error('google.connect: invalid scopes');
+    if (o.service !== undefined && !isGoogleServiceId(o.service)) throw new Error('google.connect: invalid service');
     return oauth.connect(widgetId, options as GoogleConnectOptions);
   });
 
-  ipcMain.handle(IPC.GOOGLE_GET_TOKEN, (_e, widgetId: unknown) => {
+  ipcMain.handle(IPC.GOOGLE_GET_TOKEN, (_e, widgetId: unknown, service?: unknown) => {
     if (!isString(widgetId)) throw new Error('google.getToken: invalid arguments');
-    return oauth.getToken(widgetId);
+    if (service !== undefined && !isGoogleServiceId(service)) throw new Error('google.getToken: invalid service');
+    return oauth.getToken(widgetId, service);
   });
 
-  ipcMain.handle(IPC.GOOGLE_DISCONNECT, (_e, widgetId: unknown) => {
+  ipcMain.handle(IPC.GOOGLE_DISCONNECT, (_e, widgetId: unknown, service?: unknown) => {
     if (!isString(widgetId)) throw new Error('google.disconnect: invalid arguments');
-    return oauth.disconnect(widgetId);
+    if (service !== undefined && !isGoogleServiceId(service)) throw new Error('google.disconnect: invalid service');
+    return oauth.disconnect(widgetId, service);
   });
 
-  ipcMain.handle(IPC.GOOGLE_IS_CONNECTED, (_e, widgetId: unknown) => {
+  ipcMain.handle(IPC.GOOGLE_IS_CONNECTED, (_e, widgetId: unknown, service?: unknown) => {
     if (!isString(widgetId)) throw new Error('google.isConnected: invalid arguments');
-    return oauth.isConnected(widgetId);
+    if (service !== undefined && !isGoogleServiceId(service)) throw new Error('google.isConnected: invalid service');
+    return oauth.isConnected(widgetId, service);
   });
 }

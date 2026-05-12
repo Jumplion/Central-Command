@@ -44,7 +44,7 @@ export default widget;
 | `defaultSize`  | `{ w: number; h: number }`                 | Grid cells (12-col layout, 60px rows)   |
 | `minSize`      | `{ w: number; h: number }?`                | Minimum drag/resize size                |
 | `settings`     | `SettingsField[]?`                         | Schema for the per-instance settings UI |
-| `permissions`  | `{ sqlite?: boolean }?`                    | Declare capabilities used by this widget |
+| `permissions`  | `{ sqlite?: boolean; google?: boolean }?` | Declare capabilities used by this widget |
 
 ### SettingsField
 
@@ -173,8 +173,11 @@ as base64 — avoid storing sensitive data on shared/headless machines.
 ## Google OAuth API
 
 `api.google` provides a PKCE + loopback-redirect OAuth 2.0 helper for Google
-services (Gmail, Drive, YouTube, etc.). It stores credentials and tokens
-securely in the widget's `secrets` vault and auto-refreshes expired tokens.
+services. Built-in service presets are available for Gmail, Google Calendar,
+Google Drive, Google Contacts, and Google Notes (Google Keep, where the Keep
+API/scopes are available for the signed-in account). Credentials and tokens are
+stored securely in the widget's `secrets` vault and auto-refresh expired access
+tokens.
 
 Declare `permissions: { google: true }` in your manifest.
 
@@ -194,32 +197,40 @@ Declare `permissions: { google: true }` in your manifest.
 const clientId = settings.googleClientId as string;
 const clientSecret = settings.googleClientSecret as string;
 
-// Check if already authenticated
-const already = await api.google.isConnected();
+// Inspect built-in service metadata
+const calendar = api.google.services.calendar;
+calendar.apiBaseUrl; // https://www.googleapis.com/calendar/v3/
 
-// Trigger the consent screen (opens the default browser; awaits the redirect)
+// Check if already authenticated for a specific Google service
+const already = await api.google.isConnected('calendar');
+
+// Trigger the consent screen using a built-in service preset
 await api.google.connect({
   clientId,
   clientSecret,
-  scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
+  service: 'calendar',
 });
 
-// Get a valid access token (auto-refreshes when expired)
-const token = await api.google.getToken(); // string | null
+// Get a valid access token for that service (auto-refreshes when expired)
+const token = await api.google.getToken('calendar'); // string | null
 
 // Use the token with api.net.fetch (routed through Electron's net stack)
+const calendarListUrl = new URL('users/me/calendarList', calendar.apiBaseUrl).toString();
 const res = await api.net.fetch(
-  'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&labelIds=INBOX',
+  calendarListUrl,
   { headers: { Authorization: `Bearer ${token}` } }
 );
 const data = JSON.parse(res.body);
 
-// Revoke stored credentials and tokens
-await api.google.disconnect();
+// Revoke stored credentials and tokens for that service
+await api.google.disconnect('calendar');
 ```
 
 `api.google.connect()` blocks until the user completes the browser flow (up to
 5 minutes), so call it from an event handler, not top-level render code.
+
+If you need a custom Google integration, you can still pass explicit `scopes`
+instead of `service`.
 
 ## Tips
 

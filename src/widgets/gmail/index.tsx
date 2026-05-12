@@ -140,7 +140,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
     setLoading(true);
     setError(null);
     try {
-      const token = await api.google.getToken();
+      const token = await api.google.getToken('gmail');
       if (!token) {
         setConnected(false);
         return;
@@ -220,7 +220,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
       return;
     }
     api.google
-      .isConnected()
+      .isConnected('gmail')
       .then((c) => {
         setConnected(c);
       })
@@ -238,7 +238,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
       await api.google.connect({
         clientId,
         clientSecret,
-        scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
+        service: 'gmail',
       });
       setConnected(true);
     } catch (e) {
@@ -249,7 +249,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
   };
 
   const handleDisconnect = async () => {
-    await api.google.disconnect();
+    await api.google.disconnect('gmail');
     setConnected(false);
     setMessages([]);
     setTitle?.(undefined);
