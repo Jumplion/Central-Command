@@ -89,6 +89,7 @@ function EmailRow({
         req_number: editedReqNumber,
       };
       await onAdd(data);
+      await onDismiss(email.id);
       setExpanded(false);
     } finally {
       setSaving(false);
@@ -100,6 +101,7 @@ function EmailRow({
     setSaving(true);
     try {
       await onUpdate(linkedApp, editedStatus);
+      await onDismiss(email.id);
       setExpanded(false);
     } finally {
       setSaving(false);
