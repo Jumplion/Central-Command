@@ -151,12 +151,16 @@ export const useDashboard = create<DashboardStore>((set, get) => {
   },
 
   setTitle(instanceId, title) {
-    mutate((s) =>
-      patchActive(s, (d) => ({
+    mutate((s) => {
+      const active = s.dashboards.find((d) => d.id === s.activeDashboardId);
+      const current = active?.instances.find((i) => i.instanceId === instanceId);
+      if (!current || current.title === title) return s;
+
+      return patchActive(s, (d) => ({
         ...d,
         instances: d.instances.map((i) => (i.instanceId === instanceId ? { ...i, title } : i))
-      }))
-    );
+      }));
+    });
   }
   };
 });

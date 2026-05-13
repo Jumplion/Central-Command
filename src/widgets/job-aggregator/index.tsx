@@ -21,6 +21,13 @@ function JobAggregator({ api, settings }: WidgetProps) {
 
   const apiKey = (settings.rapidApiKey as string) || '';
 
+  const ensureColumn = useCallback(async (table: string, column: string, alterSql: string) => {
+    const cols = await api.sql.all<{ name: string }>(`PRAGMA table_info(${table})`);
+    if (!cols.some((c) => c.name === column)) {
+      await api.sql.run(alterSql, []);
+    }
+  }, [api]);
+
   const loadSaved = useCallback(async () => {
     const rows = await api.sql.all<SavedJob>('SELECT * FROM saved_jobs ORDER BY saved_at DESC');
     setSavedJobs(rows);
@@ -60,8 +67,8 @@ function JobAggregator({ api, settings }: WidgetProps) {
   useEffect(() => {
     api.sql.exec(INIT_SQL).then(async () => {
       // Migrations for columns added after initial release
-      try { await api.sql.run("ALTER TABLE company_feeds ADD COLUMN company_type TEXT NOT NULL DEFAULT 'other'", []); } catch { /* already exists */ }
-      try { await api.sql.run('ALTER TABLE feed_jobs ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0', []); } catch { /* already exists */ }
+      await ensureColumn('company_feeds', 'company_type', "ALTER TABLE company_feeds ADD COLUMN company_type TEXT NOT NULL DEFAULT 'other'");
+      await ensureColumn('feed_jobs', 'ignored', 'ALTER TABLE feed_jobs ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0');
       await seedDefaultFeeds();
       await Promise.all([loadSaved(), loadFeeds()]);
       setReady(true);

@@ -1,4 +1,4 @@
-import { Component, ReactNode, useMemo, useState } from 'react';
+import { Component, ReactNode, useCallback, useMemo, useState } from 'react';
 import type { WidgetInstance } from '@shared/types';
 import type { Widget } from '@renderer/plugins/registry';
 import { createWidgetApi } from '@renderer/plugins/api';
@@ -18,6 +18,13 @@ export function WidgetHost({ instance, widget }: Props) {
   const api = useMemo(
     () => createWidgetApi(instance.widgetId, instance.instanceId),
     [instance.widgetId, instance.instanceId]
+  );
+
+  const handleSetTitle = useCallback(
+    (title: string | undefined) => {
+      setTitle(instance.instanceId, title);
+    },
+    [instance.instanceId, setTitle]
   );
 
   if (!widget) {
@@ -75,7 +82,7 @@ export function WidgetHost({ instance, widget }: Props) {
           <Component
             api={api}
             settings={instance.settings}
-            setTitle={(t) => setTitle(instance.instanceId, t)}
+            setTitle={handleSetTitle}
           />
         </ErrorBoundary>
       </div>

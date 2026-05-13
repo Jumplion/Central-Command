@@ -1,7 +1,4 @@
-import { defineConfig } from 'vitest/config';
-import { resolve } from 'node:path';
-
-export default defineConfig({
+export default {
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts'],
@@ -13,10 +10,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@shared': resolve(__dirname, 'src/shared'),
-      '@renderer': resolve(__dirname, 'src/renderer/src'),
-      '@widgets': resolve(__dirname, 'src/widgets'),
-      '@main': resolve(__dirname, 'src/main')
+      '@shared': '/src/shared',
+      '@renderer': '/src/renderer/src',
+      '@widgets': '/src/widgets',
+      '@main': '/src/main'
     }
   }
-});
+};
