@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Capture</title>
+  <style>
+    :root {
+      --bg: #16181d;
+      --surface: #1e2028;
+      --border: #2e3040;
+      --accent: #6ea8ff;
+      --text: #e8eaf0;
+      --text-dim: #8b8fa8;
+      --green: #34d399;
+      --danger: #ff6e6e;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      width: 320px;
+      min-height: 200px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header h1 { font-size: 14px; font-weight: 600; }
+
+    .settings-link {
+      font-size: 18px;
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+
+    .settings-link:hover { color: var(--text); }
+
+    #loading, #error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 32px 20px;
+      color: var(--text-dim);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    #error-state .err-icon { font-size: 28px; }
+
+    #error-state a {
+      color: var(--accent);
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .field {
+      padding: 8px 14px 0;
+    }
+
+    .field:last-of-type { padding-bottom: 8px; }
+
+    label {
+      display: block;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 3px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      padding: 5px 8px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea { resize: vertical; min-height: 50px; }
+
+    select option { background: var(--bg); }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      padding: 8px 14px 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    button {
+      flex: 1;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    button.primary {
+      background: var(--accent)22;
+      border-color: var(--accent)66;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    button:hover { background: rgba(110,168,255,0.1); border-color: var(--accent); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #submit-status {
+      font-size: 11px;
+      min-height: 16px;
+      padding: 0 14px 6px;
+      color: var(--text-dim);
+    }
+
+    #submit-status.ok   { color: var(--green); }
+    #submit-status.err  { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <span>💼</span>
+      <h1>Add to Job Tracker</h1>
+    </div>
+    <button class="settings-link" id="settings-btn" title="Extension settings">⚙</button>
+  </header>
+
+  <div id="loading">
+    <span>Extracting job details…</span>
+  </div>
+
+  <div id="error-state" style="display:none">
+    <span class="err-icon">⚠️</span>
+    <span id="error-msg">Could not connect to Central Command.</span>
+    <a id="error-action" href="#">Open settings</a>
+  </div>
+
+  <form id="job-form" style="display:none" autocomplete="off">
+    <div class="field">
+      <label for="company">Company</label>
+      <input id="company" type="text" placeholder="e.g. Acme Corp" />
+    </div>
+    <div class="field">
+      <label for="role">Role / Title</label>
+      <input id="role" type="text" placeholder="e.g. Software Engineer" />
+    </div>
+    <div class="field">
+      <label for="link">Link</label>
+      <input id="link" type="url" placeholder="https://…" />
+    </div>
+    <div class="field" style="display:flex; gap:8px">
+      <div style="flex:1">
+        <label for="applied_at">Date Applied</label>
+        <input id="applied_at" type="date" />
+      </div>
+      <div style="flex:1">
+        <label for="status">Status</label>
+        <select id="status">
+          <option value="Applied" selected>Applied</option>
+          <option value="Phone">Phone</option>
+          <option value="Onsite">Onsite</option>
+          <option value="Offer">Offer</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Ghosted">Ghosted</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="notes">Notes (optional)</label>
+      <textarea id="notes" placeholder="Salary range, recruiter name, etc."></textarea>
+    </div>
+  </form>
+
+  <div id="submit-status"></div>
+
+  <div id="actions" class="actions" style="display:none">
+    <button id="cancel-btn" type="button">Cancel</button>
+    <button id="submit-btn" type="button" class="primary">Add Job</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

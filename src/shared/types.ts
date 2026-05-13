@@ -90,6 +90,16 @@ export interface NetFetchResponse {
   body: string;
 }
 
+export interface CapturedJob {
+  company: string;
+  role: string;
+  link: string;
+  notes: string;
+  source: string;
+  status: string;
+  applied_at: string;
+}
+
 export interface CCApi {
   state: {
     load(): Promise<AppState>;
@@ -131,5 +141,16 @@ export interface CCApi {
     getToken(widgetId: string, service?: GoogleServiceId): Promise<string | null>;
     disconnect(widgetId: string, service?: GoogleServiceId): Promise<void>;
     isConnected(widgetId: string, service?: GoogleServiceId): Promise<boolean>;
+  };
+  jobCapture: {
+    /** Returns the server's current running state, port, and masked token indicator. */
+    status(): Promise<{ running: boolean; port: number; token: string }>;
+    /** Generates a new random token and persists it. Returns the new token. */
+    regenerateToken(): Promise<string>;
+    /**
+     * Registers a callback invoked whenever a job arrives via the browser
+     * extension. Returns an unsubscribe function — call it in useEffect cleanup.
+     */
+    onJobAdded(cb: (job: CapturedJob) => void): () => void;
   };
 }

@@ -29,6 +29,11 @@ export const IPC = {
   GOOGLE_GET_TOKEN: 'cc:google:get-token',
   GOOGLE_DISCONNECT: 'cc:google:disconnect',
   GOOGLE_IS_CONNECTED: 'cc:google:is-connected',
+
+  JOB_CAPTURE_STATUS:      'cc:job-capture:status',
+  JOB_CAPTURE_REGEN_TOKEN: 'cc:job-capture:regen-token',
+  /** Push event from main → renderer when a job arrives via the browser extension. */
+  JOB_CAPTURE_JOB_ADDED:   'cc:job-capture:job-added',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

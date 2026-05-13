@@ -3,9 +3,11 @@ import path from 'node:path';
 import { Storage } from './storage';
 import { SecretsStore } from './secrets';
 import { OAuthManager } from './oauth';
+import { JobCaptureServer } from './job-capture-server';
 import { registerIpc } from './ipc';
 
 let storage: Storage | null = null;
+let captureServer: JobCaptureServer | null = null;
 let isQuitting = false;
 
 function createWindow(): BrowserWindow {
@@ -43,8 +45,10 @@ app.whenReady().then(() => {
   storage = new Storage();
   const secrets = new SecretsStore(userData);
   const oauth = new OAuthManager(secrets);
-  registerIpc(storage, secrets, oauth);
+  captureServer = new JobCaptureServer(storage, secrets);
+  registerIpc(storage, secrets, oauth, captureServer);
   createWindow();
+  void captureServer.start();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -58,6 +62,8 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async (event) => {
   if (isQuitting || !storage) return;
   event.preventDefault();
+  captureServer?.stop();
+  captureServer = null;
   try {
     await storage.dispose();
   } finally {

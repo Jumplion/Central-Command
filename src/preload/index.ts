@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { IpcRendererEvent } from 'electron';
 import { IPC } from '../shared/ipc';
-import type { AppState, CCApi, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
+import type { AppState, CCApi, CapturedJob, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
 import { GOOGLE_SERVICES } from '../shared/google';
 import type { GoogleServiceId } from '../shared/google';
 
@@ -56,6 +57,15 @@ const api: CCApi = {
       ipcRenderer.invoke(IPC.GOOGLE_DISCONNECT, widgetId, service),
     isConnected: (widgetId: string, service?: GoogleServiceId) =>
       ipcRenderer.invoke(IPC.GOOGLE_IS_CONNECTED, widgetId, service)
+  },
+  jobCapture: {
+    status: () => ipcRenderer.invoke(IPC.JOB_CAPTURE_STATUS),
+    regenerateToken: () => ipcRenderer.invoke(IPC.JOB_CAPTURE_REGEN_TOKEN),
+    onJobAdded: (cb: (job: CapturedJob) => void) => {
+      const handler = (_event: IpcRendererEvent, job: CapturedJob) => cb(job);
+      ipcRenderer.on(IPC.JOB_CAPTURE_JOB_ADDED, handler);
+      return () => ipcRenderer.removeListener(IPC.JOB_CAPTURE_JOB_ADDED, handler);
+    },
   }
 };
 
