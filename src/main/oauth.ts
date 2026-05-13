@@ -1,6 +1,9 @@
 import { createServer } from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { shell } from 'electron';
+
+const IS_WSL = !!(process.env['WSL_DISTRO_NAME'] ?? process.env['WSL_INTEROP']);
 import type { SecretsStore } from './secrets';
 import type { GoogleConnectOptions } from '@shared/types';
 import { getGoogleCredsKey, getGoogleTokenKey, getGoogleConnectionId, resolveGoogleScopes } from '@shared/google';
@@ -54,7 +57,9 @@ export class OAuthManager {
       const codeChallenge = base64url(createHash('sha256').update(codeVerifier).digest());
 
       const { port, waitForCode } = await this.startRedirectServer();
-      const redirectUri = `http://127.0.0.1:${port}`;
+      // In WSL the Windows browser can't reach 127.0.0.1 (WSL-only loopback);
+      // use localhost so WSL2 localhost-forwarding delivers the callback.
+      const redirectUri = `http://${IS_WSL ? 'localhost' : '127.0.0.1'}:${port}`;
 
       const params = new URLSearchParams({
         client_id: clientId,
@@ -67,7 +72,15 @@ export class OAuthManager {
         prompt: 'consent',
       });
 
-      await shell.openExternal(`${GOOGLE_AUTH_URL}?${params.toString()}`);
+      const authUrl = `${GOOGLE_AUTH_URL}?${params.toString()}`;
+      if (IS_WSL) {
+        // shell.openExternal doesn't work in WSL — use Windows cmd.exe instead
+        await new Promise<void>((resolve) => {
+          spawn('cmd.exe', ['/c', 'start', '', authUrl], { stdio: 'ignore' }).on('close', () => resolve());
+        });
+      } else {
+        await shell.openExternal(authUrl);
+      }
 
       const code = await waitForCode;
 
@@ -227,7 +240,8 @@ export class OAuthManager {
         rejectSetup(err);
       });
 
-      server.listen(0, '127.0.0.1', () => {
+      // In WSL, bind to 0.0.0.0 so WSL2 localhost-forwarding can reach the server
+      server.listen(0, IS_WSL ? '0.0.0.0' : '127.0.0.1', () => {
         const addr = server.address();
         if (!addr || typeof addr === 'string') {
           clearTimeout(timer);
