@@ -6,7 +6,8 @@ release/
 *.tsbuildinfo
 *.log
 .DS_Store
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 .env
 .env.*
