@@ -62,8 +62,9 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
   ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, (_e, url: unknown) => {
     if (!isString(url) || !/^(https?|mailto):/.test(url)) throw new Error('openExternal: url must be http(s) or mailto');
     if (isWsl) {
+      const psUrl = (url as string).replace(/'/g, "''");
       return new Promise<void>((resolve) => {
-        spawn('cmd.exe', ['/c', 'start', '', url], { stdio: 'ignore' }).on('close', () => resolve());
+        spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Start-Process '${psUrl}'`], { stdio: 'ignore' }).on('close', () => resolve());
       });
     }
     return shell.openExternal(url);

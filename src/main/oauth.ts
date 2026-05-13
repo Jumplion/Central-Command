@@ -74,9 +74,12 @@ export class OAuthManager {
 
       const authUrl = `${GOOGLE_AUTH_URL}?${params.toString()}`;
       if (IS_WSL) {
-        // shell.openExternal doesn't work in WSL — use Windows cmd.exe instead
+        // shell.openExternal doesn't work in WSL. cmd.exe /c start also fails because
+        // WSL interop translates https:// slashes to backslashes and treats the quoted
+        // string as a file path. PowerShell Start-Process handles URLs correctly.
+        const psUrl = authUrl.replace(/'/g, "''"); // escape PS single quotes
         await new Promise<void>((resolve) => {
-          spawn('cmd.exe', ['/c', 'start', '', authUrl], { stdio: 'ignore' }).on('close', () => resolve());
+          spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Start-Process '${psUrl}'`], { stdio: 'ignore' }).on('close', () => resolve());
         });
       } else {
         await shell.openExternal(authUrl);
