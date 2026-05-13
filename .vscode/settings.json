@@ -1,0 +1,49 @@
+{
+  // ── Copilot instruction & prompt discovery ────────────────────────────────
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "chat.instructionsFilesLocations": { ".github/instructions": true },
+  "chat.promptFilesLocations": { ".github/prompts": true },
+  "chat.agentFilesLocations": { ".github/agents": true },
+  "chat.useAgentsMdFile": false,
+  "chat.useNestedAgentsMdFiles": false,
+
+  // ── Context discipline ────────────────────────────────────────────────────
+  // Disable broad semantic search; require explicit #file: references
+  "github.copilot.chat.codesearch.enabled": false,
+  "github.copilot.chat.summarizeAgentConversationHistory.enabled": true,
+
+  // ── Agent guardrails ──────────────────────────────────────────────────────
+  "chat.agent.enabled": true,
+  "chat.agent.maxRequests": 15,
+  "github.copilot.chat.virtualTools.threshold": 128,
+  "github.copilot.chat.agent.thinkingTool": false,
+  "chat.mcp.discovery.enabled": false,
+  "chat.tools.autoApprove": false,
+  "chat.tools.terminal.autoApprove": {
+    "rm": false,
+    "rmdir": false,
+    "del": false,
+    "kill": false,
+    "curl": false,
+    "wget": false,
+    "eval": false,
+    "chmod": false,
+    "chown": false
+  },
+
+  // ── Reduce indexing surface ───────────────────────────────────────────────
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/out": true,
+    "**/release": true,
+    "**/coverage": true,
+    "**/.next": true,
+    "**/*.tsbuildinfo": true
+  },
+
+  // ── Commit message generation ─────────────────────────────────────────────
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    { "text": "Use Conventional Commits. Single imperative line under 72 chars. No period at end." }
+  ]
+}
