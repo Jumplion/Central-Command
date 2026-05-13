@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 
 import type { SavedJob, CompanyFeed, FeedJob } from './types';
@@ -15,7 +15,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
 
   // Shared state lifted up so tabs can read/trigger refreshes
   const [savedJobs, setSavedJobs]     = useState<SavedJob[]>([]);
-  const [savedIds, setSavedIds]       = useState<Set<string>>(new Set());
+  const savedIds = useMemo(() => new Set(savedJobs.map((r) => r.job_id)), [savedJobs]);
   const [feeds, setFeeds]             = useState<CompanyFeed[]>([]);
   const [feedJobs, setFeedJobs]       = useState<Record<number, FeedJob[]>>({});
 
@@ -31,7 +31,6 @@ function JobAggregator({ api, settings }: WidgetProps) {
   const loadSaved = useCallback(async () => {
     const rows = await api.sql.all<SavedJob>('SELECT * FROM saved_jobs ORDER BY saved_at DESC');
     setSavedJobs(rows);
-    setSavedIds(new Set(rows.map((r) => r.job_id)));
   }, [api]);
 
   const loadFeeds = useCallback(async () => {

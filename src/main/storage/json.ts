@@ -95,4 +95,9 @@ export class JsonStore {
     const obj = await this.load(widgetId);
     return Object.keys(obj);
   }
+
+  async keysWithPrefix(widgetId: string, prefix: string): Promise<string[]> {
+    const obj = await this.load(widgetId);
+    return Object.keys(obj).filter((k) => k.startsWith(prefix));
+  }
 }

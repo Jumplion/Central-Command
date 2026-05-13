@@ -19,7 +19,8 @@ browser.storage.local.get(['port', 'token']).then(({ port, token }) => {
 // ── Save ─────────────────────────────────────────────────────────────────────
 
 saveBtn.addEventListener('click', async () => {
-  const port  = parseInt(portInput.value, 10) || 47293;
+  const rawPort = parseInt(portInput.value, 10);
+  const port  = Number.isFinite(rawPort) && rawPort >= 1 && rawPort <= 65535 ? rawPort : 47293;
   const token = tokenInput.value.trim();
 
   await browser.storage.local.set({ port, token });
@@ -41,10 +42,18 @@ async function checkConnection(showResult = false) {
   setStatus('idle', 'Checking connection…');
 
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/api/ping`, {
-      method: 'GET',
-      headers: { 'X-Job-Capture': '1' },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    let res;
+    try {
+      res = await fetch(`http://127.0.0.1:${port}/api/ping`, {
+        method: 'GET',
+        headers: { 'X-Job-Capture': '1' },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (res.ok) {
       setStatus('ok', `Connected — Central Command is listening on port ${port}`);

@@ -63,7 +63,127 @@ Persistence is split across two layers under Electron's `userData` directory:
 - Widget titles can be overridden per instance with `setTitle`, and widgets are rendered behind an error boundary so one broken widget should not take down the whole dashboard.
 - Grid sizing uses a 12-column layout with 60 px row height, and widget sizes in manifests are specified in grid units, not pixels.
 
+### Error handling
+
+- **IPC failures**: `window.cc` calls return rejected promises on error. Catch them in the widget and display a non-blocking inline error state rather than letting the rejection propagate unhandled.
+- **SQLite errors**: `api.sql` rejects on schema or constraint errors. Always `.catch()` in `useEffect` and surface the message to the user (e.g., `setError(e.message)`).
+- **Unrecoverable widget errors**: The `WidgetHost` error boundary catches render-time exceptions. A widget that throws during render is replaced with an error card — the rest of the dashboard stays functional.
+
 ### Build and alias conventions
 
 - Respect the project aliases defined in `electron.vite.config.ts`: `@shared`, `@main`, `@renderer`, and `@widgets`.
 - The node-side and web-side TypeScript projects are checked separately via `tsconfig.node.json` and `tsconfig.web.json`; changes often need to satisfy both.
+- Files in `src/shared/` are compiled under **both** tsconfigs. Do not use Node-only APIs (e.g. `process.env`) directly in shared files — they belong in `src/main/`.
+
+---
+
+## Known pitfalls
+
+### Storage
+- `api.kv` keys are prefixed `instanceId::` — use `api.kv.keys()`, not `window.cc.kv.keys()` directly.
+- `api.sql` tables are shared across all instances of the same widget type; `api.kv` is per-instance.
+
+### IPC
+- Adding a new IPC channel requires 4 changes: `src/shared/ipc.ts`, `src/main/ipc.ts`, `src/preload/index.ts`, and `src/shared/types.ts`.
+- `src/main/platform.ts` owns `IS_WSL` — import from there, do not re-declare.
+
+### UI
+- `.widget` has `contain: layout style paint`, creating a new stacking context. `position: fixed` and portals are clipped to the widget boundary.
+- `WidgetHost` uses `memo()` — pass primitive ids, not fresh object literals, to keep memoization effective.
+
+### Security
+- `safeStorage` may not encrypt on headless Linux; secrets fall back to base64. Treat as advisory encryption only.
+- The job-capture HTTP server only accepts `chrome-extension://` and `moz-extension://` origins; regular web pages are blocked at CORS.
+
+---
+
+## Widget authoring checklist
+
+If an unsupported `kind` value is encountered, log a warning and skip rendering the settings UI for that field.
+
+When creating a new widget at `src/widgets/<id>/index.tsx`:
+
+### Naming & registration
+
+- `id` must match `^[a-z0-9][a-z0-9-]{0,63}$` **and** equal the folder name.
+- Default-export a `Widget` object — the registry picks it up automatically via `import.meta.glob`.
+- `manifest.settings` drives the auto-generated settings UI. Supported `kind` values: `string`, `number`, `boolean`, `select`. If an unsupported `kind` value is encountered, log a warning, skip rendering the settings UI for that field, and notify the user in the settings panel.
+
+### Storage rules
+
+- Initialize tables with `api.sql.exec('CREATE TABLE IF NOT EXISTS ...')` inside `useEffect(() => { ... }, [])`.
+- Use `api.kv` for small per-instance config; use `api.sql` for relational or append-only data.
+- Always use parameterized SQL (`api.sql.run('INSERT ... VALUES (?,?)', [a, b])`); never interpolate values.
+- Store OAuth tokens via `api.secrets`, never in `api.kv` or SQL.
+
+### UI & shell rules
+
+- Open external links with `api.shell.openExternal(url)`, not `window.open`.
+- Catch all async errors in `useEffect` and surface them with a local `error` state (see skeleton below).
+
+**Minimal widget skeleton:**
+
+```tsx
+import type { Widget } from '@renderer/plugins/registry';
+
+function MyWidget({ api, settings, setTitle }: import('@renderer/plugins/registry').WidgetProps) {
+  const [data, setData] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    api.sql
+      .exec('CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL)')
+      .then(() => api.sql.all<{ value: string }>('SELECT value FROM items'))
+      .then((rows) => setData(rows.map((r) => r.value).join(', ')))
+      .catch((e) => setError((e as Error).message));
+  }, []);
+
+  if (error) return <div style={{ color: 'var(--error)', padding: 8 }}>{error}</div>;
+  if (data === null) return <div style={{ padding: 8, color: 'var(--text-dim)' }}>Loading…</div>;
+  return <div style={{ padding: 8 }}>{data || 'No items yet.'}</div>;
+}
+
+const widget: Widget = {
+  manifest: {
+    id: 'my-widget',        // must match folder name
+    name: 'My Widget',
+    version: '0.1.0',
+    icon: '🔧',
+    defaultSize: { w: 4, h: 4 },
+    minSize:     { w: 2, h: 2 },
+    settings: [
+      { kind: 'string', key: 'label', label: 'Label', default: 'Hello' },
+    ],
+    permissions: { sqlite: true },
+  },
+  Component: MyWidget,
+};
+export default widget;
+```
+
+---
+
+## Testing
+
+Tests live next to source files as `*.test.ts`. Run all tests:
+
+```bash
+npx vitest run
+```
+
+Run a single test file:
+
+```bash
+npx vitest run src/widgets/job-aggregator/api.test.ts
+```
+
+Test aliases (`@shared`, `@renderer`, etc.) are resolved via `vitest.config.ts`.
+
+---
+
+## Browser extension (`extensions/job-capture/`)
+
+- The extension is **Manifest V3** — background scripts must use `"service_worker"`, not `"scripts"`.
+- The extension uses the native `browser` global (Chrome 121+); no polyfill is required for current Chrome.
+- The capture server only accepts requests from `chrome-extension://` and `moz-extension://` origins. Requests from regular web pages are rejected.
+- The server token can be regenerated from the Job Tracker widget settings panel.

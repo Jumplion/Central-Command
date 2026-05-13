@@ -125,6 +125,7 @@ export interface CCApi {
     set(widgetId: string, key: string, value: unknown): Promise<void>;
     del(widgetId: string, key: string): Promise<void>;
     keys(widgetId: string): Promise<string[]>;
+    keysWithPrefix(widgetId: string, prefix: string): Promise<string[]>;
   };
   sql: {
     run(widgetId: string, sql: string, params?: unknown[]): Promise<SqlRunResult>;

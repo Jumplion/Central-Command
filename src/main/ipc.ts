@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import { ipcMain, shell, dialog, net } from 'electron';
 import { IPC } from '@shared/ipc';
+import { IS_WSL } from './platform';
 import type { AppState, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit } from '@shared/types';
 import { isGoogleServiceId } from '@shared/google';
 import type { GoogleServiceId } from '@shared/google';
@@ -36,6 +37,10 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
     if (!isString(widgetId)) throw new Error('kv.keys: invalid arguments');
     return storage.json.keys(widgetId);
   });
+  ipcMain.handle(IPC.KV_KEYS_PREFIX, (_e, widgetId: unknown, prefix: unknown) => {
+    if (!isString(widgetId) || !isString(prefix)) throw new Error('kv.keysWithPrefix: invalid arguments');
+    return storage.json.keysWithPrefix(widgetId, prefix);
+  });
 
   // ─── SQL handlers ─────────────────────────────────────────────────────────────
   function sqlQueryHandler(channel: string, method: 'run' | 'all' | 'get') {
@@ -57,14 +62,15 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
     return storage.sqlite.runBatch(widgetId, items as { sql: string; params?: unknown[] }[]);
   });
 
-  const isWsl = !!(process.env['WSL_DISTRO_NAME'] ?? process.env['WSL_INTEROP']);
-
   ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, (_e, url: unknown) => {
     if (!isString(url) || !/^(https?|mailto):/.test(url)) throw new Error('openExternal: url must be http(s) or mailto');
-    if (isWsl) {
-      const psUrl = (url as string).replace(/'/g, "''");
+    if (IS_WSL) {
+      // Pass the URL via an env var to avoid PowerShell command injection
       return new Promise<void>((resolve) => {
-        spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Start-Process '${psUrl}'`], { stdio: 'ignore' }).on('close', () => resolve());
+        spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Start-Process -FilePath $env:CC_OPEN_URL'], {
+          stdio: 'ignore',
+          env: { ...process.env, CC_OPEN_URL: url },
+        }).on('close', () => resolve());
       });
     }
     return shell.openExternal(url);

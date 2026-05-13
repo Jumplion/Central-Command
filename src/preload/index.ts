@@ -14,7 +14,8 @@ const api: CCApi = {
     get: (widgetId, key) => ipcRenderer.invoke(IPC.KV_GET, widgetId, key),
     set: (widgetId, key, value) => ipcRenderer.invoke(IPC.KV_SET, widgetId, key, value),
     del: (widgetId, key) => ipcRenderer.invoke(IPC.KV_DEL, widgetId, key),
-    keys: (widgetId) => ipcRenderer.invoke(IPC.KV_KEYS, widgetId)
+    keys: (widgetId) => ipcRenderer.invoke(IPC.KV_KEYS, widgetId),
+    keysWithPrefix: (widgetId, prefix) => ipcRenderer.invoke(IPC.KV_KEYS_PREFIX, widgetId, prefix)
   },
   sql: {
     run: (widgetId, sql, params = []): Promise<SqlRunResult> =>

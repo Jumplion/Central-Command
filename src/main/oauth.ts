@@ -2,8 +2,7 @@ import { createServer } from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { shell } from 'electron';
-
-const IS_WSL = !!(process.env['WSL_DISTRO_NAME'] ?? process.env['WSL_INTEROP']);
+import { IS_WSL } from './platform';
 import type { SecretsStore } from './secrets';
 import type { GoogleConnectOptions } from '@shared/types';
 import { getGoogleCredsKey, getGoogleTokenKey, getGoogleConnectionId, resolveGoogleScopes } from '@shared/google';
@@ -74,12 +73,13 @@ export class OAuthManager {
 
       const authUrl = `${GOOGLE_AUTH_URL}?${params.toString()}`;
       if (IS_WSL) {
-        // shell.openExternal doesn't work in WSL. cmd.exe /c start also fails because
-        // WSL interop translates https:// slashes to backslashes and treats the quoted
-        // string as a file path. PowerShell Start-Process handles URLs correctly.
-        const psUrl = authUrl.replace(/'/g, "''"); // escape PS single quotes
+        // shell.openExternal doesn't work in WSL. Pass the URL via an env var
+        // to avoid PowerShell command injection.
         await new Promise<void>((resolve) => {
-          spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Start-Process '${psUrl}'`], { stdio: 'ignore' }).on('close', () => resolve());
+          spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Start-Process -FilePath $env:CC_OPEN_URL'], {
+            stdio: 'ignore',
+            env: { ...process.env, CC_OPEN_URL: authUrl },
+          }).on('close', () => resolve());
         });
       } else {
         await shell.openExternal(authUrl);
@@ -243,8 +243,9 @@ export class OAuthManager {
         rejectSetup(err);
       });
 
-      // In WSL, bind to 0.0.0.0 so WSL2 localhost-forwarding can reach the server
-      server.listen(0, IS_WSL ? '0.0.0.0' : '127.0.0.1', () => {
+      // Bind to 127.0.0.1 in all environments. WSL2's localhost-forwarding
+      // delivers the browser callback to 127.0.0.1 inside WSL automatically.
+      server.listen(0, '127.0.0.1', () => {
         const addr = server.address();
         if (!addr || typeof addr === 'string') {
           clearTimeout(timer);

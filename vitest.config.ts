@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+
 export default {
   test: {
     environment: 'jsdom',
@@ -5,15 +7,15 @@ export default {
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/widgets/job-aggregator/{api,parsers,utils}.ts']
+      include: ['src/widgets/job-aggregator/{api,parsers}.ts']
     }
   },
   resolve: {
     alias: {
-      '@shared': '/src/shared',
-      '@renderer': '/src/renderer/src',
-      '@widgets': '/src/widgets',
-      '@main': '/src/main'
+      '@shared': resolve(__dirname, 'src/shared'),
+      '@renderer': resolve(__dirname, 'src/renderer/src'),
+      '@widgets': resolve(__dirname, 'src/widgets'),
+      '@main': resolve(__dirname, 'src/main')
     }
   }
 };

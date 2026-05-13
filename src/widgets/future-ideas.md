@@ -138,14 +138,13 @@ needs added to the core):
 ### Program update checker — Tier 4, L
 
 - Per-OS adapter in main; ship one OS first, add others incrementally.
-  - macOS: `brew outdated --json=v2`, optional `mas outdated`. Skip Sparkle.
   - Windows: `winget upgrade --include-unknown`; `choco outdated` if Chocolatey present.
   - Linux: detect apt/dnf/pacman/flatpak/snap, run their listing commands.
 - Listing commands are all unprivileged — never spawn `sudo`. Widget surfaces
   the list and lets the user open the package manager themselves.
 - Cache results 6–24h; user-triggered refresh.
 
-### Contacts consolidation — Tier 3 (Google) / Tier 4 (iCloud), L
+### Contacts consolidation — Tier 3 (Google), L
 
 - Canonical store: own SQLite.
   Schema sketch: `contacts(id, primary_name, ...)`,
@@ -153,8 +152,6 @@ needs added to the core):
   `interactions(contact_id, kind, ts, source_ref)`.
   Index identifiers on `(kind, value)` for dedupe.
 - Google: People API (OAuth, same Google client setup as Gmail/Drive).
-- iCloud: CardDAV via `tsdav` + app-specific password. Document the manual
-  password-generation step.
 - "Relationship graph" is a v2 — wait until Gmail + Calendar widgets emit
   interactions onto a shared bus.
 - Needs: OAuth helper, safeStorage, in-process bus (later).

@@ -6,6 +6,7 @@ export const IPC = {
   KV_SET: 'cc:kv:set',
   KV_DEL: 'cc:kv:del',
   KV_KEYS: 'cc:kv:keys',
+  KV_KEYS_PREFIX: 'cc:kv:keys-prefix',
 
   SQL_RUN: 'cc:sql:run',
   SQL_ALL: 'cc:sql:all',

@@ -183,8 +183,14 @@ async function init() {
 
 async function pingServer(port) {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/api/ping`);
-    return res.ok;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/ping`, { signal: controller.signal });
+      return res.ok;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch {
     return false;
   }

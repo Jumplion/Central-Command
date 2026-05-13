@@ -70,6 +70,12 @@ const VALID_STATUSES = new Set(['Applied', 'Phone', 'Onsite', 'Offer', 'Rejected
 const VALID_AUDITION_STATUSES = new Set(['Interested', 'Submitted', 'Callback', 'Booked', 'Released', 'Passed']);
 const VALID_PROJECT_TYPES = new Set(['Film', 'TV', 'Commercial', 'Theater', 'Voiceover', 'Student/Indie']);
 
+/** Max request body size accepted from the browser extension (64 KiB). */
+const MAX_BODY_BYTES = 64 * 1024;
+
+/** Thrown inside a handleCapture callback to produce a user-visible 400 response. */
+class CaptureError extends Error {}  
+
 export class JobCaptureServer {
   private server: http.Server | null = null;
   private _token  = '';
@@ -140,8 +146,15 @@ export class JobCaptureServer {
       return;
     }
 
-    // CORS — allow extension popups (origin is "null" for extension pages)
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS — only allow Chrome/Firefox extension pages (they have extension:// origins)
+    // or requests with no Origin header (native clients). Regular web pages always
+    // include an Origin header, so this blocks CSRF-style requests from any website.
+    const origin = req.headers['origin'] ?? '';
+    if (origin && !origin.startsWith('chrome-extension://') && !origin.startsWith('moz-extension://')) {
+      res.writeHead(403).end();
+      return;
+    }
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Job-Capture');
 
@@ -166,7 +179,11 @@ export class JobCaptureServer {
     res.writeHead(404).end();
   }
 
-  private handleAddJob(req: http.IncomingMessage, res: http.ServerResponse): void {
+  private handleCapture(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    process: (body: string) => void,
+  ): void {
     const auth = req.headers['authorization'] ?? '';
     if (auth !== `Bearer ${this._token}`) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -175,95 +192,93 @@ export class JobCaptureServer {
     }
 
     let body = '';
-    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('data', (chunk: Buffer) => {
+      body += chunk.toString();
+      if (body.length > MAX_BODY_BYTES) req.destroy(new Error('too large'));
+    });
+    req.on('error', () => {
+      if (!res.headersSent) {
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Request body too large' }));
+      }
+    });
     req.on('end', () => {
+      if (res.headersSent) return;
       try {
-        const job = JSON.parse(body) as Record<string, unknown>;
-
-        const company    = String(job['company']    ?? '').slice(0, 500);
-        const role       = String(job['role']       ?? '').slice(0, 500);
-        const link       = String(job['link']       ?? '').slice(0, 2000);
-        const notes      = String(job['notes']      ?? '').slice(0, 5000);
-        const source     = String(job['source']     ?? 'Browser Extension').slice(0, 200);
-        const rawStatus  = String(job['status']     ?? 'Applied');
-        const applied_at = String(job['applied_at'] ?? new Date().toISOString().slice(0, 10)).slice(0, 20);
-
-        const status = VALID_STATUSES.has(rawStatus) ? rawStatus : 'Applied';
-
-        this.storage.sqlite.run(WIDGET_ID, INSERT_SQL, [
-          company, role, status, applied_at, source, link, notes, '', Date.now(),
-        ]);
-
-        const captured = { company, role, link, notes, source, status, applied_at };
-        const wins = BrowserWindow.getAllWindows();
-        if (wins[0] && !wins[0].isDestroyed()) {
-          wins[0].webContents.send(IPC.JOB_CAPTURE_JOB_ADDED, captured);
-        }
-
+        process(body);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
-      } catch {
+      } catch (err) {
+        const msg = err instanceof CaptureError ? (err as Error).message : 'Bad request';
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Bad request' }));
+        res.end(JSON.stringify({ error: msg }));
+      }
+    });
+  }
+
+  private handleAddJob(req: http.IncomingMessage, res: http.ServerResponse): void {
+    this.handleCapture(req, res, (body) => {
+      const job = JSON.parse(body) as Record<string, unknown>;
+
+      const company    = String(job['company']    ?? '').slice(0, 500);
+      const role       = String(job['role']       ?? '').slice(0, 500);
+      const link       = String(job['link']       ?? '').slice(0, 2000);
+      const notes      = String(job['notes']      ?? '').slice(0, 5000);
+      const source     = String(job['source']     ?? 'Browser Extension').slice(0, 200);
+      const req_number = String(job['req_number'] ?? '').slice(0, 200);
+      const rawStatus  = String(job['status']     ?? 'Applied');
+      const applied_at = String(job['applied_at'] ?? new Date().toISOString().slice(0, 10)).slice(0, 20);
+
+      if (!company && !role) throw new CaptureError('company or role is required');
+
+      const status = VALID_STATUSES.has(rawStatus) ? rawStatus : 'Applied';
+
+      this.storage.sqlite.run(WIDGET_ID, INSERT_SQL, [
+        company, role, status, applied_at, source, link, notes, req_number, Date.now(),
+      ]);
+
+      const captured = { company, role, link, notes, source, status, applied_at };
+      const wins = BrowserWindow.getAllWindows();
+      if (wins[0] && !wins[0].isDestroyed()) {
+        wins[0].webContents.send(IPC.JOB_CAPTURE_JOB_ADDED, captured);
       }
     });
   }
 
   private handleAddAudition(req: http.IncomingMessage, res: http.ServerResponse): void {
-    const auth = req.headers['authorization'] ?? '';
-    if (auth !== `Bearer ${this._token}`) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized' }));
-      return;
-    }
+    this.handleCapture(req, res, (body) => {
+      const a = JSON.parse(body) as Record<string, unknown>;
 
-    let body = '';
-    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
-    req.on('end', () => {
-      try {
-        const a = JSON.parse(body) as Record<string, unknown>;
+      const project_title       = String(a['project_title']       ?? '').slice(0, 500);
+      const role                = String(a['role']                ?? '').slice(0, 500);
+      const casting_studio      = String(a['casting_studio']      ?? '').slice(0, 500);
+      const location            = String(a['location']            ?? '').slice(0, 500);
+      const pay_rate            = String(a['pay_rate']            ?? '').slice(0, 200);
+      const submitted_at        = String(a['submitted_at']        ?? new Date().toISOString().slice(0, 10)).slice(0, 20);
+      const submission_deadline = String(a['submission_deadline'] ?? '').slice(0, 20);
+      const shoot_date          = String(a['shoot_date']          ?? '').slice(0, 20);
+      const link                = String(a['link']                ?? '').slice(0, 2000);
+      const notes               = String(a['notes']               ?? '').slice(0, 5000);
 
-        const project_title       = String(a['project_title']       ?? '').slice(0, 500);
-        const role                = String(a['role']                ?? '').slice(0, 500);
-        const casting_studio      = String(a['casting_studio']      ?? '').slice(0, 500);
-        const location            = String(a['location']            ?? '').slice(0, 500);
-        const pay_rate            = String(a['pay_rate']            ?? '').slice(0, 200);
-        const submitted_at        = String(a['submitted_at']        ?? new Date().toISOString().slice(0, 10)).slice(0, 20);
-        const submission_deadline = String(a['submission_deadline'] ?? '').slice(0, 20);
-        const shoot_date          = String(a['shoot_date']          ?? '').slice(0, 20);
-        const link                = String(a['link']                ?? '').slice(0, 2000);
-        const notes               = String(a['notes']               ?? '').slice(0, 5000);
+      const rawType   = String(a['project_type'] ?? 'Film');
+      const rawStatus = String(a['status']       ?? 'Interested');
+      const project_type = VALID_PROJECT_TYPES.has(rawType)       ? rawType   : 'Film';
+      const status       = VALID_AUDITION_STATUSES.has(rawStatus) ? rawStatus : 'Interested';
 
-        const rawType   = String(a['project_type'] ?? 'Film');
-        const rawStatus = String(a['status']       ?? 'Interested');
-        const project_type = VALID_PROJECT_TYPES.has(rawType)       ? rawType   : 'Film';
-        const status       = VALID_AUDITION_STATUSES.has(rawStatus) ? rawStatus : 'Interested';
+      if (!project_title) throw new CaptureError('project_title is required');
 
-        if (!project_title) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'project_title is required' }));
-          return;
-        }
+      this.storage.sqlite.run(AUDITION_WIDGET_ID, INSERT_AUDITION_SQL, [
+        project_title, role, project_type, status, casting_studio, location, pay_rate,
+        submitted_at, submission_deadline, shoot_date, link, notes, Date.now(),
+      ]);
 
-        this.storage.sqlite.run(AUDITION_WIDGET_ID, INSERT_AUDITION_SQL, [
-          project_title, role, project_type, status, casting_studio, location, pay_rate,
-          submitted_at, submission_deadline, shoot_date, link, notes, Date.now(),
-        ]);
-
-        const captured = {
-          project_title, role, project_type, status, casting_studio, location,
-          pay_rate, submitted_at, submission_deadline, shoot_date, link, notes,
-        };
-        const wins = BrowserWindow.getAllWindows();
-        if (wins[0] && !wins[0].isDestroyed()) {
-          wins[0].webContents.send(IPC.JOB_CAPTURE_AUDITION_ADDED, captured);
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
-      } catch {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Bad request' }));
+      const captured = {
+        project_title, role, project_type, status, casting_studio, location,
+        pay_rate, submitted_at, submission_deadline, shoot_date, link, notes,
+      };
+      const wins = BrowserWindow.getAllWindows();
+      if (wins[0] && !wins[0].isDestroyed()) {
+        wins[0].webContents.send(IPC.JOB_CAPTURE_AUDITION_ADDED, captured);
       }
     });
   }

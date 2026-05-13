@@ -48,7 +48,9 @@ app.whenReady().then(() => {
   captureServer = new JobCaptureServer(storage, secrets);
   registerIpc(storage, secrets, oauth, captureServer);
   createWindow();
-  void captureServer.start();
+  void captureServer.start().catch((err) => {
+    console.error('[server] Failed to start job capture server:', (err as Error).message);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

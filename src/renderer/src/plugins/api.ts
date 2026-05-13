@@ -103,9 +103,9 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
       set: (key, value) => window.cc.kv.set(widgetId, scoped(instanceId, key), value),
       del: (key) => window.cc.kv.del(widgetId, scoped(instanceId, key)),
       keys: async () => {
-        const all = await window.cc.kv.keys(widgetId);
         const prefix = instanceId + SCOPE_SEP;
-        return all.filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
+        const prefixed = await window.cc.kv.keysWithPrefix(widgetId, prefix);
+        return prefixed.map((k) => k.slice(prefix.length));
       }
     },
     sql: {
