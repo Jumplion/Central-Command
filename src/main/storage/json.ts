@@ -1,13 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-
-const VALID_WIDGET_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
-
-export function assertValidWidgetId(widgetId: string): void {
-  if (!VALID_WIDGET_ID.test(widgetId)) {
-    throw new Error(`Invalid widget id: ${widgetId}`);
-  }
-}
+import { assertValidWidgetId } from '@shared/validation';
 
 export class JsonStore {
   private cache = new Map<string, Record<string, unknown>>();
