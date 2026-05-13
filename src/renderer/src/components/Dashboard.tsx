@@ -66,6 +66,7 @@ export function Dashboard() {
           margin={[12, 12]}
           containerPadding={[16, 16]}
           draggableHandle=".widget-header"
+          draggableCancel=".widget-actions"
           onDragStop={handleChange}
           onResizeStop={handleChange}
           compactType="vertical"

@@ -161,8 +161,8 @@ pre { white-space: pre-wrap; word-break: break-word; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.widget-actions { display: flex; gap: 4px; }
-.widget-actions button { padding: 2px 8px; }
+.widget-actions { display: flex; gap: 6px; pointer-events: auto; }
+.widget-actions button { padding: 6px 12px; font-size: 16px; pointer-events: auto; }
 .widget-body {
   flex: 1;
   padding: 12px;
