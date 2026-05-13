@@ -48,7 +48,16 @@ export function SavedTab({ api, savedJobs, onSavedChange }: Props) {
             </thead>
             <tbody>
               {filteredSaved.map((job) => (
-                <tr key={job.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <tr
+                  key={job.id}
+                  style={{
+                    borderTop: '1px solid var(--border)',
+                    transition: 'background-color 0.15s',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(110, 168, 255, 0.07)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+                >
                   <td style={tdStyle}>
                     <div style={{ fontWeight: 500, lineHeight: 1.3 }}>{job.title}</div>
                     <div style={{ color: 'var(--text-dim)', fontSize: 11 }}>

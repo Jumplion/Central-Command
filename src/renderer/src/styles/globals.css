@@ -77,6 +77,13 @@ pre { white-space: pre-wrap; word-break: break-word; }
   flex-direction: column;
   padding: 16px 12px;
   gap: 16px;
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+.sidebar.collapsed {
+  width: 60px;
+  flex: 0 0 60px;
+  padding: 16px 8px;
+  align-items: center;
 }
 .brand {
   display: flex;
@@ -84,7 +91,20 @@ pre { white-space: pre-wrap; word-break: break-word; }
   gap: 8px;
   padding: 4px;
 }
+.sidebar.collapsed .brand {
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
 .brand-mark { font-size: 18px; color: var(--accent); }
+.sidebar-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.sidebar.collapsed .sidebar-toggle {
+  margin-left: 0;
+  margin-top: 8px;
+}
 
 .section-header {
   display: flex;

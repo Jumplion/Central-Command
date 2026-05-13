@@ -46,7 +46,12 @@ export function JobCard({
     <div style={{
       border: '1px solid var(--border)', borderRadius: 6,
       padding: '8px 10px', marginBottom: 6, background: 'var(--panel-2)',
-    }}>
+      transition: 'background-color 0.15s',
+      cursor: 'pointer',
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(110, 168, 255, 0.07)'}
+    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, lineHeight: 1.3 }}>{job.title}</div>
@@ -218,7 +223,14 @@ export function BoardSection({
             return (
               <div
                 key={job.id}
-                style={{ display: 'flex', gap: 8, padding: '6px 0', borderTop: '1px solid var(--border)', alignItems: 'flex-start' }}
+                style={{
+                  display: 'flex', gap: 8, padding: '6px 0', borderTop: '1px solid var(--border)', alignItems: 'flex-start',
+                  transition: 'background-color 0.15s, padding 0.15s',
+                  paddingLeft: '4px', paddingRight: '4px', marginLeft: '-4px', marginRight: '-4px', borderRadius: 4,
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(110, 168, 255, 0.07)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 500, fontSize: 12, lineHeight: 1.3 }}>{job.title}</div>

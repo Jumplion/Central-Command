@@ -195,7 +195,16 @@ function JobTracker({ api }: WidgetProps) {
                       </td>
                     </tr>
                   ) : (
-                    <tr key={app.id} style={{ borderTop: '1px solid var(--border)' }}>
+                    <tr
+                      key={app.id}
+                      style={{
+                        borderTop: '1px solid var(--border)',
+                        transition: 'background-color 0.15s',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(110, 168, 255, 0.07)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+                    >
                       <Td>{app.company}</Td>
                       <Td>{app.role}</Td>
                       <Td><StatusBadge status={app.status} /></Td>
