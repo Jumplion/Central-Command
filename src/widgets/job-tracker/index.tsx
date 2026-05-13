@@ -32,8 +32,11 @@ function JobTracker({ api }: WidgetProps) {
     const init = async () => {
       await api.sql.exec(INIT_SQL);
       await api.sql.exec(EMAIL_INIT_SQL);
-      for (const sql of SCHEMA_MIGRATIONS) {
-        try { await api.sql.run(sql, []); } catch { /* column already exists */ }
+      for (const m of SCHEMA_MIGRATIONS) {
+        const cols = await api.sql.all<{ name: string }>(`PRAGMA table_info(${m.table})`);
+        if (!cols.find((c) => c.name === m.column)) {
+          await api.sql.run(m.sql, []);
+        }
       }
       await load();
       setReady(true);
