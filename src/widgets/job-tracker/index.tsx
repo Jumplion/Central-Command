@@ -4,17 +4,18 @@ import { STATUSES, STATUS_COLOR } from './types';
 import type { Application, AppFormData, Status } from './types';
 import { parseCSVLine } from './csv';
 import {
-  INIT_SQL, today,
+  INIT_SQL, EMAIL_INIT_SQL, SCHEMA_MIGRATIONS, today,
   StatusBar, AppForm, WeeklyChart,
   Th, Td, StatusBadge,
 } from './components';
+import { EmailsTab } from './EmailsTab';
 
 function JobTracker({ api }: WidgetProps) {
   const [apps, setApps] = useState<Application[]>([]);
   const [filter, setFilter] = useState<Status | 'All'>('All');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [view, setView] = useState<'list' | 'chart'>('list');
+  const [view, setView] = useState<'list' | 'chart' | 'emails'>('list');
   const [importing, setImporting] = useState(false);
   const [ready, setReady] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -27,10 +28,16 @@ function JobTracker({ api }: WidgetProps) {
   }, [api]);
 
   useEffect(() => {
-    api.sql.exec(INIT_SQL).then(() => {
-      load();
+    const init = async () => {
+      await api.sql.exec(INIT_SQL);
+      await api.sql.exec(EMAIL_INIT_SQL);
+      for (const sql of SCHEMA_MIGRATIONS) {
+        try { await api.sql.run(sql, []); } catch { /* column already exists */ }
+      }
+      await load();
       setReady(true);
-    });
+    };
+    void init();
   }, []);
 
   const counts = useMemo(() => {
@@ -49,8 +56,8 @@ function JobTracker({ api }: WidgetProps) {
 
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(
-      'INSERT INTO applications (company,role,status,applied_at,source,link,notes,last_updated) VALUES (?,?,?,?,?,?,?,?)',
-      [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, Date.now()]
+      'INSERT INTO applications (company,role,status,applied_at,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?)',
+      [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, data.req_number, Date.now()]
     );
     await load();
     setShowAdd(false);
@@ -58,8 +65,8 @@ function JobTracker({ api }: WidgetProps) {
 
   const handleEdit = (app: Application) => async (data: AppFormData) => {
     await api.sql.run(
-      'UPDATE applications SET company=?,role=?,status=?,applied_at=?,source=?,link=?,notes=?,last_updated=? WHERE id=?',
-      [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, Date.now(), app.id]
+      'UPDATE applications SET company=?,role=?,status=?,applied_at=?,source=?,link=?,notes=?,req_number=?,last_updated=? WHERE id=?',
+      [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, data.req_number, Date.now(), app.id]
     );
     await load();
     setEditingId(null);
@@ -71,9 +78,9 @@ function JobTracker({ api }: WidgetProps) {
   };
 
   const handleExportCSV = () => {
-    const header = 'company,role,status,applied_at,source,link,notes';
+    const header = 'company,role,status,applied_at,source,link,notes,req_number';
     const rows = apps.map((a) =>
-      [a.company, a.role, a.status, a.applied_at, a.source, a.link, a.notes]
+      [a.company, a.role, a.status, a.applied_at, a.source, a.link, a.notes, a.req_number]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(',')
     );
@@ -97,12 +104,12 @@ function JobTracker({ api }: WidgetProps) {
       for (const line of lines.slice(1)) {
         const fields = parseCSVLine(line);
         if (fields.length < 4) continue;
-        const [company, role, status, applied_at, source = '', link = '', notes = ''] = fields;
+        const [company, role, status, applied_at, source = '', link = '', notes = '', req_number = ''] = fields;
         if (!company || !role) continue;
         const safeStatus = (STATUSES as string[]).includes(status) ? status : 'Applied';
         await api.sql.run(
-          'INSERT INTO applications (company,role,status,applied_at,source,link,notes,last_updated) VALUES (?,?,?,?,?,?,?,?)',
-          [company, role, safeStatus, applied_at || today(), source, link, notes, Date.now()]
+          'INSERT INTO applications (company,role,status,applied_at,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?)',
+          [company, role, safeStatus, applied_at || today(), source, link, notes, req_number, Date.now()]
         );
       }
       await load();
@@ -127,7 +134,7 @@ function JobTracker({ api }: WidgetProps) {
           + Add
         </button>
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-          {(['list', 'chart'] as const).map((v) => (
+          {(['list', 'chart', 'emails'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -140,7 +147,7 @@ function JobTracker({ api }: WidgetProps) {
                 cursor: 'pointer',
               }}
             >
-              {v === 'list' ? 'List' : 'Chart'}
+              {v === 'list' ? 'List' : v === 'chart' ? 'Chart' : 'Emails'}
             </button>
           ))}
         </div>
@@ -174,7 +181,14 @@ function JobTracker({ api }: WidgetProps) {
         <AppForm onSave={handleAdd} onCancel={() => setShowAdd(false)} />
       )}
 
-      {view === 'chart' ? (
+      {view === 'emails' ? (
+        <EmailsTab
+          api={api}
+          apps={apps}
+          onAppAdded={load}
+          onAppUpdated={load}
+        />
+      ) : view === 'chart' ? (
         <WeeklyChart apps={apps} />
       ) : (
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
@@ -190,6 +204,7 @@ function JobTracker({ api }: WidgetProps) {
                   <Th>Role</Th>
                   <Th>Status</Th>
                   <Th>Applied</Th>
+                  <Th>Req #</Th>
                   <Th />
                 </tr>
               </thead>
@@ -216,6 +231,7 @@ function JobTracker({ api }: WidgetProps) {
                       <Td>{app.role}</Td>
                       <Td><StatusBadge status={app.status} /></Td>
                       <Td>{app.applied_at}</Td>
+                      <Td>{app.req_number}</Td>
                       <td style={{ padding: '4px 6px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {app.link && (
                           <button
@@ -265,7 +281,7 @@ const widget: Widget = {
     icon: '💼',
     defaultSize: { w: 8, h: 8 },
     minSize: { w: 5, h: 5 },
-    permissions: { sqlite: true },
+    permissions: { sqlite: true, google: true },
   },
   Component: JobTracker,
 };

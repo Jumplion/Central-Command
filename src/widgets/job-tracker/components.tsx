@@ -15,9 +15,34 @@ export const INIT_SQL = `
     source       TEXT    NOT NULL DEFAULT '',
     link         TEXT    NOT NULL DEFAULT '',
     notes        TEXT    NOT NULL DEFAULT '',
+    req_number   TEXT    NOT NULL DEFAULT '',
     last_updated INTEGER NOT NULL
   );
 `;
+
+export const EMAIL_INIT_SQL = `
+  CREATE TABLE IF NOT EXISTS email_jobs (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    gmail_id       TEXT    NOT NULL UNIQUE,
+    thread_id      TEXT    NOT NULL,
+    subject        TEXT    NOT NULL,
+    from_address   TEXT    NOT NULL,
+    received_at    TEXT    NOT NULL,
+    snippet        TEXT    NOT NULL DEFAULT '',
+    parsed_company TEXT    NOT NULL DEFAULT '',
+    parsed_role    TEXT    NOT NULL DEFAULT '',
+    parsed_status     TEXT    NOT NULL DEFAULT '',
+    parsed_req_number TEXT    NOT NULL DEFAULT '',
+    application_id    INTEGER REFERENCES applications(id) ON DELETE SET NULL,
+    dismissed      INTEGER NOT NULL DEFAULT 0,
+    fetched_at     INTEGER NOT NULL
+  );
+`;
+
+/** DDL migrations — each is safe to run repeatedly; errors mean the column already exists. */
+export const SCHEMA_MIGRATIONS = [
+  "ALTER TABLE applications ADD COLUMN req_number TEXT NOT NULL DEFAULT ''",
+];
 
 export const today = (): string => new Date().toISOString().slice(0, 10);
 
@@ -139,6 +164,7 @@ export function AppForm({ initial, onSave, onCancel }: {
     source: initial?.source ?? '',
     link: initial?.link ?? '',
     notes: initial?.notes ?? '',
+    req_number: initial?.req_number ?? '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -187,6 +213,7 @@ export function AppForm({ initial, onSave, onCancel }: {
           {COMMON_SOURCES.map((s) => <option key={s} value={s} />)}
         </datalist>
         <input style={inp} placeholder="Link" value={form.link} onChange={handleLinkChange} />
+        <input style={inp} placeholder="Req # (optional)" value={form.req_number} onChange={set('req_number')} />
       </div>
       <textarea
         style={{ ...inp, resize: 'vertical', minHeight: 44 }}

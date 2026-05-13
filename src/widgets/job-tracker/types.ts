@@ -20,7 +20,29 @@ export interface Application {
   source: string;
   link: string;
   notes: string;
+  req_number: string;
   last_updated: number;
 }
 
 export type AppFormData = Omit<Application, 'id' | 'last_updated'>;
+
+export interface ParsedJobEmail {
+  id: number;
+  gmail_id: string;
+  thread_id: string;
+  subject: string;
+  from_address: string;
+  received_at: string;
+  snippet: string;
+  parsed_company: string;
+  parsed_role: string;
+  parsed_status: string;
+  parsed_req_number: string;
+  application_id: number | null;
+  dismissed: number;
+  fetched_at: number;
+}
+
+export type EmailSuggestion =
+  | { kind: 'add'; prefill: AppFormData }
+  | { kind: 'update'; app: Application; newStatus: Status };
