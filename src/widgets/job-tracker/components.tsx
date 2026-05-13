@@ -89,6 +89,43 @@ export function Chip({ active, color, onClick, children }: {
 
 const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
 
+const COMMON_SOURCES = [
+  'LinkedIn', 'Indeed', 'Glassdoor', 'ZipRecruiter', 'Monster', 'Dice',
+  'Built In', 'Wellfound', 'AngelList', 'Y Combinator', 'Greenhouse',
+  'Lever', 'Workday', 'iCIMS', 'SimplyHired', 'CareerBuilder',
+  'Remote OK', 'We Work Remotely', 'Hired', 'Referral', 'Company Website', 'Robert Half Technologies',
+];
+
+const LINK_SOURCE_MAP: [RegExp, string][] = [
+  [/linkedin\.com/i, 'LinkedIn'],
+  [/indeed\.com/i, 'Indeed'],
+  [/glassdoor\.com/i, 'Glassdoor'],
+  [/ziprecruiter\.com/i, 'ZipRecruiter'],
+  [/monster\.com/i, 'Monster'],
+  [/dice\.com/i, 'Dice'],
+  [/builtin\.com/i, 'Built In'],
+  [/wellfound\.com/i, 'Wellfound'],
+  [/angel\.co/i, 'AngelList'],
+  [/workatastartup\.com|ycombinator\.com/i, 'Y Combinator'],
+  [/greenhouse\.io/i, 'Greenhouse'],
+  [/lever\.co/i, 'Lever'],
+  [/myworkdayjobs\.com|workday\.com/i, 'Workday'],
+  [/icims\.com/i, 'iCIMS'],
+  [/simplyhired\.com/i, 'SimplyHired'],
+  [/careerbuilder\.com/i, 'CareerBuilder'],
+  [/remoteok\.com/i, 'Remote OK'],
+  [/weworkremotely\.com/i, 'We Work Remotely'],
+  [/hired\.com/i, 'Hired'],
+  [/roberthalf\.com/i, 'Robert Half Technologies'],
+];
+
+function deriveSourceFromLink(url: string): string {
+  for (const [pattern, source] of LINK_SOURCE_MAP) {
+    if (pattern.test(url)) return source;
+  }
+  return '';
+}
+
 export function AppForm({ initial, onSave, onCancel }: {
   initial?: Application;
   onSave: (data: AppFormData) => Promise<void>;
@@ -109,6 +146,14 @@ export function AppForm({ initial, onSave, onCancel }: {
     (key: keyof AppFormData) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const link = e.target.value;
+    setForm((f) => {
+      const derived = deriveSourceFromLink(link);
+      return { ...f, link, source: f.source === '' && derived ? derived : f.source };
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,8 +182,11 @@ export function AppForm({ initial, onSave, onCancel }: {
           {STATUSES.map((s) => <option key={s}>{s}</option>)}
         </select>
         <input style={inp} type="date" value={form.applied_at} onChange={set('applied_at')} />
-        <input style={inp} placeholder="Source (LinkedIn, referral…)" value={form.source} onChange={set('source')} />
-        <input style={inp} placeholder="Link" value={form.link} onChange={set('link')} />
+        <input style={inp} placeholder="Source (LinkedIn, referral…)" value={form.source} onChange={set('source')} list="job-sources" autoComplete="off" />
+        <datalist id="job-sources">
+          {COMMON_SOURCES.map((s) => <option key={s} value={s} />)}
+        </datalist>
+        <input style={inp} placeholder="Link" value={form.link} onChange={handleLinkChange} />
       </div>
       <textarea
         style={{ ...inp, resize: 'vertical', minHeight: 44 }}
