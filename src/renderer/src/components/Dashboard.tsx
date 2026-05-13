@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GridLayout, { Layout } from 'react-grid-layout';
 import { useDashboard } from '@renderer/state/dashboard';
 import { getWidget } from '@renderer/plugins/registry';
@@ -27,24 +27,29 @@ export function Dashboard() {
     return () => ro.disconnect();
   }, []);
 
-  const layout: Layout[] = dashboard.instances.map((i) => {
-    const min = getWidget(i.widgetId)?.manifest.minSize;
-    return {
-      i: i.instanceId,
-      x: i.layout.x,
-      y: i.layout.y,
-      w: i.layout.w,
-      h: i.layout.h,
-      minW: min?.w ?? 2,
-      minH: min?.h ?? 2
-    };
-  });
+  const layout = useMemo<Layout[]>(
+    () =>
+      dashboard.instances.map((i) => {
+        const min = getWidget(i.widgetId)?.manifest.minSize;
+        return {
+          i: i.instanceId,
+          x: i.layout.x,
+          y: i.layout.y,
+          w: i.layout.w,
+          h: i.layout.h,
+          minW: min?.w ?? 2,
+          minH: min?.h ?? 2
+        };
+      }),
+    [dashboard.instances]
+  );
 
-  const handleChange = (next: Layout[]) => {
-    updateLayout(
-      next.map((l) => ({ instanceId: l.i, x: l.x, y: l.y, w: l.w, h: l.h }))
-    );
-  };
+  const handleChange = useCallback(
+    (next: Layout[]) => {
+      updateLayout(next.map((l) => ({ instanceId: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
+    },
+    [updateLayout]
+  );
 
   return (
     <div className="dashboard" ref={containerRef}>

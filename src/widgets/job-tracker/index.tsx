@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import { STATUSES, STATUS_COLOR } from './types';
 import type { Application, AppFormData, Status } from './types';
@@ -33,12 +33,19 @@ function JobTracker({ api }: WidgetProps) {
     });
   }, []);
 
-  const counts = STATUSES.reduce<Record<Status, number>>(
-    (acc, s) => { acc[s] = apps.filter((a) => a.status === s).length; return acc; },
-    {} as Record<Status, number>
-  );
+  const counts = useMemo(() => {
+    const acc = STATUSES.reduce<Record<Status, number>>(
+      (a, s) => { a[s] = 0; return a; },
+      {} as Record<Status, number>
+    );
+    for (const a of apps) if (a.status in acc) acc[a.status as Status]++;
+    return acc;
+  }, [apps]);
 
-  const filtered = filter === 'All' ? apps : apps.filter((a) => a.status === filter);
+  const filtered = useMemo(
+    () => (filter === 'All' ? apps : apps.filter((a) => a.status === filter)),
+    [apps, filter]
+  );
 
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(

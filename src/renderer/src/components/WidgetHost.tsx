@@ -1,4 +1,4 @@
-import { Component, ReactNode, useCallback, useMemo, useState } from 'react';
+import { Component, ReactNode, memo, useCallback, useMemo, useState } from 'react';
 import type { WidgetInstance } from '@shared/types';
 import type { Widget } from '@renderer/plugins/registry';
 import { createWidgetApi } from '@renderer/plugins/api';
@@ -10,7 +10,7 @@ interface Props {
   widget: Widget | undefined;
 }
 
-export function WidgetHost({ instance, widget }: Props) {
+export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) {
   const removeInstance = useDashboard((s) => s.removeInstance);
   const setTitle = useDashboard((s) => s.setTitle);
   const [showSettings, setShowSettings] = useState(false);
@@ -95,7 +95,7 @@ export function WidgetHost({ instance, widget }: Props) {
       )}
     </div>
   );
-}
+});
 
 interface BoundaryProps {
   widgetName: string;

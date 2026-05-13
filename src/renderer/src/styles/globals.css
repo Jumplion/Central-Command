@@ -162,6 +162,7 @@ pre { white-space: pre-wrap; word-break: break-word; }
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  contain: layout style paint;
 }
 .widget-header {
   display: flex;
@@ -297,4 +298,10 @@ pre { white-space: pre-wrap; word-break: break-word; }
 }
 .react-grid-item > .react-resizable-handle::after {
   border-color: var(--text-dim) !important;
+}
+/* Promote dragging/resizing items to their own compositor layer */
+.react-grid-item.react-draggable-dragging,
+.react-grid-item.resizing {
+  will-change: transform;
+  z-index: 10;
 }
