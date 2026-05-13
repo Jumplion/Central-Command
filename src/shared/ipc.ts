@@ -33,7 +33,9 @@ export const IPC = {
   JOB_CAPTURE_STATUS:      'cc:job-capture:status',
   JOB_CAPTURE_REGEN_TOKEN: 'cc:job-capture:regen-token',
   /** Push event from main → renderer when a job arrives via the browser extension. */
-  JOB_CAPTURE_JOB_ADDED:   'cc:job-capture:job-added',
+  JOB_CAPTURE_JOB_ADDED:      'cc:job-capture:job-added',
+  /** Push event from main → renderer when an audition arrives via the browser extension. */
+  JOB_CAPTURE_AUDITION_ADDED: 'cc:job-capture:audition-added',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

@@ -100,6 +100,21 @@ export interface CapturedJob {
   applied_at: string;
 }
 
+export interface CapturedAudition {
+  project_title: string;
+  role: string;
+  project_type: string;
+  status: string;
+  casting_studio: string;
+  location: string;
+  pay_rate: string;
+  submitted_at: string;
+  submission_deadline: string;
+  shoot_date: string;
+  link: string;
+  notes: string;
+}
+
 export interface CCApi {
   state: {
     load(): Promise<AppState>;
@@ -152,5 +167,10 @@ export interface CCApi {
      * extension. Returns an unsubscribe function — call it in useEffect cleanup.
      */
     onJobAdded(cb: (job: CapturedJob) => void): () => void;
+    /**
+     * Registers a callback invoked whenever an audition arrives via the browser
+     * extension. Returns an unsubscribe function — call it in useEffect cleanup.
+     */
+    onAuditionAdded(cb: (audition: CapturedAudition) => void): () => void;
   };
 }

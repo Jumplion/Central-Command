@@ -3,6 +3,7 @@ import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { ExtensionTab } from './ExtensionTab';
 
 // ─── Enums ─────────────────────────────────────────────────────────────────
 
@@ -489,7 +490,7 @@ function AuditionAggregator({ api }: WidgetProps) {
   const [typeFilter, setTypeFilter] = useState<ProjectType | 'All'>('All');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [view, setView] = useState<'list' | 'chart'>('list');
+  const [view, setView] = useState<'list' | 'chart' | 'extension'>('list');
   const [importing, setImporting] = useState(false);
   const [ready, setReady] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -647,7 +648,7 @@ function AuditionAggregator({ api }: WidgetProps) {
           + Add
         </button>
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-          {(['list', 'chart'] as const).map((v) => (
+          {(['list', 'chart', 'extension'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -660,7 +661,7 @@ function AuditionAggregator({ api }: WidgetProps) {
                 cursor: 'pointer',
               }}
             >
-              {v === 'list' ? 'List' : 'Chart'}
+              {v === 'list' ? 'List' : v === 'chart' ? 'Chart' : '🧩 Extension'}
             </button>
           ))}
         </div>
@@ -694,7 +695,9 @@ function AuditionAggregator({ api }: WidgetProps) {
         <AuditionForm onSave={handleAdd} onCancel={() => setShowAdd(false)} />
       )}
 
-      {view === 'chart' ? (
+      {view === 'extension' ? (
+        <ExtensionTab api={api} onAuditionAdded={load} />
+      ) : view === 'chart' ? (
         <WeeklyChart auditions={auds} />
       ) : (
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
