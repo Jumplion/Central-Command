@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { WidgetApi } from '@renderer/plugins/api';
 import type { JobListing } from './types';
 import { EMP_TYPES, inp } from './constants';
-import { searchJSearch, searchArbeitnow } from './api';
+import { searchArbeitnow } from './api';
+import { searchJSearch } from './jsearch';
 import { JobCard } from './components';
 
 interface Props {
