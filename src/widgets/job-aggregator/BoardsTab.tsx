@@ -24,6 +24,7 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
   const [feedSearch, setFeedSearch]               = useState('');
   const [feedTypeFilter, setFeedTypeFilter]       = useState<FeedType | 'all'>('all');
   const [companyTypeFilter, setCompanyTypeFilter] = useState<CompanyType | 'all'>('all');
+  const [showEmptyCompanies, setShowEmptyCompanies] = useState(false);
 
   // ── Job-level filters ────────────────────────────────────────────────────
   const [jobTitleFilter, setJobTitleFilter] = useState('');
@@ -114,14 +115,22 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
   }, [visibleFeeds, feedJobs, jobQ]);
 
   // When a job filter is active, hide companies that have cached jobs but none match
-  const filteredFeeds = useMemo(() =>
-    jobQ
+  // Also hide companies with no jobs unless showEmptyCompanies is enabled
+  const filteredFeeds = useMemo(() => {
+    let result = jobQ
       ? visibleFeeds.filter((f) => {
           const cached = (feedJobs[f.id] ?? []).length;
           return cached === 0 || filteredFeedJobs[f.id].length > 0;
         })
-      : visibleFeeds,
-  [jobQ, visibleFeeds, feedJobs, filteredFeedJobs]);
+      : visibleFeeds;
+
+    // Hide companies with no jobs unless showEmptyCompanies is enabled
+    if (!showEmptyCompanies) {
+      result = result.filter((f) => (feedJobs[f.id] ?? []).length > 0);
+    }
+
+    return result;
+  }, [jobQ, visibleFeeds, feedJobs, filteredFeedJobs, showEmptyCompanies]);
 
   const totalMatchingJobs = useMemo(() =>
     jobQ ? filteredFeeds.reduce((n, f) => n + filteredFeedJobs[f.id].length, 0) : null,
@@ -148,8 +157,9 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
     setFeedTypeFilter('all');
     setCompanyTypeFilter('all');
     setJobTitleFilter('');
+    setShowEmptyCompanies(false);
   };
-  const hasActiveFilter = feedSearch.trim() || feedTypeFilter !== 'all' || companyTypeFilter !== 'all' || jobTitleFilter.trim();
+  const hasActiveFilter = feedSearch.trim() || feedTypeFilter !== 'all' || companyTypeFilter !== 'all' || jobTitleFilter.trim() || showEmptyCompanies;
 
   return (
     <>
@@ -165,6 +175,23 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
           </button>
           <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={toggleAll}>
             {allCollapsed ? '▶ Expand All' : '▼ Collapse All'}
+          </button>
+          <button
+            className="ghost"
+            style={{
+              fontSize: 11,
+              padding: '2px 8px',
+              borderRadius: 4,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              background: showEmptyCompanies ? 'var(--accent)22' : 'transparent',
+              border: showEmptyCompanies ? '1px solid var(--accent)55' : '1px solid var(--border)',
+              color: showEmptyCompanies ? 'var(--accent)' : 'var(--text-dim)',
+            }}
+            onClick={() => setShowEmptyCompanies((x) => !x)}
+            title="Toggle display of companies with no jobs"
+          >
+            Show Companies with No Jobs
           </button>
           {hasActiveFilter && (
             <button className="ghost" style={{ fontSize: 11, padding: '2px 8px', marginLeft: 'auto', color: '#f59e0b' }} onClick={clearFilters}>
