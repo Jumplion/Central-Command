@@ -3,11 +3,17 @@ import { resolve } from 'node:path';
 export default {
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/widgets/job-aggregator/{api,parsers}.ts']
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.d.ts',
+        'src/renderer/src/main.tsx',
+        'src/renderer/src/vite-env.d.ts',
+      ]
     }
   },
   resolve: {
