@@ -1,6 +1,5 @@
 import type { JobListing, CompanyFeed, NetFetcher, StampedFeedJob, ParsedFeedJob } from './types';
 import { parseLeverXML, parseRSSXML, parseGreenhouseJSON } from './parsers';
-import { searchJSearch } from './jsearch';
 
 // ─── Arbeitnow (free, no key) ─────────────────────────────────────────────────
 

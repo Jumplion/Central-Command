@@ -7,7 +7,6 @@ import { AddFeedForm, BoardSection } from './components';
 
 interface Props {
   api: WidgetApi;
-  apiKey: string;
   feeds: CompanyFeed[];
   feedJobs: Record<number, FeedJob[]>;
   savedIds: Set<string>;
@@ -15,7 +14,7 @@ interface Props {
   onSaved: () => void;
 }
 
-export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChange, onSaved }: Props) {
+export function BoardsTab({ api, feeds, feedJobs, savedIds, onFeedsChange, onSaved }: Props) {
   const [feedLoading, setFeedLoading] = useState<Record<number, boolean>>({});
   const [feedErrors, setFeedErrors]   = useState<Record<number, string>>({});
   const [showAddFeed, setShowAddFeed] = useState(false);
@@ -50,7 +49,7 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
     setFeedLoading((l) => ({ ...l, [feed.id]: true }));
     setFeedErrors((e) => ({ ...e, [feed.id]: '' }));
     try {
-      const jobs: StampedFeedJob[] = await fetchFeed(api.net.fetch, feed, apiKey);
+      const jobs: StampedFeedJob[] = await fetchFeed(api.net.fetch, feed, '');
       await api.sql.run('DELETE FROM feed_jobs WHERE feed_id=?', [feed.id]);
       if (jobs.length > 0) {
         await api.sql.runBatch(jobs.map((job) => ({
@@ -66,7 +65,7 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
     } finally {
       setFeedLoading((l) => ({ ...l, [feed.id]: false }));
     }
-  }, [api, apiKey, onFeedsChange]);
+  }, [api, onFeedsChange]);
 
   const handleRefreshAll = () => void Promise.all(feeds.map((feed) => handleRefreshFeed(feed)));
 
@@ -198,8 +197,8 @@ export function BoardsTab({ api, apiKey, feeds, feedJobs, savedIds, onFeedsChang
               ✕ Clear filters
             </button>
           )}
-          {feeds.filter((f) => f.feed_type === 'search').length > 0 && !apiKey && !hasActiveFilter && (
-            <span style={{ fontSize: 11, color: '#f59e0b', marginLeft: 'auto' }}>⚠ Search feeds need RapidAPI key</span>
+          {feeds.filter((f) => f.feed_type === 'search').length > 0 && !hasActiveFilter && (
+            <span style={{ fontSize: 11, color: '#f59e0b', marginLeft: 'auto' }}>⚠ Search feeds are no longer supported</span>
           )}
         </div>
 

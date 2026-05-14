@@ -19,8 +19,6 @@ function JobAggregator({ api, settings }: WidgetProps) {
   const [feeds, setFeeds]             = useState<CompanyFeed[]>([]);
   const [feedJobs, setFeedJobs]       = useState<Record<number, FeedJob[]>>({});
 
-  const apiKey = (settings.rapidApiKey as string) || '';
-
   const ensureColumn = useCallback(async (table: string, column: string, alterSql: string) => {
     const cols = await api.sql.all<{ name: string }>(`PRAGMA table_info(${table})`);
     if (!cols.some((c) => c.name === column)) {
@@ -98,11 +96,9 @@ function JobAggregator({ api, settings }: WidgetProps) {
       {tab === 'search' && (
         <SearchTab
           api={api}
-          apiKey={apiKey}
           savedIds={savedIds}
           onSaved={loadSaved}
           defaultKeywords={(settings.defaultKeywords as string) || ''}
-          defaultLocation={(settings.defaultLocation as string) || ''}
           defaultRemoteOnly={Boolean(settings.remoteOnly)}
         />
       )}
@@ -118,7 +114,6 @@ function JobAggregator({ api, settings }: WidgetProps) {
       {tab === 'boards' && (
         <BoardsTab
           api={api}
-          apiKey={apiKey}
           feeds={feeds}
           feedJobs={feedJobs}
           savedIds={savedIds}
@@ -136,8 +131,8 @@ const widget: Widget = {
   manifest: {
     id: 'job-aggregator',
     name: 'Job Aggregator',
-    description: 'Search LinkedIn, Indeed, ZipRecruiter, and more. Monitor 40+ company boards (Lever, Greenhouse, RSS, JSearch). Save and track listings.',
-    version: '0.4.0',
+    description: 'Search Arbeitnow jobs. Monitor 40+ company boards (Lever, Greenhouse, RSS). Save and track listings.',
+    version: '0.5.0',
     icon: '🔍',
     defaultSize: { w: 8, h: 10 },
     minSize:     { w: 5, h: 7 },
@@ -145,21 +140,9 @@ const widget: Widget = {
     settings: [
       {
         kind: 'string',
-        key: 'rapidApiKey',
-        label: 'RapidAPI Key (JSearch)',
-        placeholder: 'Sign up at rapidapi.com → search "JSearch" → subscribe to free plan',
-      },
-      {
-        kind: 'string',
         key: 'defaultKeywords',
         label: 'Default search keywords',
         placeholder: 'e.g. Software Engineer',
-      },
-      {
-        kind: 'string',
-        key: 'defaultLocation',
-        label: 'Default location',
-        placeholder: 'e.g. New York, NY',
       },
       {
         kind: 'boolean',
