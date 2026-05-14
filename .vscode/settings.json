@@ -17,7 +17,12 @@
   "chat.agent.maxRequests": 15,
   "github.copilot.chat.virtualTools.threshold": 128,
   "github.copilot.chat.agent.thinkingTool": false,
-  "chat.mcp.discovery.enabled": false,
+  "chat.mcp.discovery.enabled": {
+    "claude-desktop": false,
+    "windsurf": false,
+    "cursor-global": false,
+    "cursor-workspace": false
+  },
   "chat.tools.autoApprove": false,
   "chat.tools.terminal.autoApprove": {
     "rm": false,
