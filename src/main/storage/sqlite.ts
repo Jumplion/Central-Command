@@ -7,6 +7,9 @@ import type { SqlRunResult } from '@shared/types';
 export class SqliteStore {
   private dbs = new Map<string, Database.Database>();
 
+  /** Called after each write operation with the affected widgetId. */
+  onWritten: (widgetId: string) => void = () => {};
+
   constructor(private root: string) {}
 
   private dbFor(widgetId: string): Database.Database {
@@ -25,6 +28,7 @@ export class SqliteStore {
   run(widgetId: string, sql: string, params: unknown[] = []): SqlRunResult {
     const stmt = this.dbFor(widgetId).prepare(sql);
     const result = stmt.run(...(params as unknown[]));
+    this.onWritten(widgetId);
     return { changes: result.changes, lastInsertRowid: Number(result.lastInsertRowid) };
   }
 
@@ -38,6 +42,7 @@ export class SqliteStore {
 
   exec(widgetId: string, sql: string): void {
     this.dbFor(widgetId).exec(sql);
+    this.onWritten(widgetId);
   }
 
   runBatch(widgetId: string, items: { sql: string; params?: unknown[] }[]): SqlRunResult[] {
@@ -50,7 +55,22 @@ export class SqliteStore {
       }
     });
     run();
+    this.onWritten(widgetId);
     return results;
+  }
+
+  /** Creates a safe hot backup of a widget's database to the given destination path. */
+  async backup(widgetId: string, destPath: string): Promise<void> {
+    const db = this.dbFor(widgetId);
+    await db.backup(destPath);
+  }
+
+  /** Closes a single widget's database connection so it can be replaced on disk. */
+  closeDb(widgetId: string): void {
+    const db = this.dbs.get(widgetId);
+    if (!db) return;
+    try { db.close(); } catch { /* ignore */ }
+    this.dbs.delete(widgetId);
   }
 
   closeAll(): void {

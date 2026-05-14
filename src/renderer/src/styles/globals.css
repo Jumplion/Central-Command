@@ -290,6 +290,83 @@ pre { white-space: pre-wrap; word-break: break-word; }
   font-size: 11px;
 }
 
+/* Mobile layout */
+.app.mobile {
+  flex-direction: column;
+  overflow: hidden;
+}
+.app.mobile .main {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 56px; /* height of mobile-nav */
+}
+.dashboard.mobile {
+  min-height: 100%;
+  padding: 0;
+}
+.mobile-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+.mobile-widget-row {
+  width: 100%;
+  min-height: 240px;
+}
+.mobile-widget-row .widget {
+  height: 100%;
+  min-height: 240px;
+}
+/* Mobile widget headers are not draggable */
+.app.mobile .widget-header { cursor: default; }
+
+/* Mobile nav bar */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  z-index: 200;
+  gap: 8px;
+}
+.mobile-nav-dashboards {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mobile-nav-dashboards::-webkit-scrollbar { display: none; }
+.mobile-nav-tab {
+  white-space: nowrap;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+.mobile-nav-tab.active {
+  background: rgba(110, 168, 255, 0.15);
+  color: var(--accent);
+  border-color: transparent;
+}
+.mobile-nav-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.mobile-nav-btn {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
 /* react-grid-layout overrides */
 .react-grid-item.react-grid-placeholder {
   background: var(--accent) !important;

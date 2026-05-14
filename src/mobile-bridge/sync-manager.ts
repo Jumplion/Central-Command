@@ -1,10 +1,8 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-import type { BrowserWindow } from 'electron';
-import { IPC } from '@shared/ipc';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import type { DriveSyncState, DriveSyncStatus } from '@shared/types';
-import { DriveSync, DriveError } from './storage/drive';
-import type { Storage } from './storage';
+import { DriveSync, DriveError } from './drive-sync';
+import { invalidateCache, onFlushed as setKvFlushedCb } from './kv';
+import { onWritten as setSqlWrittenCb, closeDb, reopenDb } from './sql';
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 const DRIVE_STATE_FILE = 'cc-state.json';
@@ -27,16 +25,20 @@ function dbWidgetIdFromDriveName(name: string): string | null {
   return name.slice('cc-db-'.length, -'.db'.length);
 }
 
-export class SyncManager {
+type StatusListener = (status: DriveSyncStatus) => void;
+
+export class MobileSyncManager {
   private _enabled = false;
   private _syncing = false;
   private _disposed = false;
   private _uploadPending = false;
-  private _pendingDbUploads = new Set<string>();
   private _driveIds = new Map<string, string>();
   private _driveIdsLoaded = false;
-  private _pollTimer: NodeJS.Timeout | null = null;
+  private _pollTimer: ReturnType<typeof setInterval> | null = null;
   private _queue: Promise<void> = Promise.resolve();
+  private _listeners = new Set<StatusListener>();
+  private _pendingDbUploads = new Set<string>();
+
   private _status: DriveSyncStatus = {
     state: 'disabled',
     enabled: false,
@@ -45,18 +47,20 @@ export class SyncManager {
     stateChangedByRemote: false,
   };
 
-  constructor(
-    private drive: DriveSync,
-    private storage: Storage,
-    private getWindow: () => BrowserWindow | null
-  ) {
-    storage.onStateSaved = () => this._onStateSaved();
-    storage.json.onFlushed = (widgetId) => this._onKvFlushed(widgetId);
-    storage.sqlite.onWritten = (widgetId) => this._onDbWritten(widgetId);
+  constructor(private drive: DriveSync) {
+    // Hook into kv flush events
+    setKvFlushedCb((widgetId) => this._onKvFlushed(widgetId));
+    // Hook into sql write events
+    setSqlWrittenCb((widgetId) => this._onSqlWritten(widgetId));
   }
 
   getStatus(): DriveSyncStatus {
     return { ...this._status };
+  }
+
+  onStatusChanged(cb: StatusListener): () => void {
+    this._listeners.add(cb);
+    return () => this._listeners.delete(cb);
   }
 
   enable(): void {
@@ -105,16 +109,6 @@ export class SyncManager {
     this._stopPolling();
   }
 
-  private _onStateSaved(): void {
-    if (!this._enabled || this._syncing) return;
-    this._uploadPending = true;
-    this._enqueue(async () => {
-      if (!this._uploadPending) return;
-      this._uploadPending = false;
-      await this._doUploadAll();
-    });
-  }
-
   private _onKvFlushed(widgetId: string): void {
     if (!this._enabled || this._syncing) return;
     this._uploadPending = true;
@@ -125,7 +119,7 @@ export class SyncManager {
     });
   }
 
-  private _onDbWritten(widgetId: string): void {
+  private _onSqlWritten(widgetId: string): void {
     if (!this._enabled) return;
     this._pendingDbUploads.add(widgetId);
     this._enqueue(async () => {
@@ -150,28 +144,6 @@ export class SyncManager {
       });
   }
 
-  private async _uploadDb(widgetId: string): Promise<void> {
-    const dbPath = path.join(this.storage.root, 'widgets', widgetId, 'data.db');
-    try {
-      await fs.access(dbPath);
-    } catch {
-      return; // database doesn't exist for this widget yet
-    }
-    const backupPath = dbPath + '.sync-backup';
-    try {
-      await this.storage.sqlite.backup(widgetId, backupPath);
-      const content = await fs.readFile(backupPath);
-      // Store as base64-encoded text for reliable binary transport via Drive API
-      const base64 = content.toString('base64');
-      const driveName = driveDbName(widgetId);
-      const knownId = this._driveIds.get(driveName);
-      const newId = await this.drive.upsertFile(driveName, base64, knownId);
-      this._driveIds.set(driveName, newId);
-    } finally {
-      fs.unlink(backupPath).catch(() => {});
-    }
-  }
-
   private async _doUploadAll(): Promise<void> {
     this._syncing = true;
     this._setState('uploading');
@@ -180,33 +152,46 @@ export class SyncManager {
       await this._ensureDriveIds();
 
       // Upload state.json
-      const stateFile = path.join(this.storage.root, 'state.json');
       try {
-        const content = await fs.readFile(stateFile, 'utf-8');
+        const { data } = await Filesystem.readFile({
+          path: DRIVE_STATE_FILE,
+          directory: Directory.Data,
+          encoding: Encoding.UTF8,
+        });
         const knownId = this._driveIds.get(DRIVE_STATE_FILE);
-        const newId = await this.drive.upsertFile(DRIVE_STATE_FILE, content, knownId);
+        const newId = await this.drive.upsertFile(DRIVE_STATE_FILE, data as string, knownId);
         this._driveIds.set(DRIVE_STATE_FILE, newId);
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      } catch {
+        // file may not exist yet
       }
 
       // Upload cached widget KV stores
-      for (const widgetId of this.storage.json.getCachedWidgetIds()) {
-        const kvFile = path.join(this.storage.root, 'widgets', widgetId, 'store.json');
-        try {
-          const content = await fs.readFile(kvFile, 'utf-8');
-          const driveName = driveKvName(widgetId);
-          const knownId = this._driveIds.get(driveName);
-          const newId = await this.drive.upsertFile(driveName, content, knownId);
-          this._driveIds.set(driveName, newId);
-        } catch (err) {
-          if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-        }
-      }
+      try {
+        const { files } = await Filesystem.readdir({
+          path: 'widgets',
+          directory: Directory.Data,
+        });
+        for (const entry of files) {
+          const widgetId = entry.name;
+          try {
+            const { data } = await Filesystem.readFile({
+              path: `widgets/${widgetId}/store.json`,
+              directory: Directory.Data,
+              encoding: Encoding.UTF8,
+            });
+            const driveName = driveKvName(widgetId);
+            const knownId = this._driveIds.get(driveName);
+            const newId = await this.drive.upsertFile(driveName, data as string, knownId);
+            this._driveIds.set(driveName, newId);
+          } catch {
+            // no store.json for this widget
+          }
 
-      // Upload SQLite databases for widgets that have one
-      for (const widgetId of this.storage.json.getCachedWidgetIds()) {
-        await this._uploadDb(widgetId);
+          // Upload SQLite DB if it exists
+          await this._uploadDb(widgetId);
+        }
+      } catch {
+        // widgets directory may not exist yet
       }
 
       this._status.lastSyncedAt = Date.now();
@@ -215,13 +200,29 @@ export class SyncManager {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this._setError(msg);
-      // Reset drive ID cache on auth/network errors so next attempt re-discovers files
       if (err instanceof DriveError) {
         this._driveIdsLoaded = false;
         this._driveIds.clear();
       }
     } finally {
       this._syncing = false;
+    }
+  }
+
+  private async _uploadDb(widgetId: string): Promise<void> {
+    try {
+      // Capacitor returns base64 when no encoding is specified for binary files
+      const { data } = await Filesystem.readFile({
+        path: `widgets/${widgetId}/data.db`,
+        directory: Directory.Data,
+      });
+      // Store as base64-encoded text — matches desktop's _uploadDb format
+      const driveName = driveDbName(widgetId);
+      const knownId = this._driveIds.get(driveName);
+      const newId = await this.drive.upsertFile(driveName, data as string, knownId);
+      this._driveIds.set(driveName, newId);
+    } catch {
+      // DB may not exist for this widget
     }
   }
 
@@ -239,13 +240,16 @@ export class SyncManager {
         const remoteMs = new Date(driveFile.modifiedTime).getTime();
 
         if (driveFile.name === DRIVE_STATE_FILE) {
-          const localPath = path.join(this.storage.root, 'state.json');
+          const localPath = DRIVE_STATE_FILE;
           if (await this._isRemoteNewer(localPath, remoteMs)) {
             const content = await this.drive.downloadFile(driveFile.id);
-            const tmp = localPath + '.tmp';
-            await fs.mkdir(path.dirname(localPath), { recursive: true });
-            await fs.writeFile(tmp, content, 'utf-8');
-            await fs.rename(tmp, localPath);
+            await Filesystem.writeFile({
+              path: localPath,
+              directory: Directory.Data,
+              data: content,
+              encoding: Encoding.UTF8,
+              recursive: true,
+            });
             stateChangedByRemote = true;
           }
           continue;
@@ -253,31 +257,38 @@ export class SyncManager {
 
         const kvWidgetId = kvWidgetIdFromDriveName(driveFile.name);
         if (kvWidgetId) {
-          const localPath = path.join(this.storage.root, 'widgets', kvWidgetId, 'store.json');
+          const localPath = `widgets/${kvWidgetId}/store.json`;
           if (await this._isRemoteNewer(localPath, remoteMs)) {
             const content = await this.drive.downloadFile(driveFile.id);
-            const tmp = localPath + '.tmp';
-            await fs.mkdir(path.dirname(localPath), { recursive: true });
-            await fs.writeFile(tmp, content, 'utf-8');
-            await fs.rename(tmp, localPath);
-            this.storage.json.invalidateCache(kvWidgetId);
+            await Filesystem.writeFile({
+              path: localPath,
+              directory: Directory.Data,
+              data: content,
+              encoding: Encoding.UTF8,
+              recursive: true,
+            });
+            invalidateCache(kvWidgetId);
           }
           continue;
         }
 
         const dbWidgetId = dbWidgetIdFromDriveName(driveFile.name);
         if (dbWidgetId) {
-          const localPath = path.join(this.storage.root, 'widgets', dbWidgetId, 'data.db');
+          const localPath = `widgets/${dbWidgetId}/data.db`;
           if (await this._isRemoteNewer(localPath, remoteMs)) {
-            // Content is stored as base64-encoded text (see _uploadDb)
+            // Content is stored as base64-encoded text (matches desktop _uploadDb format)
             const base64 = await this.drive.downloadFile(driveFile.id);
-            const content = Buffer.from(base64, 'base64');
-            const tmp = localPath + '.tmp';
-            await fs.mkdir(path.dirname(localPath), { recursive: true });
-            await fs.writeFile(tmp, content);
-            await fs.rename(tmp, localPath);
-            // Close existing connection so next query re-opens the replaced file
-            this.storage.sqlite.closeDb(dbWidgetId);
+            // Close existing connection before overwriting the file
+            await closeDb(dbWidgetId);
+            await Filesystem.writeFile({
+              path: localPath,
+              directory: Directory.Data,
+              // Capacitor writes binary when data is base64 and no encoding is set
+              data: base64,
+              recursive: true,
+            });
+            // Reopen so subsequent widget reads work
+            await reopenDb(dbWidgetId);
           }
         }
       }
@@ -301,10 +312,11 @@ export class SyncManager {
 
   private async _isRemoteNewer(localPath: string, remoteMs: number): Promise<boolean> {
     try {
-      const stat = await fs.stat(localPath);
-      return remoteMs > stat.mtimeMs;
+      const stat = await Filesystem.stat({ path: localPath, directory: Directory.Data });
+      const localMs = typeof stat.mtime === 'number' ? stat.mtime : Number(stat.mtime);
+      return remoteMs > localMs;
     } catch {
-      return true; // local file doesn't exist → remote wins
+      return true;
     }
   }
 
@@ -331,10 +343,10 @@ export class SyncManager {
   }
 
   private _notifyWithFlag(stateChangedByRemote: boolean): void {
-    const win = this.getWindow();
-    if (!win || win.isDestroyed()) return;
     const payload: DriveSyncStatus = { ...this._status, stateChangedByRemote };
-    win.webContents.send(IPC.DRIVE_SYNC_STATUS_CHANGED, payload);
+    for (const cb of this._listeners) {
+      try { cb(payload); } catch { /* ignore listener errors */ }
+    }
   }
 
   private _schedulePolling(): void {

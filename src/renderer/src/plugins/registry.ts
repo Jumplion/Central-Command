@@ -3,6 +3,11 @@ import type { WidgetManifest, WidgetSettings } from '@shared/types';
 import { isValidWidgetId } from '@shared/validation';
 import type { WidgetApi } from './api';
 
+declare const __MOBILE__: boolean | undefined;
+
+const CURRENT_PLATFORM: 'desktop' | 'mobile' =
+  typeof __MOBILE__ !== 'undefined' && __MOBILE__ ? 'mobile' : 'desktop';
+
 export interface WidgetProps {
   api: WidgetApi;
   settings: WidgetSettings;
@@ -34,6 +39,9 @@ for (const filePath in modules) {
   }
   if (registry.has(id)) {
     console.warn(`[plugins] duplicate widget id "${id}" at ${filePath}`);
+    continue;
+  }
+  if (widget.manifest.platforms && !widget.manifest.platforms.includes(CURRENT_PLATFORM)) {
     continue;
   }
   registry.set(id, widget);
