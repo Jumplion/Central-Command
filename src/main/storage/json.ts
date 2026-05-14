@@ -7,6 +7,8 @@ export class JsonStore {
   private writers = new Map<string, NodeJS.Timeout>();
   private inflight = new Map<string, Promise<Record<string, unknown>>>();
 
+  onFlushed?: (widgetId: string) => void;
+
   constructor(private root: string) {}
 
   private widgetDir(widgetId: string): string {
@@ -66,6 +68,15 @@ export class JsonStore {
     const tmp = target + '.tmp';
     await fs.writeFile(tmp, JSON.stringify(obj, null, 2), 'utf-8');
     await fs.rename(tmp, target);
+    this.onFlushed?.(widgetId);
+  }
+
+  getCachedWidgetIds(): string[] {
+    return Array.from(this.cache.keys());
+  }
+
+  invalidateCache(widgetId: string): void {
+    this.cache.delete(widgetId);
   }
 
   async flushAll(): Promise<void> {

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { IpcRendererEvent } from 'electron';
 import { IPC } from '../shared/ipc';
-import type { AppState, CCApi, CapturedJob, CapturedAudition, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
+import type { AppState, CCApi, CapturedJob, CapturedAudition, DialogOpenPathOptions, DriveSyncStatus, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
 import { GOOGLE_SERVICES } from '../shared/google';
 import type { GoogleServiceId } from '../shared/google';
 
@@ -58,6 +58,18 @@ const api: CCApi = {
       ipcRenderer.invoke(IPC.GOOGLE_DISCONNECT, widgetId, service),
     isConnected: (widgetId: string, service?: GoogleServiceId) =>
       ipcRenderer.invoke(IPC.GOOGLE_IS_CONNECTED, widgetId, service)
+  },
+  driveSync: {
+    getStatus: (): Promise<DriveSyncStatus> => ipcRenderer.invoke(IPC.DRIVE_SYNC_GET_STATUS),
+    enable: (): Promise<void> => ipcRenderer.invoke(IPC.DRIVE_SYNC_ENABLE),
+    disable: (): Promise<void> => ipcRenderer.invoke(IPC.DRIVE_SYNC_DISABLE),
+    forcePush: (): Promise<void> => ipcRenderer.invoke(IPC.DRIVE_SYNC_FORCE_PUSH),
+    forcePull: (): Promise<void> => ipcRenderer.invoke(IPC.DRIVE_SYNC_FORCE_PULL),
+    onStatusChanged: (cb: (status: DriveSyncStatus) => void) => {
+      const handler = (_event: IpcRendererEvent, status: DriveSyncStatus) => cb(status);
+      ipcRenderer.on(IPC.DRIVE_SYNC_STATUS_CHANGED, handler);
+      return () => ipcRenderer.removeListener(IPC.DRIVE_SYNC_STATUS_CHANGED, handler);
+    },
   },
   jobCapture: {
     status: () => ipcRenderer.invoke(IPC.JOB_CAPTURE_STATUS),

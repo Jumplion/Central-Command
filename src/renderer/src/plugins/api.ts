@@ -1,10 +1,7 @@
 import type { DialogOpenPathOptions, GoogleConnectOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
 import type { GoogleServiceDefinition, GoogleServiceId } from '@shared/google';
-import { getGoogleCredsKey } from '@shared/google';
+import { getGoogleCredsKey, SHARED_GOOGLE_WIDGET_ID } from '@shared/google';
 import { emitApiCall } from './apiEvents';
-
-/** Fixed namespace used for shared (app-wide) Google OAuth credentials and tokens. */
-const SHARED_GOOGLE_WIDGET_ID = 'google';
 
 export interface WidgetApi {
   widgetId: WidgetId;

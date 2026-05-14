@@ -9,6 +9,7 @@ import type { Storage } from './storage';
 import type { SecretsStore } from './secrets';
 import type { OAuthManager } from './oauth';
 import type { JobCaptureServer } from './job-capture-server';
+import type { SyncManager } from './sync';
 
 const isString = (x: unknown): x is string => typeof x === 'string';
 const isParams = (x: unknown): x is unknown[] => Array.isArray(x);
@@ -19,7 +20,7 @@ function requireOptionalService(channel: string, service: unknown): void {
     throw new Error(`${channel}: invalid service`);
 }
 
-export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAuthManager, captureServer: JobCaptureServer): void {
+export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAuthManager, captureServer: JobCaptureServer, syncManager: SyncManager): void {
   ipcMain.handle(IPC.STATE_LOAD, () => storage.loadState());
   ipcMain.handle(IPC.STATE_SAVE, (_e, state: AppState) => storage.saveState(state));
 
@@ -154,6 +155,14 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
   googleServiceHandler(IPC.GOOGLE_GET_TOKEN,    (w, s) => oauth.getToken(w, s));
   googleServiceHandler(IPC.GOOGLE_DISCONNECT,   (w, s) => oauth.disconnect(w, s));
   googleServiceHandler(IPC.GOOGLE_IS_CONNECTED, (w, s) => oauth.isConnected(w, s));
+
+  // ─── Drive Sync handlers ───────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.DRIVE_SYNC_GET_STATUS, () => syncManager.getStatus());
+  ipcMain.handle(IPC.DRIVE_SYNC_ENABLE, () => syncManager.enable());
+  ipcMain.handle(IPC.DRIVE_SYNC_DISABLE, () => syncManager.disable());
+  ipcMain.handle(IPC.DRIVE_SYNC_FORCE_PUSH, () => syncManager.forcePush());
+  ipcMain.handle(IPC.DRIVE_SYNC_FORCE_PULL, () => syncManager.forcePull());
 
   // ─── Job Capture handlers ──────────────────────────────────────────────────
   ipcMain.handle(IPC.JOB_CAPTURE_STATUS, () => ({

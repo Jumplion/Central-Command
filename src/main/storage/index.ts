@@ -21,6 +21,8 @@ export class Storage {
   readonly json: JsonStore;
   readonly sqlite: SqliteStore;
 
+  onStateSaved?: () => void;
+
   constructor() {
     this.root = app.getPath('userData');
     this.json = new JsonStore(this.root);
@@ -49,6 +51,7 @@ export class Storage {
     const tmp = this.stateFile + '.tmp';
     await fs.writeFile(tmp, JSON.stringify(state, null, 2), 'utf-8');
     await fs.rename(tmp, this.stateFile);
+    this.onStateSaved?.();
   }
 
   async dispose(): Promise<void> {
