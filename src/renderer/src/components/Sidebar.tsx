@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDashboard } from '@renderer/state/dashboard';
 import { AddWidgetDialog } from './AddWidgetDialog';
+import { AppSettings } from './AppSettings';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -16,6 +17,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const removeDashboard = useDashboard((s) => s.removeDashboard);
 
   const [showAdd, setShowAdd] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
@@ -110,10 +112,22 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
               + Add widget
             </button>
           </div>
+
+          <div className="sidebar-footer">
+            <button
+              className="ghost block"
+              onClick={() => setShowSettings(true)}
+              title="App settings"
+              aria-label="App settings"
+            >
+              Settings
+            </button>
+          </div>
         </>
       )}
 
       {showAdd && <AddWidgetDialog onClose={() => setShowAdd(false)} />}
+      {showSettings && <AppSettings onClose={() => setShowSettings(false)} />}
     </aside>
   );
 }

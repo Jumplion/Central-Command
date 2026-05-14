@@ -37,6 +37,14 @@ export const IPC = {
   JOB_CAPTURE_JOB_ADDED:      'cc:job-capture:job-added',
   /** Push event from main → renderer when an audition arrives via the browser extension. */
   JOB_CAPTURE_AUDITION_ADDED: 'cc:job-capture:audition-added',
+
+  DRIVE_SYNC_GET_STATUS:  'cc:drive-sync:get-status',
+  DRIVE_SYNC_ENABLE:      'cc:drive-sync:enable',
+  DRIVE_SYNC_DISABLE:     'cc:drive-sync:disable',
+  DRIVE_SYNC_FORCE_PUSH:  'cc:drive-sync:force-push',
+  DRIVE_SYNC_FORCE_PULL:  'cc:drive-sync:force-pull',
+  /** Push event from main → renderer on any status change or after a remote pull. */
+  DRIVE_SYNC_STATUS_CHANGED: 'cc:drive-sync:status-changed',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

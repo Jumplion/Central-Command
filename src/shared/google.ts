@@ -1,3 +1,5 @@
+export const SHARED_GOOGLE_WIDGET_ID = 'google';
+
 export const GOOGLE_SERVICES = {
   gmail: {
     id: 'gmail',
@@ -33,6 +35,13 @@ export const GOOGLE_SERVICES = {
     description: 'Notes data via Google Keep APIs when available.',
     apiBaseUrl: 'https://keep.googleapis.com/v1/',
     defaultScopes: ['https://www.googleapis.com/auth/keep.readonly'],
+  },
+  'drive-sync': {
+    id: 'drive-sync',
+    name: 'Drive Sync',
+    description: 'Private app-data folder for cross-machine state sync.',
+    apiBaseUrl: 'https://www.googleapis.com/drive/v3/',
+    defaultScopes: ['https://www.googleapis.com/auth/drive.appdata'],
   },
 } as const;
 

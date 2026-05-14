@@ -115,6 +115,16 @@ export interface CapturedAudition {
   notes: string;
 }
 
+export type DriveSyncState = 'disabled' | 'idle' | 'uploading' | 'downloading' | 'error';
+
+export interface DriveSyncStatus {
+  state: DriveSyncState;
+  enabled: boolean;
+  lastSyncedAt: number | null;
+  lastError: string | null;
+  stateChangedByRemote: boolean;
+}
+
 export interface CCApi {
   state: {
     load(): Promise<AppState>;
@@ -157,6 +167,14 @@ export interface CCApi {
     getToken(widgetId: string, service?: GoogleServiceId): Promise<string | null>;
     disconnect(widgetId: string, service?: GoogleServiceId): Promise<void>;
     isConnected(widgetId: string, service?: GoogleServiceId): Promise<boolean>;
+  };
+  driveSync: {
+    getStatus(): Promise<DriveSyncStatus>;
+    enable(): Promise<void>;
+    disable(): Promise<void>;
+    forcePush(): Promise<void>;
+    forcePull(): Promise<void>;
+    onStatusChanged(cb: (status: DriveSyncStatus) => void): () => void;
   };
   jobCapture: {
     /** Returns the server's current running state, port, and masked token indicator. */

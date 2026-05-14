@@ -10,6 +10,7 @@ interface DashboardStore {
 
   load(): Promise<void>;
   persist(): void;
+  applyRemoteState(state: AppState): void;
 
   activeDashboard(): Dashboard;
   setActiveDashboard(id: DashboardId): void;
@@ -55,6 +56,11 @@ export const useDashboard = create<DashboardStore>((set, get) => {
     persistTimer = setTimeout(() => {
       void window.cc.state.save(get().state);
     }, 150);
+  },
+
+  applyRemoteState(state) {
+    if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
+    set({ state });
   },
 
   activeDashboard() {
