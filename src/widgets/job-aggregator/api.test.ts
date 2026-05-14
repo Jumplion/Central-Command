@@ -29,10 +29,10 @@ describe('searchArbeitnow', () => {
     const result = await searchArbeitnow(fetch, 'frontend engineer', true);
     const calledUrl = fetch.mock.calls[0][0];
 
-    expect(calledUrl).toContain('query=frontend+engineer');
+    expect(calledUrl).toContain('search=frontend+engineer');
     expect(calledUrl).toContain('remote=true');
     expect(result[0]).toMatchObject({
-      id: 'job-1',
+      id: 'arbeitnow-job-1',
       title: 'Engineer',
       company: 'Acme',
       location: 'Austin, TX',
