@@ -212,6 +212,7 @@ const widget: Widget = {
     icon: '📂',
     defaultSize: { w: 4, h: 6 },
     minSize: { w: 3, h: 4 },
+    platforms: ['desktop'],
   },
   Component: FileShortcuts,
 };

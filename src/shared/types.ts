@@ -43,6 +43,8 @@ export interface WidgetManifest {
   minSize?: { w: number; h: number };
   settings?: SettingsField[];
   permissions?: { sqlite?: boolean; google?: boolean };
+  /** Platforms this widget supports. Omit to support all platforms. */
+  platforms?: ('desktop' | 'mobile')[];
 }
 
 export type WidgetSettings = Record<string, unknown>;
