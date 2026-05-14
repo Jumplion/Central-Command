@@ -67,7 +67,7 @@ describe('searchArbeitnow', () => {
 
 describe('fetchFeed', () => {
   it('fetches and stamps lever feeds', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     const fetch = vi.fn<NetFetcher>().mockResolvedValue({
       ok: true,
       status: 200,
@@ -92,10 +92,11 @@ describe('fetchFeed', () => {
       company: 'LeverCo',
       fetched_at: 1700000000000,
     });
+    nowSpy.mockRestore();
   });
 
   it('fetches greenhouse feeds', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1700000000100);
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1700000000100);
     const fetch = vi.fn<NetFetcher>().mockResolvedValue({
       ok: true,
       status: 200,
@@ -132,10 +133,11 @@ describe('fetchFeed', () => {
       apply_link: 'https://example.com/gh-1',
       fetched_at: 1700000000100,
     });
+    nowSpy.mockRestore();
   });
 
   it('uses rss parser when rss feed body is not lever xml', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1700000000200);
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1700000000200);
     const fetch = vi.fn<NetFetcher>().mockResolvedValue({
       ok: true,
       status: 200,
@@ -159,10 +161,11 @@ describe('fetchFeed', () => {
       company: 'RssCo',
       fetched_at: 1700000000200,
     });
+    nowSpy.mockRestore();
   });
 
   it('uses lever parser for rss feeds that contain jobs xml', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1700000000300);
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1700000000300);
     const fetch = vi.fn<NetFetcher>().mockResolvedValue({
       ok: true,
       status: 200,
@@ -185,6 +188,7 @@ describe('fetchFeed', () => {
       company: 'RssLever',
       fetched_at: 1700000000300,
     });
+    nowSpy.mockRestore();
   });
 
   it('throws for disabled search feeds', async () => {
