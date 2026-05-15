@@ -4,7 +4,7 @@ import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MediaType   = 'book' | 'movie' | 'tv' | 'game' | 'podcast' | 'anime' | 'other';
-type MediaStatus = 'current' | 'completed' | 'want' | 'paused' | 'dropped';
+type MediaStatus = 'current' | 'owned' | 'want' | 'completed' | 'paused' | 'dropped';
 type StatusFilter = MediaStatus | 'all';
 type TypeFilter   = MediaType | 'all';
 
@@ -17,9 +17,15 @@ interface MediaItem {
   rating: number | null;
   notes: string | null;
   author_creator: string | null;
-  completed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface HistoryEntry {
+  id: number;
+  item_id: number;
+  status: MediaStatus;
+  changed_at: string;
 }
 
 interface FormState {
@@ -43,24 +49,28 @@ const MEDIA_TYPES: { value: MediaType; label: string; emoji: string }[] = [
   { value: 'other',   label: 'Other',    emoji: '🎯' },
 ];
 
+// Tab order reflects a natural consumption workflow
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'all',       label: 'All' },
   { value: 'current',   label: 'Current' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'owned',     label: 'Owned' },
   { value: 'want',      label: 'Want' },
+  { value: 'completed', label: 'Completed' },
   { value: 'paused',    label: 'Paused' },
   { value: 'dropped',   label: 'Dropped' },
 ];
 
 const STATUS_COLORS: Record<MediaStatus, string> = {
   current:   '#3b82f6',
-  completed: '#22c55e',
+  owned:     '#06b6d4',
   want:      '#a855f7',
+  completed: '#22c55e',
   paused:    '#f59e0b',
   dropped:   '#ef4444',
 };
 
-const VERB: Record<MediaType, string> = {
+// Active-consumption verb shown on the badge instead of the status name
+const CURRENT_VERB: Record<MediaType, string> = {
   book:    'Reading',
   movie:   'Watching',
   tv:      'Watching',
@@ -89,16 +99,24 @@ const INIT_SQL = `
     rating         INTEGER,
     notes          TEXT,
     author_creator TEXT,
-    completed_at   TEXT,
     created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS media_status_history (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id    INTEGER NOT NULL,
+    status     TEXT    NOT NULL,
+    changed_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
 `;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const typeEmoji  = (t: MediaType)   => MEDIA_TYPES.find(m => m.value === t)?.emoji ?? '🎯';
+const typeEmoji   = (t: MediaType)   => MEDIA_TYPES.find(m => m.value === t)?.emoji ?? '🎯';
 const statusLabel = (s: MediaStatus) => STATUS_FILTERS.find(f => f.value === s)?.label ?? s;
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -131,17 +149,38 @@ function StarDisplay({ value }: { value: number }) {
   );
 }
 
+function StatusTimeline({ history }: { history: HistoryEntry[] }) {
+  if (history.length === 0) return null;
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #1e293b' }}>
+      {history.map((h, i) => {
+        const color = STATUS_COLORS[h.status];
+        return (
+          <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: i < history.length - 1 ? 4 : 0 }}>
+            <span style={{ fontSize: 11, color: i === 0 ? '#64748b' : color }}>
+              {i === 0 ? 'Added' : `→ ${statusLabel(h.status)}`}
+            </span>
+            <span style={{ fontSize: 10, color: '#4b5563' }}>{formatDate(h.changed_at)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MediaCard({
-  item, onEdit, onPin, onDelete,
+  item, history, onEdit, onPin, onDelete,
 }: {
   item: MediaItem;
+  history: HistoryEntry[];
   onEdit: () => void;
   onPin: () => void;
   onDelete: () => void;
 }) {
-  const [showNotes, setShowNotes] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const isPinned = Boolean(item.pinned);
   const color = STATUS_COLORS[item.status];
+  const hasDetails = Boolean(item.notes) || history.length > 0;
 
   return (
     <div style={{
@@ -153,12 +192,10 @@ function MediaCard({
       flexShrink: 0,
     }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-        {/* Type icon */}
         <span style={{ fontSize: 18, lineHeight: 1, marginTop: 3, flexShrink: 0 }}>
           {typeEmoji(item.type)}
         </span>
 
-        {/* Main info */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 13, color: '#f3f4f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {item.title}
@@ -174,14 +211,13 @@ function MediaCard({
               fontSize: 10, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase',
               background: color + '22', color,
             }}>
-              {item.status === 'current' ? VERB[item.type] : statusLabel(item.status)}
+              {item.status === 'current' ? CURRENT_VERB[item.type] : statusLabel(item.status)}
             </span>
             {item.rating ? <StarDisplay value={item.rating} /> : null}
             {isPinned && <span style={{ fontSize: 10, color: '#f59e0b' }}>📌 pinned</span>}
           </div>
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 1, flexShrink: 0, alignItems: 'center' }}>
           <button
             style={{ ...s.iconBtn, ...(isPinned ? { opacity: 1, color: '#f59e0b' } : {}) }}
@@ -189,22 +225,26 @@ function MediaCard({
           >📌</button>
           <button style={s.iconBtn} onClick={onEdit} title="Edit">✏️</button>
           <button style={s.iconBtn} onClick={onDelete} title="Delete">🗑️</button>
-          {item.notes && (
-            <button style={s.iconBtn} onClick={() => setShowNotes(v => !v)} title="Toggle thoughts">
-              {showNotes ? '▲' : '▼'}
+          {hasDetails && (
+            <button style={s.iconBtn} onClick={() => setExpanded(v => !v)} title="Toggle details">
+              {expanded ? '▲' : '▼'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Expandable notes */}
-      {showNotes && item.notes && (
-        <div style={{
-          marginTop: 8, padding: '7px 9px', borderRadius: 5,
-          background: '#1e293b', fontSize: 12, color: '#94a3b8',
-          lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-        }}>
-          {item.notes}
+      {expanded && (
+        <div style={{ marginTop: 8 }}>
+          {item.notes && (
+            <div style={{
+              padding: '7px 9px', borderRadius: 5,
+              background: '#1e293b', fontSize: 12, color: '#94a3b8',
+              lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            }}>
+              {item.notes}
+            </div>
+          )}
+          <StatusTimeline history={history} />
         </div>
       )}
     </div>
@@ -215,6 +255,7 @@ function MediaCard({
 
 function MediaTracker({ api, setTitle }: WidgetProps) {
   const [items, setItems]               = useState<MediaItem[]>([]);
+  const [history, setHistory]           = useState<Record<number, HistoryEntry[]>>({});
   const [ready, setReady]               = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [typeFilter, setTypeFilter]     = useState<TypeFilter>('all');
@@ -224,10 +265,24 @@ function MediaTracker({ api, setTitle }: WidgetProps) {
   const [form, setForm]                 = useState<FormState>(DEFAULT_FORM);
 
   const loadItems = useCallback(async () => {
-    const rows = await api.sql.all<MediaItem>(
-      "SELECT * FROM media_items ORDER BY pinned DESC, CASE status WHEN 'current' THEN 0 ELSE 1 END, updated_at DESC"
-    );
+    const [rows, hist] = await Promise.all([
+      api.sql.all<MediaItem>(
+        "SELECT * FROM media_items ORDER BY pinned DESC, CASE status WHEN 'current' THEN 0 ELSE 1 END, updated_at DESC"
+      ),
+      api.sql.all<HistoryEntry>(
+        'SELECT * FROM media_status_history ORDER BY item_id, changed_at ASC'
+      ),
+    ]);
+
+    const histMap: Record<number, HistoryEntry[]> = {};
+    for (const h of hist) {
+      if (!histMap[h.item_id]) histMap[h.item_id] = [];
+      histMap[h.item_id].push(h);
+    }
+
     setItems(rows);
+    setHistory(histMap);
+
     const activeCount = rows.filter(r => r.status === 'current').length;
     setTitle(activeCount > 0 ? `Media Tracker (${activeCount} active)` : undefined);
   }, [api.sql, setTitle]);
@@ -263,19 +318,24 @@ function MediaTracker({ api, setTitle }: WidgetProps) {
     const now = new Date().toISOString();
 
     if (editItem) {
-      // Preserve original completed_at unless newly marking as completed
-      const completedAt =
-        form.status === 'completed' && editItem.status !== 'completed'
-          ? now
-          : editItem.completed_at;
       await api.sql.run(
-        'UPDATE media_items SET title=?, type=?, status=?, author_creator=?, rating=?, notes=?, completed_at=?, updated_at=? WHERE id=?',
-        [form.title.trim(), form.type, form.status, form.author_creator || null, form.rating || null, form.notes || null, completedAt, now, editItem.id]
+        'UPDATE media_items SET title=?, type=?, status=?, author_creator=?, rating=?, notes=?, updated_at=? WHERE id=?',
+        [form.title.trim(), form.type, form.status, form.author_creator || null, form.rating || null, form.notes || null, now, editItem.id]
       );
+      if (form.status !== editItem.status) {
+        await api.sql.run(
+          'INSERT INTO media_status_history (item_id, status, changed_at) VALUES (?,?,?)',
+          [editItem.id, form.status, now]
+        );
+      }
     } else {
+      const result = await api.sql.run(
+        'INSERT INTO media_items (title, type, status, author_creator, rating, notes) VALUES (?,?,?,?,?,?)',
+        [form.title.trim(), form.type, form.status, form.author_creator || null, form.rating || null, form.notes || null]
+      );
       await api.sql.run(
-        'INSERT INTO media_items (title, type, status, author_creator, rating, notes, completed_at) VALUES (?,?,?,?,?,?,?)',
-        [form.title.trim(), form.type, form.status, form.author_creator || null, form.rating || null, form.notes || null, form.status === 'completed' ? now : null]
+        'INSERT INTO media_status_history (item_id, status, changed_at) VALUES (?,?,?)',
+        [result.lastInsertRowid, form.status, now]
       );
     }
 
@@ -289,13 +349,14 @@ function MediaTracker({ api, setTitle }: WidgetProps) {
   };
 
   const deleteItem = async (id: number) => {
+    await api.sql.run('DELETE FROM media_status_history WHERE item_id=?', [id]);
     await api.sql.run('DELETE FROM media_items WHERE id=?', [id]);
     loadItems();
   };
 
   const filtered = items.filter(item => {
     if (statusFilter !== 'all' && item.status !== statusFilter) return false;
-    if (typeFilter  !== 'all' && item.type   !== typeFilter)   return false;
+    if (typeFilter   !== 'all' && item.type   !== typeFilter)   return false;
     if (search) {
       const q = search.toLowerCase();
       if (!item.title.toLowerCase().includes(q) && !(item.author_creator?.toLowerCase().includes(q))) return false;
@@ -363,6 +424,7 @@ function MediaTracker({ api, setTitle }: WidgetProps) {
             <MediaCard
               key={item.id}
               item={item}
+              history={history[item.id] ?? []}
               onEdit={() => openEdit(item)}
               onPin={() => togglePin(item)}
               onDelete={() => deleteItem(item.id)}
@@ -617,7 +679,7 @@ const widget: Widget = {
     id: 'media-tracker',
     name: 'Media Tracker',
     description: 'Track books, movies, TV shows, games, podcasts, and more. Pin current media, write reviews, and rate your favorites.',
-    version: '0.1.0',
+    version: '0.2.0',
     icon: '🎬',
     defaultSize: { w: 6, h: 9 },
     minSize:     { w: 4, h: 6 },
