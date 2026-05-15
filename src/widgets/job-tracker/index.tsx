@@ -9,14 +9,13 @@ import {
   Th, Td, StatusBadge,
 } from './components';
 import { EmailsTab } from './EmailsTab';
-import { ExtensionTab } from './ExtensionTab';
 
 function JobTracker({ api }: WidgetProps) {
   const [apps, setApps] = useState<Application[]>([]);
   const [filter, setFilter] = useState<Status | 'All'>('All');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [view, setView] = useState<'list' | 'chart' | 'emails' | 'extension'>('list');
+  const [view, setView] = useState<'list' | 'chart' | 'emails'>('list');
   const [importing, setImporting] = useState(false);
   const [ready, setReady] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -138,7 +137,7 @@ function JobTracker({ api }: WidgetProps) {
           + Add
         </button>
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-          {(['list', 'chart', 'emails', 'extension'] as const).map((v) => (
+          {(['list', 'chart', 'emails'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -151,7 +150,7 @@ function JobTracker({ api }: WidgetProps) {
                 cursor: 'pointer',
               }}
             >
-              {v === 'list' ? 'List' : v === 'chart' ? 'Chart' : v === 'emails' ? 'Emails' : '🧩 Extension'}
+              {v === 'list' ? 'List' : v === 'chart' ? 'Chart' : 'Emails'}
             </button>
           ))}
         </div>
@@ -185,9 +184,7 @@ function JobTracker({ api }: WidgetProps) {
         <AppForm onSave={handleAdd} onCancel={() => setShowAdd(false)} />
       )}
 
-      {view === 'extension' ? (
-        <ExtensionTab api={api} onJobAdded={load} />
-      ) : view === 'emails' ? (
+      {view === 'emails' ? (
         <EmailsTab
           api={api}
           apps={apps}

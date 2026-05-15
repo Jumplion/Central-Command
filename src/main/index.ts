@@ -3,13 +3,11 @@ import path from 'node:path';
 import { Storage } from './storage';
 import { SecretsStore } from './secrets';
 import { OAuthManager } from './oauth';
-import { JobCaptureServer } from './job-capture-server';
 import { DriveSync } from './storage/drive';
 import { SyncManager } from './sync';
 import { registerIpc } from './ipc';
 
 let storage: Storage | null = null;
-let captureServer: JobCaptureServer | null = null;
 let syncManager: SyncManager | null = null;
 let isQuitting = false;
 
@@ -49,13 +47,9 @@ app.whenReady().then(() => {
   const secrets = new SecretsStore(userData);
   const oauth = new OAuthManager(secrets);
   const drive = new DriveSync(oauth);
-  captureServer = new JobCaptureServer(storage, secrets);
   const win = createWindow();
   syncManager = new SyncManager(drive, storage, () => BrowserWindow.getAllWindows()[0] ?? null);
-  registerIpc(storage, secrets, oauth, captureServer, syncManager);
-  void captureServer.start().catch((err) => {
-    console.error('[server] Failed to start job capture server:', (err as Error).message);
-  });
+  registerIpc(storage, secrets, oauth, syncManager);
   win.webContents.once('did-finish-load', () => {
     void syncManager!.initialSync().catch((err) => {
       console.error('[sync] initialSync failed:', (err as Error).message);
@@ -74,8 +68,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async (event) => {
   if (isQuitting || !storage) return;
   event.preventDefault();
-  captureServer?.stop();
-  captureServer = null;
   syncManager?.dispose();
   syncManager = null;
   try {

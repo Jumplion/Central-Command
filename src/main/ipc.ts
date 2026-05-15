@@ -8,7 +8,6 @@ import type { GoogleServiceId } from '@shared/google';
 import type { Storage } from './storage';
 import type { SecretsStore } from './secrets';
 import type { OAuthManager } from './oauth';
-import type { JobCaptureServer } from './job-capture-server';
 import type { SyncManager } from './sync';
 
 const isString = (x: unknown): x is string => typeof x === 'string';
@@ -20,7 +19,7 @@ function requireOptionalService(channel: string, service: unknown): void {
     throw new Error(`${channel}: invalid service`);
 }
 
-export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAuthManager, captureServer: JobCaptureServer, syncManager: SyncManager): void {
+export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAuthManager, syncManager: SyncManager): void {
   ipcMain.handle(IPC.STATE_LOAD, () => storage.loadState());
   ipcMain.handle(IPC.STATE_SAVE, (_e, state: AppState) => storage.saveState(state));
 
@@ -164,12 +163,4 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
   ipcMain.handle(IPC.DRIVE_SYNC_FORCE_PUSH, () => syncManager.forcePush());
   ipcMain.handle(IPC.DRIVE_SYNC_FORCE_PULL, () => syncManager.forcePull());
 
-  // ─── Job Capture handlers ──────────────────────────────────────────────────
-  ipcMain.handle(IPC.JOB_CAPTURE_STATUS, () => ({
-    running: captureServer.isRunning,
-    port:    captureServer.currentPort,
-    token:   captureServer.currentToken,
-  }));
-
-  ipcMain.handle(IPC.JOB_CAPTURE_REGEN_TOKEN, () => captureServer.regenerateToken());
 }

@@ -5,7 +5,7 @@ import { kvApi } from './kv';
 import { sqlApi, initSqlite } from './sql';
 import { secretsApi } from './secrets';
 import { netApi } from './net';
-import { shellApi, dialogApi, jobCaptureStub } from './stubs';
+import { shellApi, dialogApi } from './stubs';
 import {
   googleConnect,
   googleGetToken,
@@ -60,7 +60,6 @@ export async function installMobileBridge(): Promise<void> {
     secrets: secretsApi,
     google: googleApi,
     driveSync: driveSyncApi,
-    jobCapture: jobCaptureStub,
   };
 
   (window as unknown as Record<string, unknown>).cc = api;

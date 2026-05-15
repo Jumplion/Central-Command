@@ -92,31 +92,6 @@ export interface NetFetchResponse {
   body: string;
 }
 
-export interface CapturedJob {
-  company: string;
-  role: string;
-  link: string;
-  notes: string;
-  source: string;
-  status: string;
-  applied_at: string;
-}
-
-export interface CapturedAudition {
-  project_title: string;
-  role: string;
-  project_type: string;
-  status: string;
-  casting_studio: string;
-  location: string;
-  pay_rate: string;
-  submitted_at: string;
-  submission_deadline: string;
-  shoot_date: string;
-  link: string;
-  notes: string;
-}
-
 export type DriveSyncState = 'disabled' | 'idle' | 'uploading' | 'downloading' | 'error';
 
 export interface DriveSyncStatus {
@@ -177,21 +152,5 @@ export interface CCApi {
     forcePush(): Promise<void>;
     forcePull(): Promise<void>;
     onStatusChanged(cb: (status: DriveSyncStatus) => void): () => void;
-  };
-  jobCapture: {
-    /** Returns the server's current running state, port, and masked token indicator. */
-    status(): Promise<{ running: boolean; port: number; token: string }>;
-    /** Generates a new random token and persists it. Returns the new token. */
-    regenerateToken(): Promise<string>;
-    /**
-     * Registers a callback invoked whenever a job arrives via the browser
-     * extension. Returns an unsubscribe function — call it in useEffect cleanup.
-     */
-    onJobAdded(cb: (job: CapturedJob) => void): () => void;
-    /**
-     * Registers a callback invoked whenever an audition arrives via the browser
-     * extension. Returns an unsubscribe function — call it in useEffect cleanup.
-     */
-    onAuditionAdded(cb: (audition: CapturedAudition) => void): () => void;
   };
 }
