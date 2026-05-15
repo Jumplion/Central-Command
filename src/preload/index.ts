@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { IpcRendererEvent } from 'electron';
 import { IPC } from '../shared/ipc';
-import type { AppState, CCApi, CapturedJob, CapturedAudition, DialogOpenPathOptions, DriveSyncStatus, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
+import type { AppState, CCApi, DialogOpenPathOptions, DriveSyncStatus, GoogleConnectOptions, NetFetchInit, NetFetchResponse, SqlRunResult } from '../shared/types';
 import { GOOGLE_SERVICES } from '../shared/google';
 import type { GoogleServiceId } from '../shared/google';
 
@@ -71,20 +71,6 @@ const api: CCApi = {
       return () => ipcRenderer.removeListener(IPC.DRIVE_SYNC_STATUS_CHANGED, handler);
     },
   },
-  jobCapture: {
-    status: () => ipcRenderer.invoke(IPC.JOB_CAPTURE_STATUS),
-    regenerateToken: () => ipcRenderer.invoke(IPC.JOB_CAPTURE_REGEN_TOKEN),
-    onJobAdded: (cb: (job: CapturedJob) => void) => {
-      const handler = (_event: IpcRendererEvent, job: CapturedJob) => cb(job);
-      ipcRenderer.on(IPC.JOB_CAPTURE_JOB_ADDED, handler);
-      return () => ipcRenderer.removeListener(IPC.JOB_CAPTURE_JOB_ADDED, handler);
-    },
-    onAuditionAdded: (cb: (audition: CapturedAudition) => void) => {
-      const handler = (_event: IpcRendererEvent, audition: CapturedAudition) => cb(audition);
-      ipcRenderer.on(IPC.JOB_CAPTURE_AUDITION_ADDED, handler);
-      return () => ipcRenderer.removeListener(IPC.JOB_CAPTURE_AUDITION_ADDED, handler);
-    },
-  }
 };
 
 contextBridge.exposeInMainWorld('cc', api);

@@ -16,7 +16,6 @@ applyTo: '{src/main/**,src/preload/**}'
 ## Security
 
 - `safeStorage` may not encrypt on headless Linux; falls back to base64 — treat as advisory only
-- The job-capture HTTP server only accepts `chrome-extension://` and `moz-extension://` origins
 - Import `IS_WSL` from `src/main/platform.ts` — do not re-declare it
 
 ## Storage

@@ -1,5 +1,5 @@
 import { Browser } from '@capacitor/browser';
-import type { CapturedAudition, CapturedJob, DialogOpenPathOptions } from '@shared/types';
+import type { DialogOpenPathOptions } from '@shared/types';
 
 export const shellApi = {
   async openExternal(url: string): Promise<void> {
@@ -21,9 +21,3 @@ export const dialogApi = {
   },
 };
 
-export const jobCaptureStub = {
-  status: async () => ({ running: false, port: 0, token: '' }),
-  regenerateToken: async () => '',
-  onJobAdded: (_cb: (job: CapturedJob) => void) => () => {},
-  onAuditionAdded: (_cb: (audition: CapturedAudition) => void) => () => {},
-};

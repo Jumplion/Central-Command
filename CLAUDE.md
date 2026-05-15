@@ -25,14 +25,13 @@ There is a Vitest unit test suite. Run `npm run test` before committing changes 
 
 This is an Electron desktop app (Central Command) — a personal extensible dashboard. `electron-vite` compiles **three separate TypeScript projects** that share no runtime bundle:
 
-- **`src/main/`** — Electron main process (Node). Owns the window, registers all IPC handlers, manages storage backends, Google OAuth, Drive sync, and the job capture HTTP server.
+- **`src/main/`** — Electron main process (Node). Owns the window, registers all IPC handlers, manages storage backends, Google OAuth, and Drive sync.
 - **`src/preload/`** — contextBridge script. Exposes `window.cc` (typed as `CCApi` in `src/shared/types.ts`) to the renderer. The only bridge between Node and browser.
 - **`src/renderer/`** — React app. Has no direct Node/Electron access; everything goes through `window.cc`.
 - **`src/shared/`** — Types and IPC channel names imported by both main and renderer via the `@shared` alias.
 - **`src/widgets/`** — Widget plugins (see below).
 - **`src/mobile-bridge/`** — Capacitor bridging layer for mobile builds.
 - **`src/mobile-renderer/`** — Mobile-specific React app.
-- **`extensions/job-capture/`** — Chrome extension that sends job/audition data to the job capture HTTP server.
 
 ### Path aliases
 
@@ -81,10 +80,6 @@ This is an Electron desktop app (Central Command) — a personal extensible dash
 | `cc:google:get-token` | renderer → main | Get/refresh Google access token |
 | `cc:google:is-connected` | renderer → main | Check auth status |
 | `cc:google:disconnect` | renderer → main | Revoke credentials |
-| `cc:job-capture:status` | renderer → main | Get capture server status |
-| `cc:job-capture:regen-token` | renderer → main | Regenerate auth token |
-| `cc:job-capture:job-added` | main → renderer | Push: new job captured |
-| `cc:job-capture:audition-added` | main → renderer | Push: new audition captured |
 | `cc:drive-sync:get-status` | renderer → main | Get current sync status |
 | `cc:drive-sync:enable/disable` | renderer → main | Toggle Drive sync |
 | `cc:drive-sync:force-push/pull` | renderer → main | Manual sync |
@@ -112,10 +107,6 @@ Available built-in service presets: `gmail`, `calendar`, `drive`, `contacts`, `n
 ### Drive sync
 
 `src/main/sync.ts` syncs the three data files (`cc-state.json`, `cc-kv-{widgetId}.json`, `cc-db-{widgetId}.db`) to the user's Google Drive app data folder. Polling interval is 5 minutes when enabled. All sync operations are queue-sequenced to avoid races. Remote state wins on pull. Enable/disable is persisted in `AppState`.
-
-### Job capture server
-
-`src/main/job-capture-server.ts` runs an HTTP server (default port 47293). The companion Chrome extension (`extensions/job-capture/`) POSTs job and audition data secured by a random 32-byte hex token. The server writes directly to the `job-tracker` / `audition-aggregator` widget SQLite databases and emits IPC push events to the renderer.
 
 ## Widget system
 
@@ -197,7 +188,6 @@ api.google.shared  // shared OAuth namespace ('google' widgetId)
 | Google OAuth | `src/main/oauth.ts` |
 | Encrypted secrets | `src/main/secrets.ts` |
 | Drive sync manager | `src/main/sync.ts` |
-| Job capture server | `src/main/job-capture-server.ts` |
 | WSL detection | `src/main/platform.ts` |
 | Preload contextBridge | `src/preload/index.ts` |
 | Dashboard Zustand store | `src/renderer/src/state/dashboard.ts` |
@@ -226,6 +216,3 @@ Covered areas: `src/shared/google.test.ts`, `src/shared/validation.test.ts`, `sr
 
 Mobile builds use Capacitor with an Android target. The `__MOBILE__` build-time flag (injected by Vite) switches the renderer to use `MobileLayout` / `MobileNav` and filters widgets by `manifest.platforms`. Mobile-specific code lives in `src/mobile-bridge/` and `src/mobile-renderer/`.
 
-## Chrome extension
-
-`extensions/job-capture/` is a companion Chrome extension that captures job listings and auditions from job boards and POSTs them to the local job capture server. It is a standalone package separate from the Electron build.

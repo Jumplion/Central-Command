@@ -31,13 +31,6 @@ export const IPC = {
   GOOGLE_DISCONNECT: 'cc:google:disconnect',
   GOOGLE_IS_CONNECTED: 'cc:google:is-connected',
 
-  JOB_CAPTURE_STATUS:      'cc:job-capture:status',
-  JOB_CAPTURE_REGEN_TOKEN: 'cc:job-capture:regen-token',
-  /** Push event from main → renderer when a job arrives via the browser extension. */
-  JOB_CAPTURE_JOB_ADDED:      'cc:job-capture:job-added',
-  /** Push event from main → renderer when an audition arrives via the browser extension. */
-  JOB_CAPTURE_AUDITION_ADDED: 'cc:job-capture:audition-added',
-
   DRIVE_SYNC_GET_STATUS:  'cc:drive-sync:get-status',
   DRIVE_SYNC_ENABLE:      'cc:drive-sync:enable',
   DRIVE_SYNC_DISABLE:     'cc:drive-sync:disable',

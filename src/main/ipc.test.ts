@@ -63,13 +63,6 @@ const mockOAuth = {
   isConnected: vi.fn().mockResolvedValue(false),
 };
 
-const mockCaptureServer = {
-  isRunning: true,
-  currentPort: 3000,
-  currentToken: 'tok-abc',
-  regenerateToken: vi.fn().mockResolvedValue('tok-new'),
-};
-
 const mockSyncManager = {
   getStatus: vi.fn().mockReturnValue({ state: 'disabled', enabled: false }),
   enable: vi.fn(),
@@ -84,7 +77,6 @@ beforeAll(() => {
     mockStorage as never,
     mockSecrets as never,
     mockOAuth as never,
-    mockCaptureServer as never,
     mockSyncManager as never,
   );
 });
@@ -309,11 +301,3 @@ describe('Google service handlers (getToken / disconnect / isConnected)', () => 
   });
 });
 
-// ── Job capture handlers ───────────────────────────────────────────────────────
-
-describe('JOB_CAPTURE_STATUS', () => {
-  it('returns the server running state, port, and token', () => {
-    const status = call(IPC.JOB_CAPTURE_STATUS) as { running: boolean; port: number; token: string };
-    expect(status).toEqual({ running: true, port: 3000, token: 'tok-abc' });
-  });
-});
