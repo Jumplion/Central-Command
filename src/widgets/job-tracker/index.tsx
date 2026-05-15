@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
+import { useSqlInit } from '@renderer/hooks/useSqlInit';
 import { STATUSES, STATUS_COLOR } from './types';
 import type { Application, AppFormData, Status } from './types';
 import { parseCSVLine } from './csv';
@@ -17,8 +18,9 @@ function JobTracker({ api }: WidgetProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [view, setView] = useState<'list' | 'chart' | 'emails'>('list');
   const [importing, setImporting] = useState(false);
-  const [ready, setReady] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+
+  const ready = useSqlInit(api, INIT_SQL + EMAIL_INIT_SQL, SCHEMA_MIGRATIONS);
 
   const load = useCallback(async () => {
     const rows = await api.sql.all<Application>(
@@ -28,20 +30,8 @@ function JobTracker({ api }: WidgetProps) {
   }, [api]);
 
   useEffect(() => {
-    const init = async () => {
-      await api.sql.exec(INIT_SQL);
-      await api.sql.exec(EMAIL_INIT_SQL);
-      for (const m of SCHEMA_MIGRATIONS) {
-        const cols = await api.sql.all<{ name: string }>(`PRAGMA table_info(${m.table})`);
-        if (!cols.find((c) => c.name === m.column)) {
-          await api.sql.run(m.sql, []);
-        }
-      }
-      await load();
-      setReady(true);
-    };
-    void init();
-  }, []);
+    if (ready) void load();
+  }, [ready]);
 
   const counts = useMemo(() => {
     const acc = STATUSES.reduce<Record<Status, number>>(
