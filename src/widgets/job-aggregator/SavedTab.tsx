@@ -86,15 +86,15 @@ export function SavedTab({ api, savedJobs, onSavedChange }: Props) {
                         className="ghost"
                         style={{ fontSize: 11, padding: '1px 6px', color: STATUS_COLORS['Applied'], borderColor: `${STATUS_COLORS['Applied']}55` }}
                         title="Mark as Applied"
-                        onClick={() => void handleStatusChange(job.id, 'Applied')}
+                        onClick={(e) => { e.stopPropagation(); void handleStatusChange(job.id, 'Applied'); }}
                       >
                         ✓ Applied
                       </button>
                     )}
                     {job.apply_link && (
-                      <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={() => void api.shell.openExternal(job.apply_link)}>↗</button>
+                      <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={(e) => { e.stopPropagation(); void api.shell.openExternal(job.apply_link); }}>↗</button>
                     )}
-                    <button className="ghost danger" style={{ fontSize: 11, padding: '1px 6px' }} onClick={() => void handleDelete(job.id)}>✕</button>
+                    <button className="ghost danger" style={{ fontSize: 11, padding: '1px 6px' }} onClick={(e) => { e.stopPropagation(); void handleDelete(job.id); }}>✕</button>
                   </td>
                 </tr>
               ))}

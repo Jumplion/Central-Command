@@ -75,11 +75,11 @@ export function JobCard({
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-          <button className="ghost" style={{ fontSize: 11, padding: '2px 8px' }} onClick={onApply}>Apply ↗</button>
+          <button className="ghost" style={{ fontSize: 11, padding: '2px 8px' }} onClick={(e) => { e.stopPropagation(); onApply(); }}>Apply ↗</button>
           <button
             className={isSaved ? 'ghost' : 'primary'}
             style={{ fontSize: 11, padding: '2px 8px' }}
-            onClick={onSave}
+            onClick={(e) => { e.stopPropagation(); onSave(); }}
             disabled={isSaved}
           >
             {isSaved ? 'Saved ✓' : 'Save'}
@@ -247,12 +247,12 @@ export function BoardSection({
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                   {job.apply_link && (
-                    <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={() => onApply(job.apply_link)} title="Open posting">↗</button>
+                    <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={(e) => { e.stopPropagation(); onApply(job.apply_link); }} title="Open posting">↗</button>
                   )}
                   <button
                     className={savedIds.has(savedKey) ? 'ghost' : 'primary'}
                     style={{ fontSize: 11, padding: '1px 6px' }}
-                    onClick={() => onSave(job)}
+                    onClick={(e) => { e.stopPropagation(); onSave(job); }}
                     disabled={savedIds.has(savedKey)}
                     title={savedIds.has(savedKey) ? 'Already saved' : 'Save to tracker'}
                   >
@@ -261,7 +261,7 @@ export function BoardSection({
                   <button
                     className="ghost"
                     style={{ fontSize: 11, padding: '1px 6px', color: 'var(--text-dim)' }}
-                    onClick={() => onIgnore(job)}
+                    onClick={(e) => { e.stopPropagation(); onIgnore(job); }}
                     title="Ignore this job"
                   >🚫</button>
                 </div>

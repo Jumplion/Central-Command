@@ -96,7 +96,11 @@ export function SearchTab({ api, savedIds, onSaved, defaultKeywords, defaultRemo
             job={job}
             isSaved={savedIds.has(job.id)}
             onSave={() => void handleSave(job)}
-            onApply={() => job.applyLink && void api.shell.openExternal(job.applyLink)}
+            onApply={() => {
+              if (job.applyLink) {
+                void api.shell.openExternal(job.applyLink);
+              }
+            }}
           />
         ))}
       </div>
