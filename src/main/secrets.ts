@@ -5,6 +5,7 @@ import { assertValidWidgetId } from '@shared/validation';
 
 export class SecretsStore {
   private cache = new Map<string, Record<string, string>>();
+  private saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private available: boolean;
 
   constructor(private root: string) {
@@ -74,6 +75,15 @@ export class SecretsStore {
     await fs.rename(tmp, file);
   }
 
+  private scheduleSave(namespace: string): void {
+    const existing = this.saveTimers.get(namespace);
+    if (existing) clearTimeout(existing);
+    this.saveTimers.set(namespace, setTimeout(() => {
+      this.saveTimers.delete(namespace);
+      void this.save(namespace);
+    }, 200));
+  }
+
   async get(namespace: string, key: string): Promise<string | null> {
     const obj = await this.load(namespace);
     const val = obj[key];
@@ -88,13 +98,13 @@ export class SecretsStore {
   async set(namespace: string, key: string, value: string): Promise<void> {
     const obj = await this.load(namespace);
     obj[key] = this.encrypt(value);
-    await this.save(namespace);
+    this.scheduleSave(namespace);
   }
 
   async del(namespace: string, key: string): Promise<void> {
     const obj = await this.load(namespace);
     delete obj[key];
-    await this.save(namespace);
+    this.scheduleSave(namespace);
   }
 
   async has(namespace: string, key: string): Promise<boolean> {
