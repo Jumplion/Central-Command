@@ -48,6 +48,16 @@ export function Dashboard() {
     [dashboard.instances]
   );
 
+  const gridItems = useMemo(
+    () =>
+      dashboard.instances.map((i) => (
+        <div key={i.instanceId}>
+          <WidgetHost instance={i} widget={getWidget(i.widgetId)} />
+        </div>
+      )),
+    [dashboard.instances]
+  );
+
   const handleChange = useCallback(
     (next: Layout[]) => {
       updateLayout(next.map((l) => ({ instanceId: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
@@ -88,11 +98,7 @@ export function Dashboard() {
           onResizeStop={handleChange}
           compactType="vertical"
         >
-          {dashboard.instances.map((i) => (
-            <div key={i.instanceId}>
-              <WidgetHost instance={i} widget={getWidget(i.widgetId)} />
-            </div>
-          ))}
+          {gridItems}
         </GridLayout>
       )}
     </div>

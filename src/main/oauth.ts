@@ -14,13 +14,9 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const TOKEN_EXPIRY_BUFFER_SECONDS = 60;
 
+const HTML_ESCAPE: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return str.replace(/[&<>"']/g, (c) => HTML_ESCAPE[c]);
 }
 
 interface StoredCreds {
@@ -35,7 +31,7 @@ interface StoredTokens {
 }
 
 function base64url(buf: Buffer): string {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return buf.toString('base64url');
 }
 
 export class OAuthManager {

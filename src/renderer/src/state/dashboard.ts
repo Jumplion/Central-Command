@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import { nanoid } from 'nanoid';
 import type { AppState, Dashboard, DashboardId, InstanceId, WidgetId, WidgetInstance, WidgetSettings } from '@shared/types';
+
+const NANOID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+function nanoid(length: number): string {
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes, (b) => NANOID_ALPHABET[b & 63]).join('');
+}
 import { DEFAULT_STATE } from '@shared/defaults';
 import { defaultSettingsFor, getWidget } from '@renderer/plugins/registry';
 
