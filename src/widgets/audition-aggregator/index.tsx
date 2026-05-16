@@ -3,6 +3,7 @@ import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import type { Audition, AuditionFormData, CastingSite, ProjectType, Status } from './types';
 import { INIT_SQL, PROJECT_TYPES, STATUSES, CSV_HEADERS } from './constants';
 import { parseCSVLine, today } from './helpers';
+import { exportCsv } from '@renderer/utils/csv';
 import {
   AuditionForm, DeadlineCell, SiteRow, StatusBar, StatusBadge,
   Td, Th, TypeBar, WeeklyChart,
@@ -107,17 +108,8 @@ function AuditionAggregator({ api }: WidgetProps) {
   };
 
   const handleExportCSV = () => {
-    const header = CSV_HEADERS.join(',');
-    const rows = auds.map((a) =>
-      CSV_HEADERS.map((h) => `"${String(a[h] ?? '').replace(/"/g, '""')}"`).join(',')
-    );
-    const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'auditions.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    const rows = auds.map((a) => CSV_HEADERS.map((h) => a[h] ?? ''));
+    exportCsv([...CSV_HEADERS], rows, 'auditions.csv');
   };
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
