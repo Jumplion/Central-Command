@@ -137,6 +137,7 @@ export const MIGRATIONS = [
 ```
 
 Validates:
+
 - All parameters are provided
 - SQL contains `ALTER TABLE` and `ADD COLUMN`
 - Column name appears in the statement

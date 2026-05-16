@@ -76,6 +76,7 @@ function MyWidget({ api }: WidgetProps) {
 ## Common mistakes to avoid
 
 ❌ **Mistake:** Defining a column in both INIT_SQL and MIGRATIONS
+
 ```ts
 // ❌ WRONG — will cause "duplicate column name" error
 export const INIT_SQL = `CREATE TABLE items (id INTEGER, title TEXT, status TEXT);`;
@@ -85,6 +86,7 @@ export const MIGRATIONS = [
 ```
 
 ✅ **Fix:** Keep columns in INIT_SQL, remove duplicate from MIGRATIONS
+
 ```ts
 // ✅ CORRECT
 export const INIT_SQL = `CREATE TABLE items (id INTEGER, title TEXT, status TEXT);`;
@@ -94,6 +96,7 @@ export const MIGRATIONS: SqlMigration[] = emptyMigrations();
 ---
 
 ❌ **Mistake:** Not using `useSqlInit` hook
+
 ```ts
 // ❌ WRONG — manual error handling
 function MyWidget({ api }: WidgetProps) {
@@ -110,6 +113,7 @@ function MyWidget({ api }: WidgetProps) {
 ```
 
 ✅ **Fix:** Use the hook
+
 ```ts
 // ✅ CORRECT
 function MyWidget({ api }: WidgetProps) {
@@ -144,6 +148,7 @@ export const MIGRATIONS = [
 ```
 
 Validates:
+
 - All parameters are provided
 - SQL contains `ALTER TABLE` and `ADD COLUMN`
 - Column name appears in the statement
