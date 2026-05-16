@@ -1,4 +1,6 @@
 import type { FormState, LinkRelation, MediaStatus, MediaType, StatusFilter } from './types';
+import { emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
+import type { SqlMigration } from '@renderer/hooks/useSqlInit';
 
 export const MEDIA_TYPES: { value: MediaType; label: string; emoji: string }[] = [
   { value: 'book',    label: 'Book',     emoji: '📚' },
@@ -91,7 +93,8 @@ export const INIT_SQL = `
   );
 `;
 
-export const MIGRATIONS = [
-  `ALTER TABLE media_items ADD COLUMN external_id TEXT`,
-  `ALTER TABLE media_items ADD COLUMN external_source TEXT`,
-];
+export const MIGRATIONS: SqlMigration[] = emptyMigrations();
+// When adding columns after v1.0, replace with:
+// export const MIGRATIONS: SqlMigration[] = [
+//   createMigration('media_items', 'newColumn', 'ALTER TABLE media_items ADD COLUMN newColumn TEXT'),
+// ];

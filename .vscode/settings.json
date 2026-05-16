@@ -143,5 +143,6 @@
   // ── Quick open & command palette ─────────────────────────────────────────
   "workbench.quickOpen.preserveFilter": true,
   // ── Notifications ───────────────────────────────────────────────────────
-  "notifications.minTimeout": 3000
+  "notifications.minTimeout": 3000,
+  "workbench.editor.tabActionLocation": "right"
 }

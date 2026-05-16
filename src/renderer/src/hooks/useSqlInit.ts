@@ -7,6 +7,32 @@ export interface SqlMigration {
   sql: string;
 }
 
+/**
+ * Extracts column names from a CREATE TABLE statement.
+ * Used for validation to catch duplicate columns between INIT_SQL and migrations.
+ */
+function extractColumnsFromCreateTable(initSql: string): Record<string, Set<string>> {
+  const tables: Record<string, Set<string>> = {};
+  // Simple regex to find CREATE TABLE statements and their columns
+  const createTableRegex = /CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*?)\);/gi;
+  let match;
+
+  while ((match = createTableRegex.exec(initSql)) !== null) {
+    const tableName = match[1];
+    const content = match[2];
+    tables[tableName] = new Set();
+
+    // Extract column names (first word after whitespace, excluding keywords)
+    const columnRegex = /,?\s*(\w+)\s+[A-Z]/g;
+    let colMatch;
+    while ((colMatch = columnRegex.exec(content)) !== null) {
+      tables[tableName].add(colMatch[1]);
+    }
+  }
+
+  return tables;
+}
+
 export function useSqlInit(
   api: WidgetApi,
   initSql: string,
@@ -16,6 +42,23 @@ export function useSqlInit(
 
   useEffect(() => {
     const run = async () => {
+      // Validate migrations don't duplicate columns from INIT_SQL
+      if (migrations?.length) {
+        const initialColumns = extractColumnsFromCreateTable(initSql);
+        for (const m of migrations) {
+          const cols = initialColumns[m.table];
+          if (cols && cols.has(m.column)) {
+            console.error(
+              `[useSqlInit] Migration tries to add column "${m.column}" to table "${m.table}", ` +
+              `but it's already defined in INIT_SQL. Remove it from INIT_SQL or remove this migration.`
+            );
+            throw new Error(
+              `Migration conflict: "${m.column}" already exists in table "${m.table}"`
+            );
+          }
+        }
+      }
+
       await api.sql.exec(initSql);
       if (migrations?.length) {
         for (const m of migrations) {

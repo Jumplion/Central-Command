@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
+import { useSqlInit } from '@renderer/hooks/useSqlInit';
 import type { FormState, HistoryEntry, LinkRelation, MediaItem, MediaLink, StatusFilter, TypeFilter } from './types';
 import { DEFAULT_FORM, INIT_SQL, MEDIA_TYPES, MIGRATIONS, STATUS_FILTERS } from './constants';
 import { lookupMetadata } from './helpers';
@@ -12,7 +13,6 @@ function MediaTracker({ api, settings, setTitle }: WidgetProps) {
   const [items, setItems]               = useState<MediaItem[]>([]);
   const [history, setHistory]           = useState<Record<number, HistoryEntry[]>>({});
   const [links, setLinks]               = useState<Record<number, MediaLink[]>>({});
-  const [ready, setReady]               = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [typeFilter, setTypeFilter]     = useState<TypeFilter>('all');
   const [search, setSearch]             = useState('');
@@ -26,6 +26,8 @@ function MediaTracker({ api, settings, setTitle }: WidgetProps) {
   const [highlightId, setHighlightId]   = useState<number | null>(null);
 
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
 
   const loadItems = useCallback(async () => {
     const [rows, hist, linkRows] = await Promise.all([
@@ -63,16 +65,8 @@ function MediaTracker({ api, settings, setTitle }: WidgetProps) {
   }, [api.sql, setTitle]);
 
   useEffect(() => {
-    const init = async () => {
-      await api.sql.exec(INIT_SQL);
-      for (const sql of MIGRATIONS) {
-        try { await api.sql.exec(sql); } catch { /* column already exists */ }
-      }
-      setReady(true);
-      loadItems();
-    };
-    init();
-  }, [api.sql, loadItems]);
+    if (ready) void loadItems();
+  }, [ready, loadItems]);
 
   const openAdd = () => {
     setEditItem(null);

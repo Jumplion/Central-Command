@@ -14,6 +14,8 @@ Custom hooks are just functions that call other hooks and return useful values. 
 | --- | --- |
 | `useWidgetData.ts` | Load rows from a widget's SQLite database and track loading state |
 | `useSqlInit.ts` | Run a SQL schema setup (CREATE TABLE) once when a widget first mounts |
+| `sqlMigrationHelper.ts` | Helper functions to create type-safe SQL migrations |
+| `SCHEMA_PATTERN.md` | **Read this first:** Complete guide to the schema migration pattern |
 
 ---
 
@@ -57,32 +59,102 @@ return (
 
 ## `useSqlInit.ts`
 
-Widgets that use SQLite need to create their tables before they can use them. This hook runs a `CREATE TABLE IF NOT EXISTS` statement (or any schema setup SQL) exactly once when the widget mounts, and tracks whether initialization is complete.
+Widgets that use SQLite need to create their tables before they can use them. This hook runs a `CREATE TABLE IF NOT EXISTS` statement (or any schema setup SQL) exactly once when the widget mounts, and tracks whether initialization is complete. It also safely applies migrations (schema changes) added after initial release.
 
 ### What It Does
 
 ```ts
-const initialized = useSqlInit(api, `
+import { useSqlInit } from '@renderer/hooks/useSqlInit';
+import type { SqlMigration } from '@renderer/hooks/useSqlInit';
+
+// Schema for initial release
+const INIT_SQL = `
   CREATE TABLE IF NOT EXISTS entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     note TEXT NOT NULL,
     ts   INTEGER NOT NULL
   );
-`);
+`;
+
+// Migrations for columns added AFTER v1.0 was released
+const MIGRATIONS: SqlMigration[] = [
+  { table: 'entries', column: 'priority', sql: 'ALTER TABLE entries ADD COLUMN priority INTEGER DEFAULT 0' },
+];
+
+const initialized = useSqlInit(api, INIT_SQL, MIGRATIONS);
 ```
 
 Returns a boolean — `false` while the schema is being set up, `true` once it's done.
 
+### What the hook automatically handles
+
+✅ Executes INIT_SQL once (idempotent via `CREATE TABLE IF NOT EXISTS`)  
+✅ For each migration, checks if the column already exists  
+✅ Skips migrations that are already applied  
+✅ **Validates** that migrations don't duplicate columns from INIT_SQL (throws an error if detected)  
+✅ Returns `ready: boolean` to tell you when it's safe to query  
+
 ### Why this is needed
 
-SQLite databases are created empty. If a widget tries to `SELECT * FROM entries` before `entries` exists, it will throw an error. `useSqlInit` ensures the schema is ready before the widget tries to use it.
+SQLite databases are created empty. If a widget tries to `SELECT * FROM entries` before `entries` exists, it will throw an error. `useSqlInit` ensures the schema is ready before the widget tries to use it. The validation also prevents the "duplicate column name" error that occurs when migrations reference columns already in INIT_SQL.
 
 ### Usage pattern
 
 ```tsx
-const initialized = useSqlInit(api, CREATE_SCHEMA_SQL);
-const [rows, loading] = useWidgetData<Row>(api, 'SELECT * FROM entries');
+import { useSqlInit } from '@renderer/hooks/useSqlInit';
+import { INIT_SQL, MIGRATIONS } from './constants';
 
-if (!initialized) return <p>Setting up...</p>;
-// Now safe to render data
+function MyWidget({ api }: WidgetProps) {
+  const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
+  const [rows, loading] = useWidgetData<Row>(api, 'SELECT * FROM entries');
+
+  useEffect(() => {
+    if (ready) void load();
+  }, [ready]);
+
+  if (!ready) return <p>Setting up…</p>;
+  if (loading) return <p>Loading…</p>;
+  // Now safe to render data
+}
 ```
+
+---
+
+## `sqlMigrationHelper.ts`
+
+Helper functions to make it harder to define migrations incorrectly.
+
+### `createMigration(table, column, sql)`
+
+Creates a type-safe migration object with validation:
+
+```ts
+import { createMigration } from '@renderer/hooks/sqlMigrationHelper';
+
+export const MIGRATIONS = [
+  createMigration('items', 'priority', 'ALTER TABLE items ADD COLUMN priority INTEGER DEFAULT 0'),
+];
+```
+
+Validates:
+- All parameters are provided
+- SQL contains `ALTER TABLE` and `ADD COLUMN`
+- Column name appears in the statement
+
+### `emptyMigrations()`
+
+Use this as a placeholder when you don't have any migrations yet:
+
+```ts
+import { emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
+
+export const MIGRATIONS = emptyMigrations();
+```
+
+---
+
+## ⚠️ Important: Schema Pattern
+
+**Before creating a new widget, read [SCHEMA_PATTERN.md](./SCHEMA_PATTERN.md)** for the complete guide on how to define INIT_SQL and MIGRATIONS correctly.
+
+The key rule: **All initial columns go in INIT_SQL. Only add migrations for columns added AFTER the initial release.** If you define a column in both places, SQLite will throw a "duplicate column name" error when creating new instances of your widget.

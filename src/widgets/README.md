@@ -10,7 +10,39 @@ A widget is a React component that lives in one cell of the dashboard grid. It c
 
 The renderer's plugin registry (`src/renderer/src/plugins/registry.ts`) uses Vite's `import.meta.glob` to find all files matching `src/widgets/*/index.tsx` at build time. Every folder that has an `index.tsx` with a valid default export becomes an available widget. You never need to register a widget anywhere — just create the folder.
 
-## Folder layout
+---
+
+## 🚀 Quick Start: Creating a new widget
+
+### Automatic schema pattern (prevents errors)
+
+**All new widgets automatically use a safe SQL schema pattern** that prevents the "duplicate column name" error:
+
+- `INIT_SQL` — defines all columns for the initial release
+- `MIGRATIONS` — safely adds columns added in later versions
+- `useSqlInit` hook — validates schemas and prevents conflicts
+- Helper functions — make it impossible to define migrations incorrectly
+
+**See [src/renderer/src/hooks/SCHEMA_PATTERN.md](../renderer/src/hooks/SCHEMA_PATTERN.md)** for the complete guide.
+
+### Using the scaffold script
+
+To get started with a new widget using the correct patterns:
+
+```bash
+cd src/widgets
+bash create-widget.sh my-new-widget
+cd my-new-widget
+```
+
+This creates:
+- `constants.ts` — schema with `emptyMigrations()` placeholder
+- `types.ts` — TypeScript interfaces
+- `index.tsx` — widget component with `useSqlInit` hook already configured
+
+Then edit the files to build your widget.
+
+---
 
 ```bash
 src/widgets/
@@ -117,8 +149,11 @@ Components used by more than one widget live here. See `src/widgets/_shared/READ
 
 ## Tips for writing widgets
 
-- **Use `useEffect` for timers and subscriptions**, and always return a cleanup function to avoid memory leaks
 - **Use `useSqlInit` from `@renderer/hooks/useSqlInit`** to set up your database tables before querying them
+  - See [SCHEMA_PATTERN.md](../hooks/SCHEMA_PATTERN.md) for the complete guide
+  - The hook automatically validates schemas and prevents duplicate column errors
+  - Use `createMigration()` helper for type-safe migrations (see the guide)
+- **Use `useEffect` for timers and subscriptions**, and always return a cleanup function to avoid memory leaks
 - **Use `useWidgetData` from `@renderer/hooks/useWidgetData`** to load SQL rows and handle loading state
 - **Never call `api.google.connect()` during render** — it opens a browser window and blocks for up to 5 minutes. Call it from a button's `onClick` handler instead
 - **The widget body scrolls automatically** — you don't need `overflow: auto` on your container
