@@ -3,7 +3,8 @@ import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import { useSqlInit } from '@renderer/hooks/useSqlInit';
 import { STATUSES, STATUS_COLOR } from './types';
 import type { Application, AppFormData, Status } from './types';
-import { parseCSVLine } from './csv';
+import { parseCSVLine } from '@shared/csv';
+import { exportCsv } from '@renderer/utils/csv';
 import {
   INIT_SQL, EMAIL_INIT_SQL, SCHEMA_MIGRATIONS, today,
   StatusBar, AppForm, WeeklyChart,
@@ -71,19 +72,9 @@ function JobTracker({ api }: WidgetProps) {
   };
 
   const handleExportCSV = () => {
-    const header = 'company,role,status,applied_at,source,link,notes,req_number';
-    const rows = apps.map((a) =>
-      [a.company, a.role, a.status, a.applied_at, a.source, a.link, a.notes, a.req_number]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(',')
-    );
-    const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'applications.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const headers = ['company', 'role', 'status', 'applied_at', 'source', 'link', 'notes', 'req_number'];
+    const rows = apps.map((a) => [a.company, a.role, a.status, a.applied_at, a.source, a.link, a.notes, a.req_number]);
+    exportCsv(headers, rows, 'applications.csv');
   };
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
