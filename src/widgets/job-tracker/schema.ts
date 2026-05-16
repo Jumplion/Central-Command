@@ -32,7 +32,4 @@ export const EMAIL_INIT_SQL = `
   );
 `;
 
-export const SCHEMA_MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
-  { table: 'applications', column: 'req_number', sql: "ALTER TABLE applications ADD COLUMN req_number TEXT NOT NULL DEFAULT ''" },
-  { table: 'email_jobs', column: 'parsed_req_number', sql: "ALTER TABLE email_jobs ADD COLUMN parsed_req_number TEXT NOT NULL DEFAULT ''" },
-];
+export const SCHEMA_MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [];
