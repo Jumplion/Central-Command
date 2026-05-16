@@ -1,8 +1,8 @@
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import type { AppState } from '@shared/types';
 import { DEFAULT_STATE } from '@shared/defaults';
 
-const STATE_FILE = 'cc-state.json';
+const STATE_KEY = 'cc-state';
+const STATE_MTIME_KEY = 'cc-state:mtime';
 
 function isAppState(v: unknown): v is AppState {
   return (
@@ -15,27 +15,34 @@ function isAppState(v: unknown): v is AppState {
 }
 
 export const stateApi = {
-  async load(): Promise<AppState> {
+  load(): Promise<AppState> {
     try {
-      const { data } = await Filesystem.readFile({
-        path: STATE_FILE,
-        directory: Directory.Data,
-        encoding: Encoding.UTF8,
-      });
-      const parsed: unknown = JSON.parse(data as string);
-      return isAppState(parsed) ? parsed : structuredClone(DEFAULT_STATE);
+      const raw = localStorage.getItem(STATE_KEY);
+      if (!raw) return Promise.resolve(structuredClone(DEFAULT_STATE));
+      const parsed: unknown = JSON.parse(raw);
+      return Promise.resolve(isAppState(parsed) ? parsed : structuredClone(DEFAULT_STATE));
     } catch {
-      return structuredClone(DEFAULT_STATE);
+      return Promise.resolve(structuredClone(DEFAULT_STATE));
     }
   },
 
-  async save(state: AppState): Promise<void> {
-    await Filesystem.writeFile({
-      path: STATE_FILE,
-      directory: Directory.Data,
-      data: JSON.stringify(state, null, 2),
-      encoding: Encoding.UTF8,
-      recursive: true,
-    });
+  save(state: AppState): Promise<void> {
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    localStorage.setItem(STATE_MTIME_KEY, String(Date.now()));
+    return Promise.resolve();
+  },
+
+  exportJson(): string | null {
+    return localStorage.getItem(STATE_KEY);
+  },
+
+  importJson(json: string): void {
+    localStorage.setItem(STATE_KEY, json);
+    localStorage.setItem(STATE_MTIME_KEY, String(Date.now()));
+  },
+
+  getLastModified(): number {
+    const v = localStorage.getItem(STATE_MTIME_KEY);
+    return v ? Number(v) : 0;
   },
 };

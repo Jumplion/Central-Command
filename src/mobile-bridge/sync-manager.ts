@@ -1,4 +1,4 @@
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import type { DriveSyncStatus } from '@shared/types';
 import {
   SyncManagerBase, IDriveSync,
@@ -6,7 +6,8 @@ import {
   kvWidgetIdFromDriveName, dbWidgetIdFromDriveName,
 } from '@shared/sync-base';
 import { DriveSync, DriveError } from './drive-sync';
-import { invalidateCache, onFlushed as setKvFlushedCb } from './kv';
+import { kvApi, onFlushed as setKvFlushedCb } from './kv';
+import { stateApi } from './state';
 import { onWritten as setSqlWrittenCb, closeDb, reopenDb } from './sql';
 
 type StatusListener = (status: DriveSyncStatus) => void;
@@ -34,37 +35,27 @@ export class MobileSyncManager extends SyncManagerBase {
     try {
       await this._ensureDriveIds();
 
-      try {
-        const { data } = await Filesystem.readFile({
-          path: DRIVE_STATE_FILE,
-          directory: Directory.Data,
-          encoding: Encoding.UTF8,
-        });
+      const stateJson = stateApi.exportJson();
+      if (stateJson !== null) {
         const knownId = this._driveIds.get(DRIVE_STATE_FILE);
-        const newId = await this.drive.upsertFile(DRIVE_STATE_FILE, data as string, knownId);
+        const newId = await this.drive.upsertFile(DRIVE_STATE_FILE, stateJson, knownId);
         this._driveIds.set(DRIVE_STATE_FILE, newId);
-      } catch {
-        // file may not exist yet
+      }
+
+      for (const widgetId of kvApi.widgetIds()) {
+        const kvJson = kvApi.exportJson(widgetId);
+        if (kvJson !== null) {
+          const driveName = driveKvName(widgetId);
+          const knownId = this._driveIds.get(driveName);
+          const newId = await this.drive.upsertFile(driveName, kvJson, knownId);
+          this._driveIds.set(driveName, newId);
+        }
       }
 
       try {
         const { files } = await Filesystem.readdir({ path: 'widgets', directory: Directory.Data });
         for (const entry of files) {
-          const widgetId = entry.name;
-          try {
-            const { data } = await Filesystem.readFile({
-              path: `widgets/${widgetId}/store.json`,
-              directory: Directory.Data,
-              encoding: Encoding.UTF8,
-            });
-            const driveName = driveKvName(widgetId);
-            const knownId = this._driveIds.get(driveName);
-            const newId = await this.drive.upsertFile(driveName, data as string, knownId);
-            this._driveIds.set(driveName, newId);
-          } catch {
-            // no store.json for this widget
-          }
-          await this._uploadDb(widgetId);
+          await this._uploadDb(entry.name);
         }
       } catch {
         // widgets directory may not exist yet
@@ -114,15 +105,9 @@ export class MobileSyncManager extends SyncManagerBase {
         const remoteMs = new Date(driveFile.modifiedTime).getTime();
 
         if (driveFile.name === DRIVE_STATE_FILE) {
-          if (await this._isRemoteNewer(DRIVE_STATE_FILE, remoteMs)) {
+          if (remoteMs > stateApi.getLastModified()) {
             const content = await this.drive.downloadFile(driveFile.id);
-            await Filesystem.writeFile({
-              path: DRIVE_STATE_FILE,
-              directory: Directory.Data,
-              data: content,
-              encoding: Encoding.UTF8,
-              recursive: true,
-            });
+            stateApi.importJson(content);
             stateChangedByRemote = true;
           }
           continue;
@@ -130,17 +115,9 @@ export class MobileSyncManager extends SyncManagerBase {
 
         const kvWidgetId = kvWidgetIdFromDriveName(driveFile.name);
         if (kvWidgetId) {
-          const localPath = `widgets/${kvWidgetId}/store.json`;
-          if (await this._isRemoteNewer(localPath, remoteMs)) {
+          if (remoteMs > kvApi.getLastModified(kvWidgetId)) {
             const content = await this.drive.downloadFile(driveFile.id);
-            await Filesystem.writeFile({
-              path: localPath,
-              directory: Directory.Data,
-              data: content,
-              encoding: Encoding.UTF8,
-              recursive: true,
-            });
-            invalidateCache(kvWidgetId);
+            kvApi.importJson(kvWidgetId, content);
           }
           continue;
         }
