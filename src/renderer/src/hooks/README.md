@@ -11,7 +11,7 @@ Custom hooks are just functions that call other hooks and return useful values. 
 ## Files
 
 | File | What it provides |
-|---|---|
+| --- | --- |
 | `useWidgetData.ts` | Load rows from a widget's SQLite database and track loading state |
 | `useSqlInit.ts` | Run a SQL schema setup (CREATE TABLE) once when a widget first mounts |
 
@@ -59,7 +59,7 @@ return (
 
 Widgets that use SQLite need to create their tables before they can use them. This hook runs a `CREATE TABLE IF NOT EXISTS` statement (or any schema setup SQL) exactly once when the widget mounts, and tracks whether initialization is complete.
 
-### What it does
+### What It Does
 
 ```ts
 const initialized = useSqlInit(api, `

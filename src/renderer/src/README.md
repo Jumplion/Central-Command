@@ -5,13 +5,13 @@ This is the source code for the React application that runs inside the Electron 
 ## Entry points
 
 | File | Role |
-|---|---|
+| --- | --- |
 | `main.tsx` | React entry — calls `ReactDOM.createRoot(...).render(<App />)` |
 | `App.tsx` | Root component — loads state on mount, renders the sidebar and dashboard |
 
 ## Subfolders
 
-```
+```bash
 src/renderer/src/
 ├── components/   # All React UI components (Dashboard, Sidebar, WidgetHost, etc.)
 ├── hooks/        # Reusable React hooks for widgets
@@ -44,7 +44,7 @@ On mobile (when the `__MOBILE__` build flag is true), the `Sidebar` is replaced 
 
 ## How components, state, and plugins relate
 
-```
+```bash
 Zustand store (state/dashboard.ts)
   │  stores: dashboards, instances, layouts, settings
   │
@@ -65,7 +65,7 @@ WidgetApi factory (plugins/api.ts)
 
 ## Data flow for a user action
 
-**Example: user drags a widget to a new position**
+### Example: user drags a widget to a new position
 
 1. `<GridLayout>` (inside `Dashboard.tsx`) fires `onDragStop` with the new layout array
 2. `Dashboard` calls `updateLayout(newLayouts)` from the Zustand store
@@ -74,9 +74,9 @@ WidgetApi factory (plugins/api.ts)
 5. The main process writes the new state to `userData/state.json`
 6. On next app start, the widget appears in its new position
 
-**Example: user clicks "+ Add widget"**
+### Example: user clicks "+ Add widget"
 
-1. `Sidebar` renders `<AddWidgetDialog>` 
+1. `Sidebar` renders `<AddWidgetDialog>`
 2. The dialog calls `listWidgets()` from the registry to get all available widgets
 3. User picks one; dialog calls `addInstance(widgetId)` on the store
 4. Store generates a new `instanceId`, gets default settings from the manifest, adds the instance

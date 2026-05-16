@@ -15,7 +15,7 @@ function Greeting({ name }: { name: string }) {
 ## Components overview
 
 | File | What the user sees |
-|---|---|
+| --- | --- |
 | `Dashboard.tsx` | The main grid where widgets live and can be dragged/resized |
 | `WidgetHost.tsx` | The chrome (header, settings button, remove button) around each widget |
 | `Sidebar.tsx` | The left panel with dashboard list, "+ Add widget", and Settings |
@@ -30,6 +30,7 @@ function Greeting({ name }: { name: string }) {
 This component renders the draggable, resizable grid using the `react-grid-layout` library.
 
 **How `react-grid-layout` works:**
+
 - The grid is divided into 12 equal columns and rows of 60px height
 - Each widget occupies a rectangular area defined by `{ x, y, w, h }` in grid units
 - The user can drag widgets by their header and resize them from the corners
@@ -87,6 +88,7 @@ Shows a searchable list of all registered widgets (from `listWidgets()` in the p
 ## `AppSettings.tsx`
 
 The application-level settings UI, currently focused on Google Drive sync:
+
 - Shows current sync status
 - Buttons to enable/disable sync and force push/pull
 - All calls go through `window.cc.driveSync.*` IPC methods

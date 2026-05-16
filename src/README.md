@@ -8,7 +8,7 @@ Separating source code into `src/` is a common convention that keeps your workin
 
 ## What's inside
 
-```
+```bash
 src/
 ├── main/             # Electron "main process" — the Node.js backend
 ├── preload/          # The secure bridge between backend and frontend

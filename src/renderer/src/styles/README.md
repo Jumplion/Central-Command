@@ -5,7 +5,7 @@ This folder contains the application-wide CSS that styles the shell of Central C
 ## Files
 
 | File | What it does |
-|---|---|
+| --- | --- |
 | `globals.css` | Every CSS rule for the app shell — imported once in `main.tsx` |
 
 ---
@@ -27,6 +27,7 @@ The `"sideEffects": ["**/*.css"]` entry in `package.json` tells bundlers that CS
 ## What's styled here vs. in widgets
 
 **`globals.css` styles:**
+
 - CSS custom properties (variables) for colors, spacing, and typography
 - The overall app layout (`.app`, `.sidebar`, `.main`)
 - Widget chrome (`.widget`, `.widget-header`, `.widget-body`, `.widget-actions`)
@@ -35,6 +36,7 @@ The `"sideEffects": ["**/*.css"]` entry in `package.json` tells bundlers that CS
 
 **Widget-specific styles:**
 Widgets are responsible for their own internal styles. They can:
+
 - Use inline styles (`style={{ color: 'red' }}`)
 - Import a CSS module (`import styles from './styles.module.css'`)
 - Use the CSS custom properties defined here for consistent colors and spacing

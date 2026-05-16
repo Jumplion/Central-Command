@@ -5,7 +5,7 @@ This folder holds small, general-purpose functions that are useful in the render
 ## Files
 
 | File | What it does |
-|---|---|
+| --- | --- |
 | `csv.ts` | Re-exports CSV parsing/formatting utilities from `src/shared/csv.ts` |
 
 ---
@@ -21,6 +21,7 @@ See `src/shared/README.md` for documentation on what the CSV functions actually 
 ## Adding new utilities
 
 If you write a helper function used by more than one component or widget, put it here. Good candidates:
+
 - Date formatting helpers
 - String manipulation (truncation, slugification)
 - Number formatting (percentages, file sizes)

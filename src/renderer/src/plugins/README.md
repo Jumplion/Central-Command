@@ -5,7 +5,7 @@ This folder is the engine that powers the widget system. It has three responsibi
 ## Files
 
 | File | What it does |
-|---|---|
+| --- | --- |
 | `registry.ts` | Discovers all `src/widgets/*/index.tsx` files at build time and exposes them as a registry |
 | `api.ts` | Creates a `WidgetApi` object scoped to one specific widget instance |
 | `apiEvents.ts` | Simple event bus for tracking outgoing network requests (used by the api-tracker widget) |
@@ -27,6 +27,7 @@ const modules = import.meta.glob<{ default: Widget }>('../../../widgets/*/index.
 ```
 
 After this line, `modules` is an object like:
+
 ```js
 {
   '../../../widgets/gmail/index.tsx': { default: gmailWidget },
@@ -40,6 +41,7 @@ The registry then loops over every entry, validates it (checks for a valid manif
 ### Platform filtering
 
 Widgets can declare which platforms they support via `manifest.platforms`:
+
 ```ts
 platforms: ['desktop']  // only show on Electron desktop
 platforms: ['mobile']   // only show on Android

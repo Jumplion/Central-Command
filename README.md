@@ -16,6 +16,7 @@ npm run dev    # starts the app in development mode with hot-reload
 ```
 
 The first run creates a `userData` directory on your computer (Electron's app data folder) where the dashboard state and widget data are stored. The location is:
+
 - **macOS:** `~/Library/Application Support/central-command/`
 - **Windows:** `%APPDATA%\central-command\`
 - **Linux:** `~/.config/central-command/`
@@ -23,7 +24,7 @@ The first run creates a `userData` directory on your computer (Electron's app da
 ## Scripts
 
 | Script | What it does |
-|---|---|
+| --- | --- |
 | `npm run dev` | Start the app in dev mode — changes hot-reload without restart |
 | `npm run build` | Compile all bundles (main process, preload, renderer) for production |
 | `npm run test` | Run the Vitest unit test suite |
@@ -69,7 +70,7 @@ Capacitor wraps the web app in a native Android app shell. JavaScript calls Capa
 
 ## Project layout
 
-```
+```bash
 Central-Command/
 ├── src/
 │   ├── main/             # Electron main process (Node.js backend)
@@ -96,7 +97,7 @@ Each subfolder has its own README with detailed documentation. Start with `src/R
 
 All data lives in the `userData` directory:
 
-```
+```bash
 userData/
 ├── state.json               # Dashboard layout, widget instances, settings
 └── widgets/

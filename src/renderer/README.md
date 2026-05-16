@@ -4,7 +4,7 @@ This folder is the browser-side half of the Electron app — everything the user
 
 ## Files and folders
 
-```
+```bash
 src/renderer/
 ├── index.html   # The HTML shell — Vite injects the bundled JS here
 └── src/         # All React source code (see src/renderer/src/README.md)
@@ -19,6 +19,7 @@ This is actually a security feature. Widgets loaded in the renderer are sandboxe
 ## `index.html`
 
 This is the single HTML page that Vite uses as its build entry point. It contains a minimal shell:
+
 - A `<div id="root">` where React mounts the entire application
 - A `<script>` tag pointing to `src/main.tsx` (the React entry point)
 - Vite replaces that script tag at build time with the bundled, minified output
@@ -34,11 +35,13 @@ At build time, `npm run build` bundles everything into `out/renderer/`. The wind
 ## What the renderer can and cannot do
 
 **Can do:**
+
 - Render React components, manage local state
 - Call `window.cc.*` methods to read/write storage, make HTTP requests, open files
 - Subscribe to push events from the main process (e.g., Drive sync status changes)
 
 **Cannot do:**
+
 - Import Node.js modules (`fs`, `path`, `crypto`, etc.)
 - Directly access the SQLite database or filesystem
 - Use Electron APIs like `ipcRenderer` (the preload handles that)

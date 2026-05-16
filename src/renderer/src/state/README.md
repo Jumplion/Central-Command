@@ -5,7 +5,7 @@ This folder contains the Zustand store that holds all dashboard state: which das
 ## Files
 
 | File | What it does |
-|---|---|
+| --- | --- |
 | `dashboard.ts` | The Zustand store — all state and actions for dashboard management |
 | `dashboard.test.ts` | Unit tests for the store's logic |
 
@@ -64,7 +64,7 @@ The `activeDashboardId` tells the app which dashboard to display. Switching dash
 The store exposes these pieces:
 
 | Name | Type | Description |
-|---|---|---|
+| --- | --- | --- |
 | `loaded` | `boolean` | `false` until `load()` completes |
 | `state` | `AppState` | The entire dashboard state |
 | `load()` | action | Fetches state from disk via `window.cc.state.load()` |

@@ -12,7 +12,7 @@ The renderer's plugin registry (`src/renderer/src/plugins/registry.ts`) uses Vit
 
 ## Folder layout
 
-```
+```bash
 src/widgets/
 ├── _shared/              # Shared components used by multiple widgets
 ├── api-tracker/          # Monitors network calls made by other widgets
@@ -46,7 +46,7 @@ Larger widgets split their code across multiple files in the same folder (e.g., 
 The manifest tells the app everything it needs to know about a widget before rendering it:
 
 | Field | Type | Description |
-|---|---|---|
+| --- | --- | --- |
 | `id` | `string` | Must equal the folder name. Used as the storage namespace on disk. |
 | `name` | `string` | Display name shown in the header and Add dialog |
 | `description` | `string?` | Shown in the Add widget dialog |
@@ -63,7 +63,7 @@ The manifest tells the app everything it needs to know about a widget before ren
 The `Component` receives an `api` object scoped to its instance. See `src/renderer/src/plugins/README.md` for a detailed breakdown. Quick reference:
 
 | API | Description |
-|---|---|
+| --- | --- |
 | `api.kv` | Per-instance JSON key/value storage |
 | `api.sql` | Per-widget-type SQLite database (shared across all instances) |
 | `api.net.fetch` | HTTP requests (routed through Electron's `net` module, no CORS) |
@@ -82,24 +82,31 @@ The `Component` receives an `api` object scoped to its instance. See `src/render
 ## Existing widgets
 
 ### `api-tracker`
+
 Displays a live log of every HTTP request made by any widget via `api.net.fetch`. Useful for debugging. Listens to the `apiEvents` event bus rather than making its own requests.
 
 ### `audition-aggregator`
+
 Tracks acting auditions with a SQLite database. Supports filtering by status, date range, and role type. Has a multi-tab UI (Active, Past, Stats).
 
 ### `file-shortcuts`
+
 A configurable list of files and folders. Click an entry to open it with its default OS application. Shortcuts are stored in KV per instance.
 
 ### `gmail`
+
 Reads the user's Gmail inbox using the Gmail API. Requires Google OAuth (`api.google.shared`). Shows a list of recent threads with sender, subject, and snippet.
 
 ### `job-aggregator`
+
 Searches for job postings across multiple sources (JSearch API, RSS boards). Has three tabs: Search (live query), Saved (bookmarked jobs), and Boards (curated feeds). Uses SQLite to cache results.
 
 ### `job-tracker`
+
 A Kanban board for tracking job applications. Columns: Wishlist → Applied → Interview → Offer → Rejected. Each application is a row in SQLite. Supports CSV import/export and Gmail scanning to auto-update statuses.
 
 ### `media-tracker`
+
 Tracks media you're consuming — books, movies, TV shows, video games. Status columns: Want → In Progress → Done → Dropped. Stores everything in SQLite. Has chart visualizations using the shared `StackedBarChart` component.
 
 ## `_shared/`

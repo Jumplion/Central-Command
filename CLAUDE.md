@@ -36,7 +36,7 @@ This is an Electron desktop app (Central Command) — a personal extensible dash
 ### Path aliases
 
 | Alias | Resolves to |
-|---|---|
+| --- | --- |
 | `@shared` | `src/shared/` |
 | `@main` | `src/main/` (node project only) |
 | `@renderer` | `src/renderer/src/` |
@@ -57,7 +57,7 @@ This is an Electron desktop app (Central Command) — a personal extensible dash
 #### IPC channels reference
 
 | Channel | Direction | Description |
-|---|---|---|
+| --- | --- | --- |
 | `cc:state:load` | renderer → main | Load `AppState` from `userData/state.json` |
 | `cc:state:save` | renderer → main | Persist `AppState` to `userData/state.json` |
 | `cc:kv:get` | renderer → main | Get a KV value |
@@ -131,7 +131,7 @@ The grid uses a 12-column layout with 60 px row height (`react-grid-layout`). Si
 ### Widget manifest fields
 
 | Field | Type | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `id` | `string` | Must equal the folder name |
 | `name` | `string` | Display name |
 | `description` | `string?` | Shown in the Add dialog |
@@ -173,7 +173,7 @@ api.google.shared  // shared OAuth namespace ('google' widgetId)
 ## Key files
 
 | Purpose | File |
-|---|---|
+| --- | --- |
 | Shared type definitions | `src/shared/types.ts` |
 | IPC channel constants | `src/shared/ipc.ts` |
 | Google service presets | `src/shared/google.ts` |
@@ -215,4 +215,3 @@ Covered areas: `src/shared/google.test.ts`, `src/shared/validation.test.ts`, `sr
 ## Mobile
 
 Mobile builds use Capacitor with an Android target. The `__MOBILE__` build-time flag (injected by Vite) switches the renderer to use `MobileLayout` / `MobileNav` and filters widgets by `manifest.platforms`. Mobile-specific code lives in `src/mobile-bridge/` and `src/mobile-renderer/`.
-

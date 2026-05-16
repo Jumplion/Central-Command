@@ -11,7 +11,7 @@ Electron compiles the main process and the renderer as two completely separate b
 ## Files
 
 | File | What it provides |
-|---|---|
+| --- | --- |
 | `types.ts` | All shared TypeScript types — `AppState`, `WidgetManifest`, `CCApi`, etc. |
 | `ipc.ts` | The `IPC` constant — all channel name strings as a typed object |
 | `google.ts` | Google service definitions (scopes, base URLs) and OAuth helper functions |
@@ -72,6 +72,7 @@ export const GOOGLE_SERVICES = {
 ```
 
 Also provides helper functions used by `src/main/oauth.ts`:
+
 - `resolveGoogleScopes(options)` — returns the right OAuth scopes for a service or custom scope list
 - `getGoogleCredsKey(service?)` — returns the secrets key where credentials are stored
 - `getGoogleTokenKey(service?)` — returns the secrets key where tokens are stored
