@@ -1,100 +1,208 @@
-# Widget authoring
+# `src/widgets/` — Widget Plugins
 
-A widget is a self-contained module that renders inside a Central Command
-dashboard cell. To add one, create a folder under this directory and drop in an
-`index.tsx` that default-exports a `Widget` object. The plugin registry picks
-it up automatically on the next dev/build cycle.
+This folder contains all the widget plugins. Each widget lives in its own subfolder and is completely self-contained. The app discovers them automatically at build time — no manual registration needed.
+
+## What is a widget?
+
+A widget is a React component that lives in one cell of the dashboard grid. It can store data, make network requests, authenticate with Google services, and interact with the OS. Widgets are isolated from each other — one widget's storage doesn't interfere with another's.
+
+## How auto-discovery works
+
+The renderer's plugin registry (`src/renderer/src/plugins/registry.ts`) uses Vite's `import.meta.glob` to find all files matching `src/widgets/*/index.tsx` at build time. Every folder that has an `index.tsx` with a valid default export becomes an available widget. You never need to register a widget anywhere — just create the folder.
 
 ## Folder layout
 
-```bash
+```
 src/widgets/
-└── <id>/
-    ├── index.tsx       # required - default export of type Widget
-    ├── components/...  # optional - your widget's internal components
-    └── ...
+├── _shared/              # Shared components used by multiple widgets
+├── api-tracker/          # Monitors network calls made by other widgets
+├── audition-aggregator/  # Tracks acting auditions
+├── file-shortcuts/       # Quick-launch file/folder shortcuts
+├── gmail/                # Read Gmail inbox
+├── job-aggregator/       # Aggregates job listings from multiple sources
+├── job-tracker/          # Kanban-style job application tracker
+└── media-tracker/        # Track books, movies, TV shows, games
 ```
 
-`<id>` must match `^[a-z0-9][a-z0-9-]{0,63}$`. It's used as the folder name on
-disk for the widget's storage namespace, so it must be filesystem-safe.
+## Widget structure
 
-## Widget shape
+Every widget folder must contain `index.tsx` with a default export of type `Widget`:
 
 ```ts
 import type { Widget } from '@renderer/plugins/registry';
 
 const widget: Widget = {
   manifest: { /* see below */ },
-  Component: function MyWidget(props) { /* ... */ }
+  Component: ({ api, settings, setTitle }) => { /* JSX */ }
 };
 
 export default widget;
 ```
 
-## Manifest
+Larger widgets split their code across multiple files in the same folder (e.g., `components.tsx`, `types.ts`, `helpers.ts`). These are private to the widget — no other widget imports them.
 
-| Field          | Type                                       | Notes                                   |
-| -------------- | ------------------------------------------ | --------------------------------------- |
-| `id`           | `string`                                   | Must equal the folder name              |
-| `name`         | `string`                                   | Display name                            |
-| `description`  | `string?`                                  | Shown in the Add dialog                 |
-| `version`      | `string`                                   | Semver-ish, e.g. `0.1.0`                |
-| `author`       | `string?`                                  | Optional                                |
-| `icon`         | `string?`                                  | Emoji or short string used in header    |
-| `defaultSize`  | `{ w: number; h: number }`                 | Grid cells (12-col layout, 60px rows)   |
-| `minSize`      | `{ w: number; h: number }?`                | Minimum drag/resize size                |
-| `settings`     | `SettingsField[]?`                         | Schema for the per-instance settings UI |
-| `permissions`  | `{ sqlite?: boolean; google?: boolean }?` | Declare capabilities used by this widget |
+## The manifest
 
-### SettingsField
+The manifest tells the app everything it needs to know about a widget before rendering it:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | Must equal the folder name. Used as the storage namespace on disk. |
+| `name` | `string` | Display name shown in the header and Add dialog |
+| `description` | `string?` | Shown in the Add widget dialog |
+| `version` | `string` | Semver string like `0.1.0` |
+| `icon` | `string?` | Emoji shown in the widget header |
+| `defaultSize` | `{ w, h }` | Size in grid units (12-col grid, 60px row height) |
+| `minSize` | `{ w, h }?` | Minimum size the user can resize to |
+| `settings` | `SettingsField[]?` | Declares the settings form fields shown in the ⚙ panel |
+| `permissions` | `{ sqlite?, google? }?` | Declare `true` to unlock `api.sql` or `api.google` |
+| `platforms` | `string[]?` | `['desktop']` or `['mobile']` — omit for both |
+
+## The `api` prop
+
+The `Component` receives an `api` object scoped to its instance. See `src/renderer/src/plugins/README.md` for a detailed breakdown. Quick reference:
+
+| API | Description |
+|---|---|
+| `api.kv` | Per-instance JSON key/value storage |
+| `api.sql` | Per-widget-type SQLite database (shared across all instances) |
+| `api.net.fetch` | HTTP requests (routed through Electron's `net` module, no CORS) |
+| `api.secrets` | Per-widget encrypted storage (for API keys etc.) |
+| `api.shell` | Open URLs, files, and folders in the OS |
+| `api.dialog` | Native file-picker dialog |
+| `api.google` | Google OAuth (connect, get token, disconnect) |
+| `api.google.shared` | Shared Google auth namespace — one login for all widgets |
+
+## The `settings` prop and `setTitle`
+
+`settings` is a plain `Record<string, unknown>` with the current values for every field declared in `manifest.settings`. It's passed fresh on every render — if the user changes a setting, the component re-renders with the new values.
+
+`setTitle(title)` lets a widget override its header title at runtime (e.g., to show a count or the user's name). Pass `undefined` to restore the manifest name.
+
+## Existing widgets
+
+### `api-tracker`
+Displays a live log of every HTTP request made by any widget via `api.net.fetch`. Useful for debugging. Listens to the `apiEvents` event bus rather than making its own requests.
+
+### `audition-aggregator`
+Tracks acting auditions with a SQLite database. Supports filtering by status, date range, and role type. Has a multi-tab UI (Active, Past, Stats).
+
+### `file-shortcuts`
+A configurable list of files and folders. Click an entry to open it with its default OS application. Shortcuts are stored in KV per instance.
+
+### `gmail`
+Reads the user's Gmail inbox using the Gmail API. Requires Google OAuth (`api.google.shared`). Shows a list of recent threads with sender, subject, and snippet.
+
+### `job-aggregator`
+Searches for job postings across multiple sources (JSearch API, RSS boards). Has three tabs: Search (live query), Saved (bookmarked jobs), and Boards (curated feeds). Uses SQLite to cache results.
+
+### `job-tracker`
+A Kanban board for tracking job applications. Columns: Wishlist → Applied → Interview → Offer → Rejected. Each application is a row in SQLite. Supports CSV import/export and Gmail scanning to auto-update statuses.
+
+### `media-tracker`
+Tracks media you're consuming — books, movies, TV shows, video games. Status columns: Want → In Progress → Done → Dropped. Stores everything in SQLite. Has chart visualizations using the shared `StackedBarChart` component.
+
+## `_shared/`
+
+Components used by more than one widget live here. See `src/widgets/_shared/README.md` for details.
+
+---
+
+## Tips for writing widgets
+
+- **Use `useEffect` for timers and subscriptions**, and always return a cleanup function to avoid memory leaks
+- **Use `useSqlInit` from `@renderer/hooks/useSqlInit`** to set up your database tables before querying them
+- **Use `useWidgetData` from `@renderer/hooks/useWidgetData`** to load SQL rows and handle loading state
+- **Never call `api.google.connect()` during render** — it opens a browser window and blocks for up to 5 minutes. Call it from a button's `onClick` handler instead
+- **The widget body scrolls automatically** — you don't need `overflow: auto` on your container
+- **If your widget crashes, it shows an error without crashing the dashboard** — the `ErrorBoundary` in `WidgetHost` catches rendering errors
+
+---
+
+## Storage API reference
 
 ```ts
-type SettingsField =
-  | { kind: 'string'; key: string; label: string; default?: string; placeholder?: string; multiline?: boolean }
-  | { kind: 'number'; key: string; label: string; default?: number; min?: number; max?: number; step?: number }
-  | { kind: 'boolean'; key: string; label: string; default?: boolean }
-  | { kind: 'select'; key: string; label: string; default?: string; options: { value: string; label: string }[] };
-```
-
-The settings UI is rendered automatically from this schema. Defaults are
-applied when an instance is first added.
-
-## Component contract
-
-```ts
-interface WidgetProps {
-  api: WidgetApi;                                // storage scoped to this instance
-  settings: Record<string, unknown>;             // current settings values
-  setTitle: (title: string | undefined) => void; // override the header title
-}
-```
-
-### Storage
-
-- `api.kv` is a JSON key/value store **scoped to this widget instance**. Two
-  instances of the same widget do not share keys.
-- `api.sql` is a SQLite database **shared across all instances of this
-  widget**. Use it for structured data (logs, time-series, etc). Always use
-  parameterized queries; never interpolate untrusted values.
-
-```ts
+// JSON key/value (per instance)
 await api.kv.set('lastRun', Date.now());
-const last = await api.kv.get<number>('lastRun');
+const last = await api.kv.get<number>('lastRun');  // undefined if not set
+await api.kv.del('lastRun');
+const allKeys = await api.kv.keys();
 
-await api.sql.exec(`
-  CREATE TABLE IF NOT EXISTS entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    note TEXT NOT NULL,
-    ts   INTEGER NOT NULL
-  );
-`);
+// SQLite (per widget type, shared across instances)
+await api.sql.exec(`CREATE TABLE IF NOT EXISTS entries (
+  id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  note TEXT    NOT NULL,
+  ts   INTEGER NOT NULL
+)`);
 await api.sql.run('INSERT INTO entries (note, ts) VALUES (?, ?)', ['hello', Date.now()]);
 const rows = await api.sql.all<{ id: number; note: string; ts: number }>(
   'SELECT * FROM entries ORDER BY ts DESC LIMIT 50'
 );
+const one = await api.sql.get<{ id: number }>('SELECT id FROM entries LIMIT 1');
+
+// Secrets (per widget type, encrypted)
+await api.secrets.set('apiKey', 'super-secret-value');
+const key = await api.secrets.get('apiKey');  // string | null
+await api.secrets.has('apiKey');              // boolean
+await api.secrets.del('apiKey');
+
+// Network (no CORS, routed through Electron)
+const res = await api.net.fetch('https://api.example.com/data', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ query: 'hello' }),
+});
+// res.ok: boolean, res.status: number, res.body: string
+
+// Shell and dialog
+await api.shell.openExternal('https://example.com');
+await api.shell.openPath('/home/user/documents');
+await api.shell.showItemInFolder('/home/user/file.txt');
+const paths = await api.dialog.openPath({ title: 'Pick a file', properties: ['openFile'] });
 ```
 
-## Minimal example
+## Settings fields reference
+
+```ts
+type SettingsField =
+  | { kind: 'string';  key: string; label: string; default?: string; placeholder?: string; multiline?: boolean }
+  | { kind: 'number';  key: string; label: string; default?: number; min?: number; max?: number; step?: number }
+  | { kind: 'boolean'; key: string; label: string; default?: boolean }
+  | { kind: 'select';  key: string; label: string; default?: string; options: { value: string; label: string }[] };
+```
+
+The settings UI is generated automatically from this schema. Defaults are applied when an instance is first added to the dashboard.
+
+## Google OAuth setup
+
+To use `api.google` or `api.google.shared`, you need a Google Cloud project:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create a project
+2. Enable the API you need (e.g., Gmail API, Google Calendar API)
+3. Under "Credentials", create **OAuth 2.0 Client ID** → choose **Desktop app**
+4. Add yourself as a test user on the OAuth consent screen
+5. Expose the Client ID and Client Secret via widget `settings` fields so the user can paste them in
+
+```ts
+// Example: connect on button click
+async function handleConnect() {
+  await api.google.shared.connect({
+    clientId: settings.clientId as string,
+    clientSecret: settings.clientSecret as string,
+    service: 'gmail',
+  });
+}
+
+// Example: get a token for API calls
+const token = await api.google.shared.getToken('gmail');
+if (!token) return; // not connected
+
+const res = await api.net.fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages', {
+  headers: { Authorization: `Bearer ${token}` },
+});
+```
+
+## Minimal widget example
 
 ```tsx
 // src/widgets/hello/index.tsx
@@ -108,7 +216,6 @@ const widget: Widget = {
     version: '0.1.0',
     icon: '👋',
     defaultSize: { w: 4, h: 3 },
-    minSize: { w: 2, h: 2 },
     settings: [
       { kind: 'string', key: 'who', label: 'Who to greet', default: 'world' }
     ]
@@ -121,122 +228,3 @@ const widget: Widget = {
 
 export default widget;
 ```
-
-## Shell & dialog APIs
-
-Widgets have access to OS-level shell and dialog helpers via `api.shell` and
-`api.dialog`:
-
-```ts
-// Open a URL in the default browser (http/https/mailto only)
-await api.shell.openExternal('https://example.com');
-
-// Open a file or folder with the OS default app
-await api.shell.openPath('/home/user/documents');
-
-// Reveal a path in the system file manager
-await api.shell.showItemInFolder('/home/user/file.txt');
-
-// Open a native file-picker dialog; returns null if cancelled
-const paths = await api.dialog.openPath({
-  title: 'Pick a file',
-  properties: ['openFile', 'multiSelections'],
-});
-// properties options: 'openFile' | 'openDirectory' | 'multiSelections'
-```
-
-## Permissions
-
-The `manifest.permissions` field gates optional capabilities:
-
-| Key      | Type      | Description                                   |
-| -------- | --------- | --------------------------------------------- |
-| `sqlite` | `boolean` | Declare that this widget uses `api.sql`        |
-| `google` | `boolean` | Declare that this widget uses `api.google`     |
-
-## Secrets API
-
-`api.secrets` provides a per-widget encrypted key/value store backed by
-Electron's `safeStorage` (OS keychain on macOS/Windows, libsecret on Linux).
-Keys are scoped to the widget type — all instances share the same vault.
-
-```ts
-await api.secrets.set('apiKey', 'super-secret-value');
-const key = await api.secrets.get('apiKey');   // string | null
-await api.secrets.has('apiKey');               // boolean
-await api.secrets.del('apiKey');
-```
-
-On headless Linux systems where `safeStorage` is unavailable, values are stored
-as base64 — avoid storing sensitive data on shared/headless machines.
-
-## Google OAuth API
-
-`api.google` provides a PKCE + loopback-redirect OAuth 2.0 helper for Google
-services. Built-in service presets are available for Gmail, Google Calendar,
-Google Drive, Google Contacts, and Google Notes (Google Keep, where the Keep
-API/scopes are available for the signed-in account). Credentials and tokens are
-stored securely in the widget's `secrets` vault and auto-refresh expired access
-tokens.
-
-Declare `permissions: { google: true }` in your manifest.
-
-### Setup (one-time, per user)
-
-1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
-2. Enable the relevant Google API (e.g. Gmail API).
-3. Create **OAuth 2.0 credentials** → Application type: **Desktop app**.
-4. Add yourself as a test user on the OAuth consent screen.
-5. Expose the Client ID and Client Secret via widget settings so the user can
-   paste them in.
-
-### Usage
-
-```ts
-// In settings: { googleClientId: string; googleClientSecret: string }
-const clientId = settings.googleClientId as string;
-const clientSecret = settings.googleClientSecret as string;
-
-// Inspect built-in service metadata
-const calendar = api.google.services.calendar;
-calendar.apiBaseUrl; // https://www.googleapis.com/calendar/v3/
-
-// Check if already authenticated for a specific Google service
-const already = await api.google.isConnected('calendar');
-
-// Trigger the consent screen using a built-in service preset
-await api.google.connect({
-  clientId,
-  clientSecret,
-  service: 'calendar',
-});
-
-// Get a valid access token for that service (auto-refreshes when expired)
-const token = await api.google.getToken('calendar'); // string | null
-
-// Use the token with api.net.fetch (routed through Electron's net stack)
-const calendarListUrl = new URL('users/me/calendarList', calendar.apiBaseUrl).toString();
-const res = await api.net.fetch(
-  calendarListUrl,
-  { headers: { Authorization: `Bearer ${token}` } }
-);
-const data = JSON.parse(res.body);
-
-// Revoke stored credentials and tokens for that service
-await api.google.disconnect('calendar');
-```
-
-`api.google.connect()` blocks until the user completes the browser flow (up to
-5 minutes), so call it from an event handler, not top-level render code.
-
-If you need a custom Google integration, you can still pass explicit `scopes`
-instead of `service`.
-
-## Tips
-
-- Long-running side effects belong in `useEffect`. Cancel them on unmount.
-- The widget body is scrollable; you don't need to handle overflow yourself.
-- If a widget throws during render, the host shows an error and the rest of
-  the dashboard keeps working.
-- Network calls go out from the renderer like any browser fetch. Be aware of
-  CORS.
