@@ -9,6 +9,9 @@ export function useWidgetData<T>(
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Serialize params so inline arrays (e.g. [id]) don't cause infinite re-runs
+  const paramsKey = JSON.stringify(params ?? null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -17,7 +20,8 @@ export function useWidgetData<T>(
     } finally {
       setLoading(false);
     }
-  }, [api, query]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, query, paramsKey]);
 
   useEffect(() => { void load(); }, [load]);
 

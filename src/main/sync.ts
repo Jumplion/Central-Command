@@ -32,32 +32,36 @@ export class SyncManager extends SyncManagerBase {
     try {
       await this._ensureDriveIds();
 
-      const stateFile = path.join(this.storage.root, 'state.json');
-      try {
-        const content = await fs.readFile(stateFile, 'utf-8');
-        const knownId = this._driveIds.get(DRIVE_STATE_FILE);
-        const newId = await this.drive.upsertFile(DRIVE_STATE_FILE, content, knownId);
-        this._driveIds.set(DRIVE_STATE_FILE, newId);
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-      }
+      const widgetIds = this.storage.json.getCachedWidgetIds();
 
-      for (const widgetId of this.storage.json.getCachedWidgetIds()) {
+      // Upload state file and all KV stores concurrently
+      const uploadKv = async (widgetId: string): Promise<void> => {
         const kvFile = path.join(this.storage.root, 'widgets', widgetId, 'store.json');
+        const driveName = driveKvName(widgetId);
         try {
           const content = await fs.readFile(kvFile, 'utf-8');
-          const driveName = driveKvName(widgetId);
-          const knownId = this._driveIds.get(driveName);
-          const newId = await this.drive.upsertFile(driveName, content, knownId);
+          const newId = await this.drive.upsertFile(driveName, content, this._driveIds.get(driveName));
           this._driveIds.set(driveName, newId);
         } catch (err) {
           if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
         }
-      }
+      };
 
-      for (const widgetId of this.storage.json.getCachedWidgetIds()) {
-        await this._uploadDb(widgetId);
-      }
+      const uploadState = async (): Promise<void> => {
+        const stateFile = path.join(this.storage.root, 'state.json');
+        try {
+          const content = await fs.readFile(stateFile, 'utf-8');
+          const newId = await this.drive.upsertFile(DRIVE_STATE_FILE, content, this._driveIds.get(DRIVE_STATE_FILE));
+          this._driveIds.set(DRIVE_STATE_FILE, newId);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+        }
+      };
+
+      await Promise.all([uploadState(), ...widgetIds.map(uploadKv)]);
+
+      // Upload SQLite DBs concurrently (each uses its own backup file)
+      await Promise.all(widgetIds.map((id) => this._uploadDb(id)));
 
       this._status.lastSyncedAt = Date.now();
       this._status.lastError = null;

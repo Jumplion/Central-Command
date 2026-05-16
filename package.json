@@ -4,6 +4,7 @@
   "private": true,
   "description": "Personal extensible dashboard built on Electron + React.",
   "main": "./out/main/index.js",
+  "sideEffects": ["**/*.css"],
   "author": {
     "name": "Tomer Braff",
     "email": "tomerbraff@gmail.com"
@@ -34,11 +35,9 @@
     "@capacitor/filesystem": "^6.0.2",
     "@capacitor/preferences": "^6.0.3",
     "better-sqlite3": "^12.9.0",
-    "nanoid": "^5.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-grid-layout": "^1.5.0",
-    "recharts": "^3.8.1",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

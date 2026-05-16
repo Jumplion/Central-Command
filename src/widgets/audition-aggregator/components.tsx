@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-} from 'recharts';
+import { StackedBarChart } from '@widgets/_shared/StackedBarChart';
 import type { Audition, AuditionFormData, CastingSite, ProjectType, Status } from './types';
 import { CASTING_SITES, PROJECT_TYPES, STATUSES, STATUS_COLOR } from './constants';
 import { formatAgo, recencyColor, today } from './helpers';
@@ -271,31 +269,14 @@ export function WeeklyChart({ auditions }: { auditions: Audition[] }) {
     );
   }
 
-  const tooltipStyle = {
-    background: 'var(--panel-2)',
-    border: '1px solid var(--border)',
-    borderRadius: 4,
-    fontSize: 11,
-    color: 'var(--text)',
-  };
+  const series = useMemo(() => STATUSES.map((s) => ({ key: s, color: STATUS_COLOR[s] })), []);
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 6 }}>
         Auditions by week (submitted date) — last 8 weeks
       </div>
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-dim)' }} />
-            <YAxis tick={{ fontSize: 10, fill: 'var(--text-dim)' }} allowDecimals={false} />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-            {STATUSES.map((s) => (
-              <Bar key={s} dataKey={s} stackId="week" fill={STATUS_COLOR[s]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <StackedBarChart data={data} series={series} />
     </div>
   );
 }

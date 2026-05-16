@@ -21,14 +21,18 @@ export function Dashboard() {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    let rafId: number | null = null;
     const ro = new ResizeObserver((entries) => {
       for (const e of entries) {
         const w = e.contentRect.width;
-        if (w > 0) setWidth(w);
+        if (w > 0) {
+          if (rafId !== null) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => { rafId = null; setWidth(w); });
+        }
       }
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => { ro.disconnect(); if (rafId !== null) cancelAnimationFrame(rafId); };
   }, []);
 
   const layout = useMemo<Layout[]>(
@@ -45,6 +49,16 @@ export function Dashboard() {
           minH: min?.h ?? 2
         };
       }),
+    [dashboard.instances]
+  );
+
+  const gridItems = useMemo(
+    () =>
+      dashboard.instances.map((i) => (
+        <div key={i.instanceId}>
+          <WidgetHost instance={i} widget={getWidget(i.widgetId)} />
+        </div>
+      )),
     [dashboard.instances]
   );
 
@@ -88,11 +102,7 @@ export function Dashboard() {
           onResizeStop={handleChange}
           compactType="vertical"
         >
-          {dashboard.instances.map((i) => (
-            <div key={i.instanceId}>
-              <WidgetHost instance={i} widget={getWidget(i.widgetId)} />
-            </div>
-          ))}
+          {gridItems}
         </GridLayout>
       )}
     </div>

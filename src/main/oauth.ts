@@ -14,13 +14,9 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const TOKEN_EXPIRY_BUFFER_SECONDS = 60;
 
+const HTML_ESCAPE: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return str.replace(/[&<>"']/g, (c) => HTML_ESCAPE[c]);
 }
 
 interface StoredCreds {
@@ -35,11 +31,12 @@ interface StoredTokens {
 }
 
 function base64url(buf: Buffer): string {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return buf.toString('base64url');
 }
 
 export class OAuthManager {
   private pending = new Set<string>();
+  private tokenCache = new Map<string, { accessToken: string; expiresAt: number }>();
 
   constructor(private secrets: SecretsStore) {}
 
@@ -128,6 +125,12 @@ export class OAuthManager {
   async getToken(widgetId: string, service?: GoogleServiceId): Promise<string | null> {
     const tokenKey = getGoogleTokenKey(service);
     const credsKey = getGoogleCredsKey(service);
+    const cacheKey = `${widgetId}::${tokenKey}`;
+
+    // Fast path: return from memory cache if still valid (avoids secrets I/O + decrypt)
+    const cached = this.tokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.accessToken;
+
     const tokenRaw = await this.secrets.get(widgetId, tokenKey);
     if (!tokenRaw) return null;
 
@@ -140,6 +143,7 @@ export class OAuthManager {
     }
 
     if (Date.now() < tokens.expiresAt) {
+      this.tokenCache.set(cacheKey, tokens);
       return tokens.accessToken;
     }
 
@@ -189,10 +193,12 @@ export class OAuthManager {
     if (data.refresh_token) tokens.refreshToken = data.refresh_token;
 
     await this.secrets.set(widgetId, tokenKey, JSON.stringify(tokens));
+    this.tokenCache.set(cacheKey, { accessToken: tokens.accessToken, expiresAt: tokens.expiresAt });
     return tokens.accessToken;
   }
 
   async disconnect(widgetId: string, service?: GoogleServiceId): Promise<void> {
+    this.tokenCache.delete(`${widgetId}::${getGoogleTokenKey(service)}`);
     await this.secrets.del(widgetId, getGoogleCredsKey(service));
     await this.secrets.del(widgetId, getGoogleTokenKey(service));
   }
