@@ -1,25 +1,23 @@
-import { Preferences } from '@capacitor/preferences';
-
 function key(namespace: string, k: string): string {
   return `secrets:${namespace}:${k}`;
 }
 
 export const secretsApi = {
-  async get(namespace: string, k: string): Promise<string | null> {
-    const { value } = await Preferences.get({ key: key(namespace, k) });
-    return value;
+  get(namespace: string, k: string): Promise<string | null> {
+    return Promise.resolve(localStorage.getItem(key(namespace, k)));
   },
 
-  async set(namespace: string, k: string, value: string): Promise<void> {
-    await Preferences.set({ key: key(namespace, k), value });
+  set(namespace: string, k: string, value: string): Promise<void> {
+    localStorage.setItem(key(namespace, k), value);
+    return Promise.resolve();
   },
 
-  async del(namespace: string, k: string): Promise<void> {
-    await Preferences.remove({ key: key(namespace, k) });
+  del(namespace: string, k: string): Promise<void> {
+    localStorage.removeItem(key(namespace, k));
+    return Promise.resolve();
   },
 
-  async has(namespace: string, k: string): Promise<boolean> {
-    const { value } = await Preferences.get({ key: key(namespace, k) });
-    return value !== null;
+  has(namespace: string, k: string): Promise<boolean> {
+    return Promise.resolve(localStorage.getItem(key(namespace, k)) !== null);
   },
 };

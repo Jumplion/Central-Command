@@ -1,98 +1,88 @@
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-
-const DEBOUNCE_MS = 200;
+const KV_PREFIX = 'kv:';
+const MTIME_PREFIX = 'kv-mtime:';
+const NOTIFY_DEBOUNCE_MS = 200;
 
 type Store = Record<string, unknown>;
-const cache = new Map<string, Store>();
-const timers = new Map<string, ReturnType<typeof setTimeout>>();
+const notifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export let onFlushed: (widgetId: string) => void = () => {};
 
-async function ensureDir(widgetId: string): Promise<void> {
+function getStore(widgetId: string): Store {
   try {
-    await Filesystem.mkdir({
-      path: `widgets/${widgetId}`,
-      directory: Directory.Data,
-      recursive: true,
-    });
+    const raw = localStorage.getItem(`${KV_PREFIX}${widgetId}`);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Store) : {};
   } catch {
-    // directory may already exist
+    return {};
   }
 }
 
-async function loadStore(widgetId: string): Promise<Store> {
-  if (cache.has(widgetId)) return cache.get(widgetId)!;
-  try {
-    const { data } = await Filesystem.readFile({
-      path: `widgets/${widgetId}/store.json`,
-      directory: Directory.Data,
-      encoding: Encoding.UTF8,
-    });
-    const parsed: unknown = JSON.parse(data as string);
-    const store = typeof parsed === 'object' && parsed !== null ? (parsed as Store) : {};
-    cache.set(widgetId, store);
-    return store;
-  } catch {
-    const store: Store = {};
-    cache.set(widgetId, store);
-    return store;
-  }
+function setStore(widgetId: string, store: Store): void {
+  localStorage.setItem(`${KV_PREFIX}${widgetId}`, JSON.stringify(store));
+  localStorage.setItem(`${MTIME_PREFIX}${widgetId}`, String(Date.now()));
+  scheduleNotify(widgetId);
 }
 
-async function flush(widgetId: string): Promise<void> {
-  const store = cache.get(widgetId) ?? {};
-  await ensureDir(widgetId);
-  await Filesystem.writeFile({
-    path: `widgets/${widgetId}/store.json`,
-    directory: Directory.Data,
-    data: JSON.stringify(store, null, 2),
-    encoding: Encoding.UTF8,
-    recursive: true,
-  });
-  onFlushed(widgetId);
+function scheduleNotify(widgetId: string): void {
+  const t = notifyTimers.get(widgetId);
+  if (t) clearTimeout(t);
+  notifyTimers.set(widgetId, setTimeout(() => {
+    notifyTimers.delete(widgetId);
+    onFlushed(widgetId);
+  }, NOTIFY_DEBOUNCE_MS));
 }
 
-function scheduleFlush(widgetId: string): void {
-  const existing = timers.get(widgetId);
-  if (existing) clearTimeout(existing);
-  timers.set(
-    widgetId,
-    setTimeout(() => {
-      timers.delete(widgetId);
-      flush(widgetId).catch(console.error);
-    }, DEBOUNCE_MS)
-  );
-}
-
-export function invalidateCache(widgetId: string): void {
-  cache.delete(widgetId);
-}
+// no-op: kept for call-sites that relied on clearing the old in-memory cache
+export function invalidateCache(_widgetId: string): void {}
 
 export const kvApi = {
-  async get(widgetId: string, key: string): Promise<unknown> {
-    const store = await loadStore(widgetId);
-    return store[key];
+  get(widgetId: string, key: string): Promise<unknown> {
+    return Promise.resolve(getStore(widgetId)[key]);
   },
 
-  async set(widgetId: string, key: string, value: unknown): Promise<void> {
-    const store = await loadStore(widgetId);
+  set(widgetId: string, key: string, value: unknown): Promise<void> {
+    const store = getStore(widgetId);
     store[key] = value;
-    scheduleFlush(widgetId);
+    setStore(widgetId, store);
+    return Promise.resolve();
   },
 
-  async del(widgetId: string, key: string): Promise<void> {
-    const store = await loadStore(widgetId);
+  del(widgetId: string, key: string): Promise<void> {
+    const store = getStore(widgetId);
     delete store[key];
-    scheduleFlush(widgetId);
+    setStore(widgetId, store);
+    return Promise.resolve();
   },
 
-  async keys(widgetId: string): Promise<string[]> {
-    const store = await loadStore(widgetId);
-    return Object.keys(store);
+  keys(widgetId: string): Promise<string[]> {
+    return Promise.resolve(Object.keys(getStore(widgetId)));
   },
 
-  async keysWithPrefix(widgetId: string, prefix: string): Promise<string[]> {
-    const store = await loadStore(widgetId);
-    return Object.keys(store).filter((k) => k.startsWith(prefix));
+  keysWithPrefix(widgetId: string, prefix: string): Promise<string[]> {
+    return Promise.resolve(Object.keys(getStore(widgetId)).filter((k) => k.startsWith(prefix)));
+  },
+
+  exportJson(widgetId: string): string | null {
+    return localStorage.getItem(`${KV_PREFIX}${widgetId}`);
+  },
+
+  importJson(widgetId: string, json: string): void {
+    localStorage.setItem(`${KV_PREFIX}${widgetId}`, json);
+    localStorage.setItem(`${MTIME_PREFIX}${widgetId}`, String(Date.now()));
+  },
+
+  widgetIds(): string[] {
+    const ids: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(KV_PREFIX)) ids.push(k.slice(KV_PREFIX.length));
+    }
+    return ids;
+  },
+
+  getLastModified(widgetId: string): number {
+    const v = localStorage.getItem(`${MTIME_PREFIX}${widgetId}`);
+    return v ? Number(v) : 0;
   },
 };
