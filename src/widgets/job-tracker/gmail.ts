@@ -251,8 +251,8 @@ function normalizeCompany(name: string): string {
 export function parseReqNumber(subject: string, body: string): string {
   const text = subject + '\n' + body;
   const patterns = [
-    /(?:requisition|req(?:uisition)?|job|position|opening)\s*(?:#|id|no\.?|number)\s*[:\s]\s*([A-Za-z0-9_-]{3,30})/i,
-    /(?:ref(?:erence)?)\s*(?:#|id|no\.?|number)\s*[:\s]\s*([A-Za-z0-9_-]{3,30})/i,
+    /(?:requisition|req(?:uisition)?|job|position|opening)\s*(?:#|id\b|no\.?\s*|number\b)\s*(?:[:#]?\s*)?([A-Za-z0-9_-]*[0-9][A-Za-z0-9_-]{2,29})/i,
+    /(?:ref(?:erence)?)\s*(?:#|id\b|no\.?\s*|number\b)\s*(?:[:#]?\s*)?([A-Za-z0-9_-]*[0-9][A-Za-z0-9_-]{2,29})/i,
     /\bJR[-_]?([0-9]{4,10})\b/i,
     /\bREQ[-_]?([0-9]{4,10})\b/i,
   ];
