@@ -19,49 +19,49 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-function createTable(widgetId = W) {
-  store.exec(widgetId, 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)');
+async function createTable(widgetId = W) {
+  await store.exec(widgetId, 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)');
 }
 
 describe('exec / run / all / get', () => {
-  it('inserts a row and returns changes + lastInsertRowid', () => {
-    createTable();
-    const result = store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Alice']);
+  it('inserts a row and returns changes + lastInsertRowid', async () => {
+    await createTable();
+    const result = await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Alice']);
     expect(result.changes).toBe(1);
     expect(result.lastInsertRowid).toBe(1);
   });
 
-  it('retrieves all rows in insertion order', () => {
-    createTable();
-    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Alice']);
-    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Bob']);
-    const rows = store.all(W, 'SELECT name FROM items ORDER BY id') as { name: string }[];
+  it('retrieves all rows in insertion order', async () => {
+    await createTable();
+    await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Alice']);
+    await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Bob']);
+    const rows = (await store.all(W, 'SELECT name FROM items ORDER BY id')) as { name: string }[];
     expect(rows.map((r) => r.name)).toEqual(['Alice', 'Bob']);
   });
 
-  it('retrieves a single matching row', () => {
-    createTable();
-    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Only']);
-    const row = store.get(W, 'SELECT name FROM items WHERE id = ?', [1]) as { name: string };
+  it('retrieves a single matching row', async () => {
+    await createTable();
+    await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['Only']);
+    const row = (await store.get(W, 'SELECT name FROM items WHERE id = ?', [1])) as { name: string };
     expect(row.name).toBe('Only');
   });
 
-  it('returns undefined from get when no rows match', () => {
-    createTable();
-    expect(store.get(W, 'SELECT * FROM items WHERE id = ?', [999])).toBeUndefined();
+  it('returns undefined from get when no rows match', async () => {
+    await createTable();
+    expect(await store.get(W, 'SELECT * FROM items WHERE id = ?', [999])).toBeUndefined();
   });
 
   it('creates the widget directory automatically', async () => {
-    createTable();
+    await createTable();
     const dbPath = path.join(root, 'widgets', W, 'data.db');
     await expect(fs.access(dbPath)).resolves.toBeUndefined();
   });
 });
 
 describe('runBatch', () => {
-  it('runs all statements and returns one result per statement', () => {
-    createTable();
-    const results = store.runBatch(W, [
+  it('runs all statements and returns one result per statement', async () => {
+    await createTable();
+    const results = await store.runBatch(W, [
       { sql: 'INSERT INTO items (name) VALUES (?)', params: ['X'] },
       { sql: 'INSERT INTO items (name) VALUES (?)', params: ['Y'] },
     ]);
@@ -70,73 +70,71 @@ describe('runBatch', () => {
     expect(results[1].lastInsertRowid).toBe(2);
   });
 
-  it('rolls back all inserts when a statement fails mid-batch', () => {
-    store.exec(W, 'CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)');
-    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['taken']);
+  it('rolls back all inserts when a statement fails mid-batch', async () => {
+    await store.exec(W, 'CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)');
+    await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['taken']);
 
-    expect(() =>
+    await expect(
       store.runBatch(W, [
         { sql: 'INSERT INTO items (name) VALUES (?)', params: ['new-item'] },
         { sql: 'INSERT INTO items (name) VALUES (?)', params: ['taken'] }, // UNIQUE conflict
       ])
-    ).toThrow();
+    ).rejects.toThrow();
 
     // Transaction must have been rolled back — 'new-item' should not exist
-    expect(store.get(W, "SELECT * FROM items WHERE name = 'new-item'")).toBeUndefined();
+    expect(await store.get(W, "SELECT * FROM items WHERE name = 'new-item' ")).toBeUndefined();
   });
 
-  it('uses default empty params when params are omitted', () => {
-    createTable();
-    expect(() =>
-      store.runBatch(W, [{ sql: 'INSERT INTO items (name) VALUES (NULL)' }])
-    ).not.toThrow();
-    expect(store.all(W, 'SELECT * FROM items')).toHaveLength(1);
+  it('uses default empty params when params are omitted', async () => {
+    await createTable();
+    await store.runBatch(W, [{ sql: 'INSERT INTO items (name) VALUES (NULL)' }]);
+    expect((await store.all(W, 'SELECT * FROM items')).length).toBe(1);
   });
 });
 
 describe('onWritten callback', () => {
-  it('fires after run', () => {
-    createTable();
+  it('fires after run', async () => {
+    await createTable();
     const cb = vi.fn();
     store.onWritten = cb;
-    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['x']);
+    await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['x']);
     expect(cb).toHaveBeenCalledOnce();
     expect(cb).toHaveBeenCalledWith(W);
   });
 
-  it('fires after exec', () => {
+  it('fires after exec', async () => {
     const cb = vi.fn();
     store.onWritten = cb;
-    createTable(); // exec is called inside createTable
+    await createTable(); // exec is called inside createTable
     expect(cb).toHaveBeenCalledOnce();
     expect(cb).toHaveBeenCalledWith(W);
   });
 
-  it('fires after runBatch', () => {
-    createTable();
+  it('fires after runBatch', async () => {
+    await createTable();
     const cb = vi.fn();
     store.onWritten = cb;
-    store.runBatch(W, [{ sql: 'INSERT INTO items (name) VALUES (?)', params: ['x'] }]);
+    await store.runBatch(W, [{ sql: 'INSERT INTO items (name) VALUES (?)', params: ['x'] }]);
     expect(cb).toHaveBeenCalledOnce();
     expect(cb).toHaveBeenCalledWith(W);
   });
 
-  it('does not fire after all or get (read-only)', () => {
-    createTable();
+  it('does not fire after all or get (read-only)', async () => {
+    await createTable();
     const cb = vi.fn();
     store.onWritten = cb;
-    store.all(W, 'SELECT * FROM items');
-    store.get(W, 'SELECT * FROM items LIMIT 1');
+    await store.all(W, 'SELECT * FROM items');
+    await store.get(W, 'SELECT * FROM items LIMIT 1');
     expect(cb).not.toHaveBeenCalled();
   });
 });
 
 describe('closeDb', () => {
-  it('allows re-opening and reading existing data after close', () => {
-    createTable();
-    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['persistent']);
+  it('allows re-opening and reading existing data after close', async () => {
+    await createTable();
+    await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['persistent']);
     store.closeDb(W);
-    const rows = store.all(W, 'SELECT name FROM items') as { name: string }[];
+    const rows = (await store.all(W, 'SELECT name FROM items')) as { name: string }[];
     expect(rows[0].name).toBe('persistent');
   });
 
@@ -146,27 +144,27 @@ describe('closeDb', () => {
 });
 
 describe('closeAll', () => {
-  it('closes connections for multiple widgets without throwing', () => {
-    createTable('widget-a');
-    createTable('widget-b');
+  it('closes connections for multiple widgets without throwing', async () => {
+    await createTable('widget-a');
+    await createTable('widget-b');
     expect(() => store.closeAll()).not.toThrow();
   });
 });
 
 describe('invalid widgetId', () => {
-  it('throws before opening any db file for path-traversal ids', () => {
-    expect(() => store.exec('../evil', 'SELECT 1')).toThrow();
+  it('throws before opening any db file for path-traversal ids', async () => {
+    await expect(store.exec('../evil', 'SELECT 1')).rejects.toThrow();
   });
 
-  it('throws for ids with uppercase letters', () => {
-    expect(() => store.run('UpperCase', 'SELECT 1')).toThrow();
+  it('throws for ids with uppercase letters', async () => {
+    await expect(store.run('UpperCase', 'SELECT 1')).rejects.toThrow();
   });
 });
 
 describe('backup', () => {
   it('creates a readable copy of the database at the destination path', async () => {
-    createTable();
-    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['snapshot']);
+    await createTable();
+    await store.run(W, 'INSERT INTO items (name) VALUES (?)', ['snapshot']);
 
     const destPath = path.join(root, 'backup.db');
     await store.backup(W, destPath);
@@ -181,19 +179,17 @@ describe('backup', () => {
 });
 
 describe('WAL mode and foreign keys', () => {
-  it('enables WAL journal mode on new databases', () => {
-    createTable();
-    const journalMode = store.get(W, 'PRAGMA journal_mode') as { journal_mode: string };
+  it('enables WAL journal mode on new databases', async () => {
+    await createTable();
+    const journalMode = (await store.get(W, 'PRAGMA journal_mode')) as { journal_mode: string };
     expect(journalMode.journal_mode).toBe('wal');
   });
 
-  it('enforces foreign key constraints', () => {
-    store.exec(W, `
+  it('enforces foreign key constraints', async () => {
+    await store.exec(W, `
       CREATE TABLE parent (id INTEGER PRIMARY KEY);
       CREATE TABLE child (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent(id));
     `);
-    expect(() =>
-      store.run(W, 'INSERT INTO child (parent_id) VALUES (?)', [999])
-    ).toThrow();
+    await expect(store.run(W, 'INSERT INTO child (parent_id) VALUES (?)', [999])).rejects.toThrow();
   });
 });
