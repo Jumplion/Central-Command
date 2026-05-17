@@ -159,6 +159,11 @@ describe('setActiveDashboard', () => {
     getActions().setActiveDashboard(newId);
     expect(getState().activeDashboardId).toBe(newId);
   });
+
+  it('falls back to a valid dashboard id when requested id does not exist', () => {
+    getActions().setActiveDashboard('missing-dashboard-id');
+    expect(getState().activeDashboardId).toBe('default');
+  });
 });
 
 describe('addInstance', () => {
@@ -294,6 +299,31 @@ describe('applyRemoteState', () => {
     };
     getActions().applyRemoteState(remoteState);
     expect(getState()).toEqual(remoteState);
+  });
+
+  it('normalizes empty remote dashboards to DEFAULT_STATE', () => {
+    const remoteState: AppState = {
+      version: 1,
+      dashboards: [],
+      activeDashboardId: 'missing-id',
+    };
+
+    getActions().applyRemoteState(remoteState);
+
+    expect(getState().dashboards).toEqual(DEFAULT_STATE.dashboards);
+    expect(getState().activeDashboardId).toBe('default');
+  });
+
+  it('normalizes stale remote activeDashboardId to dashboards[0]', () => {
+    const remoteState: AppState = {
+      version: 1,
+      dashboards: [{ id: 'remote-1', name: 'Remote', instances: [] }],
+      activeDashboardId: 'missing-id',
+    };
+
+    getActions().applyRemoteState(remoteState);
+
+    expect(getState().activeDashboardId).toBe('remote-1');
   });
 
   it('cancels a pending persist timer so save is not called', () => {

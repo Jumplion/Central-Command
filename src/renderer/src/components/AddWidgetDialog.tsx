@@ -23,7 +23,12 @@ export function AddWidgetDialog({ onClose }: Props) {
   }, [widgets, filter]);
 
   function add(widgetId: string) {
-    addInstance(widgetId);
+    const instanceId = addInstance(widgetId);
+    if (!instanceId) {
+      console.warn(`[add-widget-dialog] add failed for widget "${widgetId}"`);
+      return;
+    }
+    console.info(`[add-widget-dialog] added widget "${widgetId}" as instance "${instanceId}"`);
     onClose();
   }
 

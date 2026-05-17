@@ -33,6 +33,28 @@ interface DashboardStore {
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
+function isDebugEnabled(): boolean {
+  if (import.meta.env.DEV) return true;
+  try {
+    return globalThis.localStorage?.getItem('cc:debug') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function debugLog(event: string, details: Record<string, unknown>): void {
+  if (!isDebugEnabled()) return;
+  console.info(`[dashboard] ${event}`, details);
+}
+
+function normalizeState(state: AppState): AppState {
+  const dashboards = state.dashboards.length > 0 ? state.dashboards : DEFAULT_STATE.dashboards;
+  const activeDashboardId = dashboards.some((d) => d.id === state.activeDashboardId)
+    ? state.activeDashboardId
+    : dashboards[0].id;
+  return { ...state, dashboards, activeDashboardId };
+}
+
 function resolveActiveId(state: AppState): DashboardId {
   return state.dashboards.some((d) => d.id === state.activeDashboardId)
     ? state.activeDashboardId
@@ -60,8 +82,12 @@ export const useDashboard = create<DashboardStore>((set, get) => {
 
   async load() {
     const s = await window.cc.state.load();
-    const activeDashboardId = resolveActiveId(s);
-    set({ state: { ...s, activeDashboardId }, loaded: true });
+    const normalized = normalizeState(s);
+    debugLog('load', {
+      dashboardCount: normalized.dashboards.length,
+      activeDashboardId: normalized.activeDashboardId
+    });
+    set({ state: normalized, loaded: true });
   },
 
   persist() {
@@ -73,7 +99,12 @@ export const useDashboard = create<DashboardStore>((set, get) => {
 
   applyRemoteState(state) {
     if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
-    set({ state });
+    const normalized = normalizeState(state);
+    debugLog('applyRemoteState', {
+      dashboardCount: normalized.dashboards.length,
+      activeDashboardId: normalized.activeDashboardId
+    });
+    set({ state: normalized });
   },
 
   activeDashboard() {
@@ -83,7 +114,15 @@ export const useDashboard = create<DashboardStore>((set, get) => {
   },
 
   setActiveDashboard(id) {
-    mutate((s) => ({ ...s, activeDashboardId: id }));
+    mutate((s) => {
+      if (!s.dashboards.some((d) => d.id === id)) {
+        const fallbackId = resolveActiveId(s);
+        debugLog('setActiveDashboard.invalid', { requestedId: id, fallbackId });
+        return { ...s, activeDashboardId: fallbackId };
+      }
+      debugLog('setActiveDashboard', { id });
+      return { ...s, activeDashboardId: id };
+    });
   },
 
   addDashboard(name) {
@@ -93,6 +132,7 @@ export const useDashboard = create<DashboardStore>((set, get) => {
       dashboards: [...s.dashboards, { id, name, instances: [] }],
       activeDashboardId: id
     }));
+    debugLog('addDashboard', { id, name });
     return id;
   },
 
@@ -114,14 +154,29 @@ export const useDashboard = create<DashboardStore>((set, get) => {
   },
 
   addInstance(widgetId) {
+    const stateBefore = get().state;
+    const targetDashboardId = resolveActiveId(stateBefore);
+    const targetDashboard = stateBefore.dashboards.find((d) => d.id === targetDashboardId);
+
     const widget = getWidget(widgetId);
     if (!widget) {
       console.warn(`[dashboard] addInstance: widget "${widgetId}" not found`);
+      debugLog('addInstance.rejected', { widgetId, targetDashboardId, reason: 'widget-not-found' });
       return null;
     }
+
     const instanceId = nanoid(10);
     const { defaultSize } = widget.manifest;
     const settings = defaultSettingsFor(widget.manifest);
+
+    debugLog('addInstance.request', {
+      widgetId,
+      instanceId,
+      targetDashboardId,
+      targetDashboardName: targetDashboard?.name,
+      existingInstances: targetDashboard?.instances.length ?? 0
+    });
+
     mutate((s) =>
       patchActive(s, (d) => {
         const maxY = d.instances.reduce((m, inst) => Math.max(m, inst.layout.y + inst.layout.h), 0);
@@ -134,6 +189,20 @@ export const useDashboard = create<DashboardStore>((set, get) => {
         return { ...d, instances: [...d.instances, inst] };
       })
     );
+
+    const stateAfter = get().state;
+    const activeAfter = stateAfter.dashboards.find((d) => d.id === resolveActiveId(stateAfter));
+    const added = activeAfter?.instances.find((i) => i.instanceId === instanceId);
+
+    debugLog('addInstance.result', {
+      widgetId,
+      instanceId,
+      activeDashboardId: activeAfter?.id,
+      activeDashboardName: activeAfter?.name,
+      inserted: Boolean(added),
+      layout: added?.layout
+    });
+
     return instanceId;
   },
 
