@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { JobListing, CompanyFeed, FeedJob, FeedType, CompanyType, SavedStatus } from './types';
 import { SOURCE_COLORS, STATUS_COLORS, FEED_COLORS, FEED_LABELS, COMPANY_TYPE_LABELS, COMPANY_TYPE_ORDER, STATUSES, inp, thStyle, tdStyle } from './constants';
+import { buttonDefault, buttonSmall, buttonTiny, badgePill, dimText, smallDimText } from '../_shared/styles';
 import { formatSalary, relativeDate, empTypeLabel } from './utils';
 
 // ─── SourceBadge ──────────────────────────────────────────────────────────────
@@ -9,8 +10,10 @@ export function SourceBadge({ source }: { source: string }) {
   const color = SOURCE_COLORS[source] ?? '#888';
   return (
     <span style={{
-      fontSize: 10, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap',
-      background: `${color}22`, color, border: `1px solid ${color}44`, fontWeight: 600,
+      ...badgePill,
+      background: `${color}22`,
+      color,
+      border: `1px solid ${color}44`,
     }}>
       {source}
     </span>
@@ -23,8 +26,10 @@ export function FeedTypeBadge({ type }: { type: FeedType }) {
   const color = FEED_COLORS[type];
   return (
     <span style={{
-      fontSize: 10, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap',
-      background: `${color}22`, color, border: `1px solid ${color}44`, fontWeight: 600,
+      ...badgePill,
+      background: `${color}22`,
+      color,
+      border: `1px solid ${color}44`,
     }}>
       {FEED_LABELS[type]}
     </span>
@@ -75,10 +80,10 @@ export function JobCard({
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-          <button className="ghost" style={{ fontSize: 11, padding: '2px 8px' }} onClick={(e) => { e.stopPropagation(); onApply(); }}>Apply ↗</button>
+          <button className="ghost" style={buttonSmall} onClick={(e) => { e.stopPropagation(); onApply(); }}>Apply ↗</button>
           <button
             className={isSaved ? 'ghost' : 'primary'}
-            style={{ fontSize: 11, padding: '2px 8px' }}
+            style={buttonSmall}
             onClick={(e) => { e.stopPropagation(); onSave(); }}
             disabled={isSaved}
           >
@@ -145,10 +150,10 @@ export function AddFeedForm({ onSave, onCancel }: {
       />
       <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>{ADD_FEED_META[feedType].hint}</div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <button type="submit" className="primary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={saving}>
+        <button type="submit" className="primary" style={buttonDefault} disabled={saving}>
           {saving ? 'Adding…' : 'Add Feed'}
         </button>
-        <button type="button" className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={onCancel}>
+        <button type="button" className="ghost" style={buttonDefault} onClick={onCancel}>
           Cancel
         </button>
       </div>
@@ -195,14 +200,14 @@ export function BoardSection({
         )}
         <button
           className="ghost"
-          style={{ fontSize: 11, padding: '1px 6px' }}
+          style={buttonTiny}
           onClick={(e) => { e.stopPropagation(); onRefresh(); }}
           title="Refresh"
           disabled={loading}
         >↻</button>
         <button
           className="ghost danger"
-          style={{ fontSize: 11, padding: '1px 6px' }}
+          style={buttonTiny}
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           title="Remove feed"
         >✕</button>
@@ -247,11 +252,11 @@ export function BoardSection({
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                   {job.apply_link && (
-                    <button className="ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={(e) => { e.stopPropagation(); onApply(job.apply_link); }} title="Open posting">↗</button>
+                    <button className="ghost" style={buttonTiny} onClick={(e) => { e.stopPropagation(); onApply(job.apply_link); }} title="Open posting">↗</button>
                   )}
                   <button
                     className={savedIds.has(savedKey) ? 'ghost' : 'primary'}
-                    style={{ fontSize: 11, padding: '1px 6px' }}
+                    style={buttonTiny}
                     onClick={(e) => { e.stopPropagation(); onSave(job); }}
                     disabled={savedIds.has(savedKey)}
                     title={savedIds.has(savedKey) ? 'Already saved' : 'Save to tracker'}
@@ -260,7 +265,7 @@ export function BoardSection({
                   </button>
                   <button
                     className="ghost"
-                    style={{ fontSize: 11, padding: '1px 6px', color: 'var(--text-dim)' }}
+                    style={{ ...buttonTiny, color: 'var(--text-dim)' }}
                     onClick={(e) => { e.stopPropagation(); onIgnore(job); }}
                     title="Ignore this job"
                   >🚫</button>
@@ -291,7 +296,9 @@ export function SavedStatusFilter({
         const active = savedFilter === s;
         return (
           <button key={s} onClick={() => onSelect(s)} style={{
-            fontSize: 11, padding: '2px 8px', cursor: 'pointer', borderRadius: 4,
+            ...buttonSmall,
+            cursor: 'pointer',
+            borderRadius: 4,
             background: active ? `${color}22` : 'transparent',
             border:     active ? `1px solid ${color}55` : '1px solid transparent',
             color:      active ? color : 'var(--text-dim)',

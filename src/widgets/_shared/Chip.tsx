@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { buttonSmall } from './styles';
 
 export interface ChipProps {
   active: boolean;
@@ -13,8 +14,7 @@ export function Chip({ active, color, onClick, children, style }: ChipProps) {
     <button
       onClick={onClick}
       style={{
-        fontSize: 11,
-        padding: '2px 8px',
+        ...buttonSmall,
         background: active ? color + '22' : 'transparent',
         border: active ? `1px solid ${color}55` : '1px solid transparent',
         color: active ? color : 'var(--text-dim)',

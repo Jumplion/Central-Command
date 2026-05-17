@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
+import { buttonDefault, buttonSmall, buttonTiny, dimText, smallDimText } from '../_shared/styles';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ function formatFrom(from: string): string {
 
 function SetupGuide() {
   return (
-    <div style={{ padding: '12px 4px', color: 'var(--text-dim)', fontSize: 12, lineHeight: 1.6 }}>
+    <div style={{ padding: '12px 4px', lineHeight: 1.6, ...dimText, fontSize: 12 }}>
       <p style={{ marginBottom: 8, color: 'var(--text)', fontWeight: 500 }}>Setup required</p>
       <ol style={{ paddingLeft: 18, margin: 0 }}>
         <li>Create a project in <a href="https://console.cloud.google.com/" style={{ color: 'var(--accent)' }}>Google Cloud Console</a></li>
@@ -113,7 +114,7 @@ function MessageRow({
       </div>
       <button
         className="ghost"
-        style={{ fontSize: 11, padding: '1px 6px', flexShrink: 0 }}
+        style={{ ...buttonTiny, flexShrink: 0 }}
         onClick={() => onOpen(msg.threadId)}
         title="Open in Gmail"
       >
@@ -267,7 +268,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
   // ── Loading connection status ───────────────────────────────────────────
   if (connected === null) {
     return (
-      <div style={{ padding: 12, color: 'var(--text-dim)', fontSize: 12 }}>Loading…</div>
+      <div style={{ padding: 12, ...dimText, fontSize: 12 }}>Loading…</div>
     );
   }
 
@@ -321,7 +322,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
       >
         <button
           className="ghost"
-          style={{ fontSize: 11, padding: '2px 8px' }}
+          style={buttonSmall}
           onClick={() => void loadMessages()}
           disabled={loading}
           title="Refresh messages"
@@ -330,7 +331,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
         </button>
         <button
           className="ghost danger"
-          style={{ fontSize: 11, padding: '2px 8px', marginLeft: 'auto' }}
+          style={{ ...buttonSmall, marginLeft: 'auto' }}
           onClick={() => void handleDisconnect()}
           title="Disconnect Google account"
         >
@@ -348,7 +349,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
             style={{
               padding: '24px 0',
               textAlign: 'center',
-              color: 'var(--text-dim)',
+              ...dimText,
               fontSize: 12,
             }}
           >

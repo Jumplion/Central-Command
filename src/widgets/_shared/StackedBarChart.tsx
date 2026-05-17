@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { tooltipPanel } from './styles';
 
 type BarDatum = Record<string, string | number>;
 interface Series { key: string; color: string; }
@@ -97,19 +98,10 @@ export function StackedBarChart({ data, series }: { data: BarDatum[]; series: Se
 
       {tip && (
         <div style={{
-          position: 'absolute',
+          ...tooltipPanel,
           left: tip.x,
           top: Math.max(0, tip.y - 10),
           transform: tip.rightAlign ? 'translateX(calc(-100% - 8px))' : 'translateX(8px)',
-          background: 'var(--panel-2)',
-          border: '1px solid var(--border)',
-          borderRadius: 4,
-          fontSize: 11,
-          color: 'var(--text)',
-          padding: '4px 8px',
-          pointerEvents: 'none',
-          zIndex: 10,
-          whiteSpace: 'nowrap',
         }}>
           <div style={{ fontWeight: 600, marginBottom: 2 }}>{tip.label}</div>
           {series.filter(({ key }) => tip.values[key] > 0).map(({ key, color }) => (

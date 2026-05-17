@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
+import { buttonDefault, buttonExtraSmall, buttonTiny, centeredEmptyState, inputBase, dimText } from '../_shared/styles';
 
 interface CopyEntry {
   id: string;
@@ -122,7 +123,7 @@ function QuickCopy({ api }: WidgetProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button
             className="ghost"
-            style={{ fontSize: 10, padding: '3px 5px', lineHeight: 1, color: 'var(--text-dim)' }}
+            style={{ ...buttonExtraSmall, color: 'var(--text-dim)' }}
             onClick={() => setComposerOpen((open) => !open)}
             title={composerOpen ? 'Collapse' : 'Expand'}
           >
@@ -130,7 +131,7 @@ function QuickCopy({ api }: WidgetProps) {
           </button>
           <button
             className="primary"
-            style={{ fontSize: 12, padding: '4px 10px' }}
+            style={buttonDefault}
             onClick={() => {
               if (!composerOpen) setComposerOpen(true);
               else void saveEntry();
@@ -146,13 +147,13 @@ function QuickCopy({ api }: WidgetProps) {
               value={draftTitle}
               onChange={(e) => setDraftTitle(e.target.value)}
               placeholder="Optional label (e.g. Portfolio URL)"
-              style={{ fontSize: 12, padding: '6px 8px' }}
+              style={inputBase}
             />
             <textarea
               value={draftValue}
               onChange={(e) => setDraftValue(e.target.value)}
               placeholder="Paste or type text to save..."
-              style={{ fontSize: 12, padding: '8px', minHeight: 64, resize: 'vertical' }}
+              style={{ ...inputBase, minHeight: 64, resize: 'vertical' }}
             />
           </>
         )}
@@ -167,15 +168,10 @@ function QuickCopy({ api }: WidgetProps) {
       {ordered.length === 0 ? (
         <div
           style={{
-            flex: 1,
+            ...centeredEmptyState,
             border: '1px dashed var(--border)',
             borderRadius: 6,
-            color: 'var(--text-dim)',
             fontSize: 13,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
             padding: 12,
           }}
         >
@@ -298,7 +294,7 @@ function QuickCopy({ api }: WidgetProps) {
 
                   <button
                     className="ghost danger"
-                    style={{ fontSize: 11, padding: '3px 8px', flexShrink: 0 }}
+                    style={{ ...buttonTiny, flexShrink: 0 }}
                     onClick={(e) => {
                       e.stopPropagation();
                       void removeEntry(entry.id);

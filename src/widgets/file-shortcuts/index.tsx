@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
+import { buttonDefault, buttonExtraSmall, buttonTiny, centeredEmptyState } from '../_shared/styles';
 
 interface Shortcut {
   id: string;
@@ -63,7 +64,7 @@ function ShortcutRow({ shortcut, onOpen, onReveal, onRemove }: {
       </button>
       <button
         className="ghost"
-        style={{ padding: '2px 6px', fontSize: 12, color: 'var(--text-dim)', flexShrink: 0 }}
+        style={{ ...buttonTiny, color: 'var(--text-dim)', flexShrink: 0 }}
         title="Show in folder"
         onClick={() => onReveal(shortcut)}
       >
@@ -71,7 +72,7 @@ function ShortcutRow({ shortcut, onOpen, onReveal, onRemove }: {
       </button>
       <button
         className="ghost danger"
-        style={{ padding: '2px 6px', fontSize: 12, flexShrink: 0 }}
+        style={{ ...buttonTiny, flexShrink: 0 }}
         title="Remove shortcut"
         onClick={() => onRemove(shortcut.id)}
       >
@@ -135,10 +136,10 @@ function FileShortcuts({ api }: WidgetProps) {
       onDrop={handleDrop}
     >
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => browse('file').catch(console.error)}>
+        <button style={buttonDefault} onClick={() => browse('file').catch(console.error)}>
           + File
         </button>
-        <button style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => browse('dir').catch(console.error)}>
+        <button style={buttonDefault} onClick={() => browse('dir').catch(console.error)}>
           + Folder
         </button>
       </div>
@@ -146,13 +147,8 @@ function FileShortcuts({ api }: WidgetProps) {
       {shortcuts.length === 0 ? (
         <div
           style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--text-dim)',
+            ...centeredEmptyState,
             fontSize: 13,
-            textAlign: 'center',
             border: `2px dashed ${dragging ? 'var(--accent)' : 'var(--border)'}`,
             borderRadius: 6,
             padding: 16,

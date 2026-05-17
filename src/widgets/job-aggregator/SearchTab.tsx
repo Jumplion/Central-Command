@@ -4,6 +4,7 @@ import type { JobListing } from './types';
 import { inp } from './constants';
 import { searchArbeitnow } from './api';
 import { JobCard } from './components';
+import { buttonDefault, dimText, smallDimText } from '../_shared/styles';
 
 interface Props {
   api: WidgetApi;
@@ -67,17 +68,17 @@ export function SearchTab({ api, savedIds, onSaved, defaultKeywords, defaultRemo
             onChange={(e) => setKeywords(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void handleSearch(); }}
           />
-          <button className="primary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => void handleSearch()} disabled={searching || !keywords.trim()}>
+          <button className="primary" style={buttonDefault} onClick={() => void handleSearch()} disabled={searching || !keywords.trim()}>
             {searching ? '…' : 'Search'}
           </button>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <label style={{ fontSize: 12, display: 'flex', gap: 4, alignItems: 'center', color: 'var(--text-dim)', cursor: 'pointer' }}>
+          <label style={{ fontSize: 12, display: 'flex', gap: 4, alignItems: 'center', ...dimText, cursor: 'pointer' }}>
             <input type="checkbox" checked={remoteOnly} onChange={(e) => setRemoteOnly(e.target.checked)} />
             Remote only
           </label>
           {results.length > 0 && (
-            <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+            <span style={{ ...smallDimText, marginLeft: 'auto' }}>
               {results.length} result{results.length !== 1 ? 's' : ''}
             </span>
           )}
