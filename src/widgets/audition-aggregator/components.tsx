@@ -1,33 +1,32 @@
 import { useState, useMemo } from 'react';
 import { StackedBarChart } from '@widgets/_shared/StackedBarChart';
+import { StatusBar as SharedStatusBar } from '@widgets/_shared/StatusBar';
+import { Chip } from '@widgets/_shared/Chip';
 import type { Audition, AuditionFormData, CastingSite, ProjectType, Status } from './types';
 import { CASTING_SITES, PROJECT_TYPES, STATUSES, STATUS_COLOR } from './constants';
 import { formatAgo, recencyColor, today } from './helpers';
 
-// ─── Chip ──────────────────────────────────────────────────────────────────────
-
-export function Chip({ active, color, onClick, children }: {
-  active: boolean;
-  color: string;
-  onClick: () => void;
-  children: React.ReactNode;
+export function StatusBar({
+  counts, total, filter, onFilter,
+}: {
+  counts: Record<Status, number>;
+  total: number;
+  filter: Status | 'All';
+  onFilter: (f: Status | 'All') => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        fontSize: 11,
-        padding: '2px 8px',
-        background: active ? color + '22' : 'transparent',
-        border: active ? `1px solid ${color}55` : '1px solid transparent',
-        color: active ? color : 'var(--text-dim)',
-        borderRadius: 4,
-        cursor: 'pointer',
-        transition: 'all 0.1s',
-      }}
-    >
-      {children}
-    </button>
+    <SharedStatusBar
+      allLabel="All"
+      allCount={total}
+      selected={filter}
+      onSelect={onFilter}
+      items={STATUSES.map((s) => ({
+        value: s,
+        label: s,
+        count: counts[s],
+        color: STATUS_COLOR[s],
+      }))}
+    />
   );
 }
 
@@ -69,43 +68,6 @@ export function SiteRow({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-// ─── StatusBar ─────────────────────────────────────────────────────────────────
-
-export function StatusBar({
-  counts, total, filter, onFilter,
-}: {
-  counts: Record<Status, number>;
-  total: number;
-  filter: Status | 'All';
-  onFilter: (f: Status | 'All') => void;
-}) {
-  return (
-    <div style={{ flexShrink: 0 }}>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-        <Chip active={filter === 'All'} color="var(--accent)" onClick={() => onFilter('All')}>
-          All ({total})
-        </Chip>
-        {STATUSES.map((s) => (
-          <Chip key={s} active={filter === s} color={STATUS_COLOR[s]} onClick={() => onFilter(s)}>
-            {s} ({counts[s]})
-          </Chip>
-        ))}
-      </div>
-      {total > 0 && (
-        <div style={{ display: 'flex', height: 3, borderRadius: 2, overflow: 'hidden', gap: 1 }}>
-          {STATUSES.filter((s) => counts[s] > 0).map((s) => (
-            <div
-              key={s}
-              style={{ width: `${(counts[s] / total) * 100}%`, background: STATUS_COLOR[s] }}
-              title={`${s}: ${counts[s]}`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
