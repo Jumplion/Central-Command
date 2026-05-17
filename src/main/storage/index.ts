@@ -3,6 +3,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { JsonStore } from './json';
 import { SqliteStore } from './sqlite';
+import { atomicWrite } from './helpers';
 import type { AppState } from '@shared/types';
 import { DEFAULT_STATE } from '@shared/defaults';
 
@@ -48,9 +49,7 @@ export class Storage {
   async saveState(state: AppState): Promise<void> {
     if (!isAppState(state)) throw new Error('saveState: invalid state');
     await fs.mkdir(this.root, { recursive: true });
-    const tmp = this.stateFile + '.tmp';
-    await fs.writeFile(tmp, JSON.stringify(state, null, 2), 'utf-8');
-    await fs.rename(tmp, this.stateFile);
+    await atomicWrite(this.stateFile, JSON.stringify(state, null, 2));
     this.onStateSaved?.();
   }
 

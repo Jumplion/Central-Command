@@ -3,6 +3,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { assertValidWidgetId } from '@shared/validation';
 import type { SqlRunResult } from '@shared/types';
+import { widgetDir } from './helpers';
 
 export class SqliteStore {
   private dbs = new Map<string, Database.Database>();
@@ -15,7 +16,7 @@ export class SqliteStore {
 
   private async ensureWidgetDir(widgetId: string): Promise<void> {
     assertValidWidgetId(widgetId);
-    const dir = path.join(this.root, 'widgets', widgetId);
+    const dir = widgetDir(this.root, widgetId);
 
     let pending = this.dirInit.get(widgetId);
     if (!pending) {
@@ -32,7 +33,7 @@ export class SqliteStore {
     assertValidWidgetId(widgetId);
     let db = this.dbs.get(widgetId);
     if (db) return db;
-    const dir = path.join(this.root, 'widgets', widgetId);
+    const dir = widgetDir(this.root, widgetId);
     db = new Database(path.join(dir, 'data.db'));
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');

@@ -1,6 +1,5 @@
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
-import { assertValidWidgetId } from '@shared/validation';
+import { atomicWrite, ensureWidgetDir, widgetFile } from './helpers';
 
 export class JsonStore {
   private cache = new Map<string, Record<string, unknown>>();
@@ -11,14 +10,6 @@ export class JsonStore {
 
   constructor(private root: string) {}
 
-  private widgetDir(widgetId: string): string {
-    assertValidWidgetId(widgetId);
-    return path.join(this.root, 'widgets', widgetId);
-  }
-
-  private file(widgetId: string): string {
-    return path.join(this.widgetDir(widgetId), 'store.json');
-  }
 
   private async load(widgetId: string): Promise<Record<string, unknown>> {
     const cached = this.cache.get(widgetId);
@@ -62,12 +53,9 @@ export class JsonStore {
   async flush(widgetId: string): Promise<void> {
     const obj = this.cache.get(widgetId);
     if (!obj) return;
-    const dir = this.widgetDir(widgetId);
-    await fs.mkdir(dir, { recursive: true });
-    const target = path.join(dir, 'store.json');
-    const tmp = target + '.tmp';
-    await fs.writeFile(tmp, JSON.stringify(obj, null, 2), 'utf-8');
-    await fs.rename(tmp, target);
+    await ensureWidgetDir(this.root, widgetId);
+    const target = this.file(widgetId);
+    await atomicWrite(target, JSON.stringify(obj, null, 2));
     this.onFlushed?.(widgetId);
   }
 
@@ -83,6 +71,10 @@ export class JsonStore {
     for (const t of this.writers.values()) clearTimeout(t);
     this.writers.clear();
     await Promise.all(Array.from(this.cache.keys()).map((id) => this.flush(id)));
+  }
+
+  private file(widgetId: string): string {
+    return widgetFile(this.root, widgetId, 'store.json');
   }
 
   async get(widgetId: string, key: string): Promise<unknown> {
