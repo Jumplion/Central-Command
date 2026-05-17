@@ -162,3 +162,38 @@ describe('invalid widgetId', () => {
     expect(() => store.run('UpperCase', 'SELECT 1')).toThrow();
   });
 });
+
+describe('backup', () => {
+  it('creates a readable copy of the database at the destination path', async () => {
+    createTable();
+    store.run(W, 'INSERT INTO items (name) VALUES (?)', ['snapshot']);
+
+    const destPath = path.join(root, 'backup.db');
+    await store.backup(W, destPath);
+
+    // Open backup independently and verify the row is there
+    const { default: Database } = await import('better-sqlite3');
+    const backup = new Database(destPath, { readonly: true });
+    const row = backup.prepare('SELECT name FROM items WHERE id = 1').get() as { name: string };
+    backup.close();
+    expect(row.name).toBe('snapshot');
+  });
+});
+
+describe('WAL mode and foreign keys', () => {
+  it('enables WAL journal mode on new databases', () => {
+    createTable();
+    const journalMode = store.get(W, 'PRAGMA journal_mode') as { journal_mode: string };
+    expect(journalMode.journal_mode).toBe('wal');
+  });
+
+  it('enforces foreign key constraints', () => {
+    store.exec(W, `
+      CREATE TABLE parent (id INTEGER PRIMARY KEY);
+      CREATE TABLE child (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent(id));
+    `);
+    expect(() =>
+      store.run(W, 'INSERT INTO child (parent_id) VALUES (?)', [999])
+    ).toThrow();
+  });
+});

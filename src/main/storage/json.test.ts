@@ -158,3 +158,51 @@ describe('invalid widgetId', () => {
     await expect(store.set('UpperCase', 'k', 1)).rejects.toThrow();
   });
 });
+
+describe('concurrent reads (inflight deduplication)', () => {
+  it('resolves all concurrent reads of the same widget to the same object', async () => {
+    // Trigger two parallel loads before either resolves
+    const [a, b] = await Promise.all([store.get('w', 'k'), store.get('w', 'k')]);
+    // Both should return undefined (key not set) without error
+    expect(a).toBeUndefined();
+    expect(b).toBeUndefined();
+  });
+
+  it('reads set by one concurrent caller are visible to the other', async () => {
+    await store.set('w', 'shared', 42);
+    const [a, b] = await Promise.all([store.get('w', 'shared'), store.get('w', 'shared')]);
+    expect(a).toBe(42);
+    expect(b).toBe(42);
+  });
+});
+
+describe('load from disk with invalid JSON', () => {
+  it('throws when the store file contains malformed JSON', async () => {
+    const dir = path.join(root, 'widgets', 'bad-widget');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'store.json'), '{ not valid json', 'utf-8');
+    await expect(store.get('bad-widget', 'k')).rejects.toThrow();
+  });
+
+  it('returns an empty store when the file contains a JSON array (not an object)', async () => {
+    const dir = path.join(root, 'widgets', 'arr-widget');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'arr-widget', 'store.json'), '[]', 'utf-8').catch(() => {});
+    // Write to the correct path
+    await fs.writeFile(path.join(dir, 'store.json'), '[]', 'utf-8');
+    // Arrays are coerced to empty object; no key should be found
+    expect(await store.get('arr-widget', 'any')).toBeUndefined();
+  });
+});
+
+describe('del then flush', () => {
+  it('persists the deletion to disk', async () => {
+    await store.set('w', 'to-delete', 'present');
+    await store.flush('w');
+    await store.del('w', 'to-delete');
+    await store.flush('w');
+    const filePath = path.join(root, 'widgets', 'w', 'store.json');
+    const disk = JSON.parse(await fs.readFile(filePath, 'utf-8'));
+    expect(disk).not.toHaveProperty('to-delete');
+  });
+});

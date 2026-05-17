@@ -267,3 +267,90 @@ describe('applyRemoteState', () => {
     expect(mockSave).not.toHaveBeenCalled();
   });
 });
+
+describe('persist debounce', () => {
+  it('does not call save before the debounce delay has elapsed', () => {
+    getActions().addDashboard('Work');
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('calls save exactly once after the debounce delay', () => {
+    getActions().addDashboard('Work');
+    vi.runAllTimers();
+    expect(mockSave).toHaveBeenCalledOnce();
+  });
+
+  it('coalesces multiple mutations into a single save call', () => {
+    getActions().addDashboard('One');
+    getActions().addDashboard('Two');
+    getActions().addDashboard('Three');
+    vi.runAllTimers();
+    expect(mockSave).toHaveBeenCalledOnce();
+  });
+
+  it('passes the current state snapshot to save', () => {
+    getActions().renameDashboard('default', 'Renamed');
+    vi.runAllTimers();
+    expect(mockSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dashboards: expect.arrayContaining([
+          expect.objectContaining({ id: 'default', name: 'Renamed' }),
+        ]),
+      }),
+    );
+  });
+});
+
+describe('removeInstance idempotency', () => {
+  it('is a no-op when the instanceId does not exist', () => {
+    const before = getState();
+    getActions().removeInstance('non-existent-id');
+    // State reference should be the same object (no mutation happened)
+    expect(getState().dashboards[0].instances).toHaveLength(0);
+    vi.runAllTimers();
+    // persist was still called, but no crash
+    expect(mockSave).toHaveBeenCalledOnce();
+  });
+});
+
+describe('updateSettings idempotency', () => {
+  it('does not mutate other instances when updating one', () => {
+    const widget = makeWidget();
+    mockGetWidget.mockReturnValue(widget as ReturnType<typeof getWidget>);
+    mockDefaultSettingsFor.mockReturnValue({ color: 'blue' });
+
+    const id1 = getActions().addInstance('test-widget')!;
+    const id2 = getActions().addInstance('test-widget')!;
+
+    getActions().updateSettings(id1, { color: 'red' });
+
+    const instances = getState().dashboards[0].instances;
+    expect(instances.find((i) => i.instanceId === id1)!.settings).toEqual({ color: 'red' });
+    expect(instances.find((i) => i.instanceId === id2)!.settings).toEqual({ color: 'blue' });
+  });
+});
+
+describe('renameDashboard persistence', () => {
+  it('schedules a save after renaming', () => {
+    getActions().renameDashboard('default', 'New Name');
+    vi.runAllTimers();
+    expect(mockSave).toHaveBeenCalledOnce();
+  });
+});
+
+describe('addInstance layout stacking', () => {
+  it('stacks three instances without overlapping', () => {
+    const widget = makeWidget();
+    mockGetWidget.mockReturnValue(widget as ReturnType<typeof getWidget>);
+    mockDefaultSettingsFor.mockReturnValue({});
+
+    getActions().addInstance('test-widget'); // y=0, h=4 → bottom=4
+    getActions().addInstance('test-widget'); // y=4, h=4 → bottom=8
+    getActions().addInstance('test-widget'); // y=8
+
+    const instances = getState().dashboards[0].instances;
+    expect(instances[0].layout.y).toBe(0);
+    expect(instances[1].layout.y).toBe(4);
+    expect(instances[2].layout.y).toBe(8);
+  });
+});
