@@ -87,9 +87,10 @@ export const s: Record<string, CSSProperties> = {
     flex: 1,
     overflowY: 'auto',
     padding: '2px 8px 8px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 5,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: 8,
+    alignItems: 'start',
   },
   iconBtn: {
     background: 'none',

@@ -250,7 +250,7 @@ function MediaTracker({ api, settings, setTitle }: WidgetProps) {
       {/* ── Item list ── */}
       <div style={s.list}>
         {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#4b5563', padding: 24, fontSize: 13 }}>
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#4b5563', padding: 24, fontSize: 13 }}>
             {search || statusFilter !== 'all' || typeFilter !== 'all'
               ? 'No matches found.'
               : 'Nothing added yet — hit + Add to start tracking!'}
