@@ -3,10 +3,6 @@ import GridLayout, { Layout } from 'react-grid-layout';
 import { useDashboard } from '@renderer/state/dashboard';
 import { getWidget } from '@renderer/plugins/registry';
 import { WidgetHost } from './WidgetHost';
-import { MobileLayout } from './MobileLayout';
-
-declare const __MOBILE__: boolean | undefined;
-const IS_MOBILE = typeof __MOBILE__ !== 'undefined' && __MOBILE__;
 
 const COLS = 12;
 const ROW_HEIGHT = 60;
@@ -97,14 +93,6 @@ export function Dashboard() {
     },
     [updateLayout]
   );
-
-  if (IS_MOBILE) {
-    return (
-      <div className="dashboard mobile">
-        <MobileLayout instances={dashboard.instances} />
-      </div>
-    );
-  }
 
   return (
     <div className="dashboard" ref={containerRef}>

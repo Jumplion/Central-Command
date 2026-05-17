@@ -2,7 +2,7 @@
 
 A personal extensible dashboard desktop app. Add widgets for tracking jobs, media, email, auditions, file shortcuts, and anything else you want on your dashboard. Each widget is a self-contained plugin you can build yourself.
 
-Built with Electron (for desktop), React (for the UI), and TypeScript (for type safety). Also runs on Android via Capacitor.
+Built with Electron (for desktop), React (for the UI), and TypeScript (for type safety).
 
 ## What does it look like?
 
@@ -31,8 +31,6 @@ The first run creates a `userData` directory on your computer (Electron's app da
 | `npm run test:coverage` | Run tests and generate a coverage report |
 | `npm run typecheck` | Check TypeScript types across all projects |
 | `npm run package` | Build + create a distributable installer |
-| `npm run mobile:sync` | Build the web app and sync it to the Android project |
-| `npm run mobile:run` | Build, sync, and deploy to a connected Android device |
 
 ## Technology overview
 
@@ -64,10 +62,6 @@ The widget grid is powered by `react-grid-layout`. It handles drag-to-move and r
 
 Widgets can use SQLite databases for structured data (think spreadsheet-style tables). `better-sqlite3` is a fast, synchronous Node.js SQLite driver. It's used only in the main process.
 
-### Capacitor (mobile)
-
-Capacitor wraps the web app in a native Android app shell. JavaScript calls Capacitor "plugins" that delegate to native Kotlin code for things like file access, preferences storage, and opening URLs.
-
 ## Project layout
 
 ```bash
@@ -78,13 +72,8 @@ Central-Command/
 │   ├── renderer/         # React frontend (what you see)
 │   ├── shared/           # Types and constants used by both main and renderer
 │   ├── widgets/          # Widget plugins — add your own here
-│   ├── mobile-bridge/    # Replaces the Electron bridge on Android
-│   └── mobile-renderer/  # Android app entry point
-├── android/              # Capacitor-generated Android project
 ├── electron.vite.config.ts  # Build config for Electron (3 bundles)
-├── vite.mobile.config.ts    # Build config for mobile
 ├── electron-builder.yml     # Packaging config (installers)
-├── capacitor.config.ts      # Capacitor config (app ID, webDir)
 ├── tsconfig.json            # Base TypeScript config
 ├── tsconfig.node.json       # TypeScript config for the main process
 ├── tsconfig.web.json        # TypeScript config for the renderer

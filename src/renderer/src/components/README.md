@@ -22,8 +22,6 @@ function Greeting({ name }: { name: string }) {
 | `AddWidgetDialog.tsx` | The modal that appears when you click "+ Add widget" |
 | `AppSettings.tsx` | The modal for app-wide settings (Google Drive sync, etc.) |
 | `WidgetSettingsPanel.tsx` | The overlay that appears when you click the ⚙ button on a widget |
-| `MobileLayout.tsx` | Stacked layout for widgets on mobile (replaces the grid) |
-| `MobileNav.tsx` | Bottom navigation bar shown on mobile |
 
 ## `Dashboard.tsx`
 
@@ -39,9 +37,6 @@ This component renders the draggable, resizable grid using the `react-grid-layou
 
 **Container width tracking:**
 The grid needs to know its pixel width to calculate column widths. `Dashboard` uses a `ResizeObserver` (a browser API that fires when an element changes size) to watch the container div and update a `width` state value. `requestAnimationFrame` is used to debounce rapid resize events smoothly.
-
-**Mobile branch:**
-If the `__MOBILE__` build flag is set, `Dashboard` renders `<MobileLayout>` instead of the grid.
 
 ## `WidgetHost.tsx`
 

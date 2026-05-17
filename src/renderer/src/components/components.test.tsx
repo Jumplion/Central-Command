@@ -108,8 +108,6 @@ import { AppSettings } from './AppSettings';
 import { WidgetHost } from './WidgetHost';
 import { WidgetSettingsPanel } from './WidgetSettingsPanel';
 import { Sidebar } from './Sidebar';
-import { MobileLayout } from './MobileLayout';
-import { MobileNav } from './MobileNav';
 
 const createContainer = () => {
   const container = document.createElement('div');
@@ -587,61 +585,3 @@ describe('Sidebar', () => {
   });
 });
 
-describe('MobileLayout', () => {
-  it('shows empty state when there are no widgets', async () => {
-    const container = createContainer();
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(<MobileLayout instances={[]} />);
-    });
-
-    expect(container.textContent).toContain('No widgets yet');
-    cleanupContainer(container);
-  });
-
-  it('renders widget rows sorted by layout position', async () => {
-    const instances = [
-      { instanceId: 'b', widgetId: 'widget-a', title: undefined, settings: {}, layout: { x: 0, y: 2, w: 2, h: 2 } },
-      { instanceId: 'a', widgetId: 'widget-b', title: undefined, settings: {}, layout: { x: 0, y: 1, w: 2, h: 2 } },
-    ];
-    const container = createContainer();
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(<MobileLayout instances={instances as any} />);
-    });
-
-    const rows = Array.from(container.querySelectorAll('.mobile-widget-row'));
-    expect(rows.length).toBe(2);
-    expect(rows[0].textContent).toContain('Widget B body');
-    expect(rows[1].textContent).toContain('Widget A body');
-    cleanupContainer(container);
-  });
-});
-
-describe('MobileNav', () => {
-  it('opens add widget and app settings dialogs', async () => {
-    const container = createContainer();
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(<MobileNav />);
-    });
-
-    const widgetButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === '+ Widget');
-    const settingsButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === '⚙');
-
-    await act(async () => {
-      widgetButton?.click();
-    });
-    expect(container.querySelector('.modal')).toBeTruthy();
-
-    await act(async () => {
-      settingsButton?.click();
-      await Promise.resolve();
-    });
-    expect(container.textContent).toContain('Google Drive Sync');
-    cleanupContainer(container);
-  });
-});

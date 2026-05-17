@@ -18,7 +18,7 @@ Electron compiles the main process and the renderer as two completely separate b
 | `defaults.ts` | The `DEFAULT_STATE` — the starting `AppState` for a fresh install |
 | `validation.ts` | `isValidWidgetId()` — ensures widget IDs match the required format |
 | `csv.ts` | CSV parsing and formatting utilities |
-| `sync-base.ts` | Abstract base types shared between desktop sync and mobile sync |
+| `sync-base.ts` | Abstract base types shared by desktop sync |
 | `google.test.ts` | Unit tests for the Google helper functions |
 | `validation.test.ts` | Unit tests for `isValidWidgetId` |
 
@@ -103,4 +103,4 @@ The parser handles quoted fields (values that contain commas or newlines), which
 
 ## `sync-base.ts`
 
-Abstract base classes and types shared between `src/main/sync.ts` (desktop) and `src/mobile-bridge/sync-manager.ts` (mobile). Keeping the common logic here avoids duplicating the sync state machine in both targets.
+Abstract base classes and types shared by `src/main/sync.ts`. Keeping the common logic here avoids duplicating the sync state machine across targets.

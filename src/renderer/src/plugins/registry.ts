@@ -3,10 +3,7 @@ import type { WidgetManifest, WidgetSettings } from '@shared/types';
 import type { WidgetApi } from './api';
 import { getWidgetRegistrationError } from './registry-validator';
 
-declare const __MOBILE__: boolean | undefined;
-
-const CURRENT_PLATFORM: 'desktop' | 'mobile' =
-  typeof __MOBILE__ !== 'undefined' && __MOBILE__ ? 'mobile' : 'desktop';
+const CURRENT_PLATFORM: 'desktop' = 'desktop';
 
 export interface WidgetProps {
   api: WidgetApi;

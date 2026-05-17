@@ -88,7 +88,7 @@ The manifest tells the app everything it needs to know about a widget before ren
 | `minSize` | `{ w, h }?` | Minimum size the user can resize to |
 | `settings` | `SettingsField[]?` | Declares the settings form fields shown in the ⚙ panel |
 | `permissions` | `{ sqlite?, google? }?` | Declare `true` to unlock `api.sql` or `api.google` |
-| `platforms` | `string[]?` | `['desktop']` or `['mobile']` — omit for both |
+| `platforms` | `string[]?` | `['desktop']` — omit to support all widgets |
 
 ## The `api` prop
 

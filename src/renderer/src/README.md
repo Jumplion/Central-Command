@@ -40,8 +40,6 @@ src/renderer/src/
 </App>
 ```
 
-On mobile (when the `__MOBILE__` build flag is true), the `Sidebar` is replaced by a `MobileNav` component at the bottom of the screen.
-
 ## How components, state, and plugins relate
 
 ```bash

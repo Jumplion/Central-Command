@@ -15,8 +15,6 @@ src/
 ├── renderer/         # The React frontend (what you see on screen)
 ├── shared/           # Types and constants used by both backend and frontend
 ├── widgets/          # Each widget plugin lives in its own subfolder here
-├── mobile-bridge/    # Replaces the Electron bridge when running on Android
-└── mobile-renderer/  # Mobile-specific entry point for the React app
 ```
 
 ## The big picture: Electron's two worlds

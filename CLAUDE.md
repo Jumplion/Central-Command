@@ -8,15 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # Electron + Vite dev server with HMR
 npm run build        # Build all bundles (main, preload, renderer)
 npm run typecheck    # Type-check both Node and Web projects
-npm run test         # Run Vitest unit tests
+npm run test         # Run the Vitest unit test suite
 npm run test:coverage # Run tests with v8 coverage report
 npm run package      # Build + package with electron-builder
-
-# Mobile (Capacitor)
-npm run build:mobile  # Vite build for mobile renderer
-npm run mobile:sync   # Build + sync to Android
-npm run mobile:run    # Build, sync, and run on Android device
-npm run mobile:dev    # Mobile dev server
 ```
 
 There is a Vitest unit test suite. Run `npm run test` before committing changes to `src/shared/`, `src/main/storage/`, or `src/main/ipc.ts`.
@@ -30,8 +24,6 @@ This is an Electron desktop app (Central Command) — a personal extensible dash
 - **`src/renderer/`** — React app. Has no direct Node/Electron access; everything goes through `window.cc`.
 - **`src/shared/`** — Types and IPC channel names imported by both main and renderer via the `@shared` alias.
 - **`src/widgets/`** — Widget plugins (see below).
-- **`src/mobile-bridge/`** — Capacitor bridging layer for mobile builds.
-- **`src/mobile-renderer/`** — Mobile-specific React app.
 
 ### Path aliases
 
@@ -141,7 +133,7 @@ The grid uses a 12-column layout with 60 px row height (`react-grid-layout`). Si
 | `minSize` | `{ w, h }?` | Minimum drag/resize size |
 | `settings` | `SettingsField[]?` | Schema for per-instance settings UI |
 | `permissions` | `{ sqlite?, google? }?` | Declare capabilities used |
-| `platforms` | `('desktop' \| 'mobile')[]?` | Omit = all platforms |
+| `platforms` | `('desktop')[]?` | Omit = all platforms |
 
 ### WidgetApi surface
 
@@ -197,7 +189,6 @@ api.google.shared  // shared OAuth namespace ('google' widgetId)
 | Widget error boundary | `src/renderer/src/components/WidgetHost.tsx` |
 | App settings UI | `src/renderer/src/components/AppSettings.tsx` |
 | Build config | `electron.vite.config.ts` |
-| Mobile build config | `vite.mobile.config.ts` |
 | Vitest config | `vitest.config.ts` |
 | Widget authoring guide | `src/widgets/README.md` |
 
@@ -212,6 +203,3 @@ npm run test:coverage  # single-run with v8 coverage
 
 Covered areas: `src/shared/google.test.ts`, `src/shared/validation.test.ts`, `src/main/ipc.test.ts`, `src/main/storage/sqlite.test.ts`, `src/main/storage/json.test.ts`. There are no integration or end-to-end tests.
 
-## Mobile
-
-Mobile builds use Capacitor with an Android target. The `__MOBILE__` build-time flag (injected by Vite) switches the renderer to use `MobileLayout` / `MobileNav` and filters widgets by `manifest.platforms`. Mobile-specific code lives in `src/mobile-bridge/` and `src/mobile-renderer/`.

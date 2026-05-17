@@ -44,11 +44,9 @@ Widgets can declare which platforms they support via `manifest.platforms`:
 
 ```ts
 platforms: ['desktop']  // only show on Electron desktop
-platforms: ['mobile']   // only show on Android
-// (omit entirely) → show on both platforms
 ```
 
-The registry reads a build-time flag `__MOBILE__` (set by Vite) to know the current platform and skips widgets that don't support it.
+Widgets without a `platforms` field are shown by default.
 
 ### Exported functions
 

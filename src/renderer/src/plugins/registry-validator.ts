@@ -6,7 +6,7 @@ type WidgetModule = unknown;
 export function getWidgetRegistrationError(
   widgetModule: WidgetModule,
   usedIds: Set<string>,
-  currentPlatform: 'desktop' | 'mobile'
+  currentPlatform: 'desktop'
 ): string | undefined {
   const candidate = widgetModule as {
     default?: { manifest?: Partial<WidgetManifest>; Component?: unknown };

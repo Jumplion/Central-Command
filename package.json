@@ -4,7 +4,9 @@
   "private": true,
   "description": "Personal extensible dashboard built on Electron + React.",
   "main": "./out/main/index.js",
-  "sideEffects": ["**/*.css"],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "author": {
     "name": "Tomer Braff",
     "email": "tomerbraff@gmail.com"
@@ -17,23 +19,11 @@
     "test:coverage": "vitest run --coverage",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck:mobile": "tsc --noEmit -p tsconfig.mobile.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "package": "electron-vite build && electron-builder",
-    "postinstall": "electron-builder install-app-deps",
-    "build:mobile": "vite build --config vite.mobile.config.ts",
-    "mobile:sync": "npm run build:mobile && npx cap sync android",
-    "mobile:run": "npx cap run android",
-    "mobile:dev": "vite --config vite.mobile.config.ts"
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
-    "@capacitor-community/sqlite": "^6.0.2",
-    "@capacitor/android": "^7.4.0",
-    "@capacitor/app": "^6.0.2",
-    "@capacitor/browser": "^6.0.3",
-    "@capacitor/core": "^7.4.0",
-    "@capacitor/filesystem": "^6.0.2",
-    "@capacitor/preferences": "^6.0.3",
     "better-sqlite3": "^12.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -41,7 +31,6 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.0",
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.7.4",
     "@types/react": "^18.3.11",

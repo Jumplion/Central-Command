@@ -44,7 +44,7 @@ export interface WidgetManifest {
   settings?: SettingsField[];
   permissions?: { sqlite?: boolean; google?: boolean };
   /** Platforms this widget supports. Omit to support all platforms. */
-  platforms?: ('desktop' | 'mobile')[];
+  platforms?: ('desktop')[];
 }
 
 export type SettingsFieldValue = string | number | boolean | undefined;
