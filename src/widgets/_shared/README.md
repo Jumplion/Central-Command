@@ -9,8 +9,12 @@ The folder is named `_shared` (with a leading underscore) instead of `shared` so
 ## Files
 
 | File | What it provides |
-|---|---|
+| --- | --- |
 | `StackedBarChart.tsx` | A horizontal stacked bar chart rendered with plain HTML/CSS |
+| `autocomplete.ts` | Normalized suggestion helpers and reusable suggestion menu styles |
+| `form.tsx` | Common form layout components and shared field/section styles |
+| `list.tsx` | Reusable table/list row styles and accessible row components |
+| `index.ts` | Convenience exports for shared widget utilities |
 
 ---
 
@@ -41,6 +45,59 @@ import { StackedBarChart } from '@widgets/_shared/StackedBarChart';
 - `total` — the sum of all counts (used to calculate percentages for bar widths)
 
 Segments with a `count` of 0 are hidden automatically.
+
+---
+
+## `autocomplete.ts`
+
+Shared autocomplete helpers normalize user input, return prefix matches, and expose menu/item styles for suggestion dropdowns. They are designed to work with string lists or any data model that can be mapped to a label.
+
+```tsx
+import { filterSuggestions, findSuggestion, suggestionMenuStyle, suggestionItemStyle } from '@widgets/_shared';
+
+const matches = filterSuggestions(companySuggestions, currentValue, undefined, 5);
+```
+
+---
+
+## `form.tsx`
+
+Common form layout components for widget UIs. Use `FormSection`, `FormField`, `FormGrid`, and `FormActions` to keep forms consistent across widgets.
+
+```tsx
+import { FormField, FormGrid, FormActions, formInputStyle } from '@widgets/_shared';
+
+<FormGrid columns={2} gap={8}>
+  <FormField label="Name" required>
+    <input style={formInputStyle} />
+  </FormField>
+  <FormField label="Role">
+    <input style={formInputStyle} />
+  </FormField>
+</FormGrid>
+<FormActions>
+  <button type="submit">Save</button>
+</FormActions>
+```
+
+---
+
+## `list.tsx`
+
+Reusable table and list row primitives that share padding, border, and hover-friendly styles. `InteractiveListRow` wraps a clickable row so widgets can build clean, accessible list layouts without rewriting style boilerplate.
+
+```tsx
+import { InteractiveListRow, TableHeader, TableCell } from '@widgets/_shared';
+
+<TableHeader>
+  <TableCell>Name</TableCell>
+  <TableCell>Status</TableCell>
+</TableHeader>
+<InteractiveListRow onClick={() => select(item)}>
+  <TableCell>{item.name}</TableCell>
+  <TableCell>{item.status}</TableCell>
+</InteractiveListRow>
+```
 
 ---
 
