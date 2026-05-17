@@ -36,10 +36,20 @@ export function Dashboard() {
     return () => { ro.disconnect(); if (rafId !== null) cancelAnimationFrame(rafId); };
   }, []);
 
+  const widgetMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof getWidget> | undefined>();
+    for (const instance of dashboard.instances) {
+      if (!map.has(instance.widgetId)) {
+        map.set(instance.widgetId, getWidget(instance.widgetId));
+      }
+    }
+    return map;
+  }, [dashboard.instances]);
+
   const layout = useMemo<Layout[]>(
     () =>
       dashboard.instances.map((i) => {
-        const min = getWidget(i.widgetId)?.manifest.minSize;
+        const min = widgetMap.get(i.widgetId)?.manifest.minSize;
         return {
           i: i.instanceId,
           x: i.layout.x,
@@ -50,7 +60,7 @@ export function Dashboard() {
           minH: min?.h ?? 2
         };
       }),
-    [dashboard.instances]
+    [dashboard.instances, widgetMap]
   );
 
   useEffect(() => {
@@ -75,10 +85,10 @@ export function Dashboard() {
     () =>
       dashboard.instances.map((i) => (
         <div key={i.instanceId} data-instance-id={i.instanceId}>
-          <WidgetHost instance={i} widget={getWidget(i.widgetId)} />
+          <WidgetHost instance={i} widget={widgetMap.get(i.widgetId)} />
         </div>
       )),
-    [dashboard.instances]
+    [dashboard.instances, widgetMap]
   );
 
   const handleChange = useCallback(
