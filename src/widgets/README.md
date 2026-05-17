@@ -36,6 +36,7 @@ cd my-new-widget
 ```
 
 This creates:
+
 - `constants.ts` — schema with `emptyMigrations()` placeholder
 - `types.ts` — TypeScript interfaces
 - `index.tsx` — widget component with `useSqlInit` hook already configured

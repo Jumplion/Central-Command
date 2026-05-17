@@ -202,4 +202,3 @@ npm run test:coverage  # single-run with v8 coverage
 ```
 
 Covered areas: `src/shared/google.test.ts`, `src/shared/validation.test.ts`, `src/main/ipc.test.ts`, `src/main/storage/sqlite.test.ts`, `src/main/storage/json.test.ts`. There are no integration or end-to-end tests.
-
