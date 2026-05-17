@@ -1,4 +1,4 @@
-import { EMP_TYPES } from './constants';
+import { EMP_TYPES, MONTH_NAMES } from './constants';
 
 // ─── Pure formatting helpers ──────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ export function relativeDate(dateStr: string): string {
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days}d ago`;
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
 const EMP_TYPE_LABELS: Record<string, string> = Object.fromEntries(

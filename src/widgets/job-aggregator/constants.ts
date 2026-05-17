@@ -11,6 +11,8 @@ export const thStyle: React.CSSProperties = {
 
 export const tdStyle: React.CSSProperties = { padding: '5px 6px', verticalAlign: 'middle' };
 
+export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 // ─── Status / source colours ──────────────────────────────────────────────────
 
 export const STATUSES: SavedStatus[] = ['Interested', 'Applied', 'Phone', 'Onsite', 'Offer', 'Rejected'];
