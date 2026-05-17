@@ -16,6 +16,7 @@ export function Dashboard() {
   const updateLayout = useDashboard((s) => s.updateLayout);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const previousInstanceIdsRef = useRef<Set<string>>(new Set());
   const [width, setWidth] = useState(800);
 
   useEffect(() => {
@@ -52,10 +53,28 @@ export function Dashboard() {
     [dashboard.instances]
   );
 
+  useEffect(() => {
+    const currentIds = new Set(dashboard.instances.map((instance) => instance.instanceId));
+    const previousIds = previousInstanceIdsRef.current;
+    const newInstanceIds = Array.from(currentIds).filter((id) => !previousIds.has(id));
+
+    previousInstanceIdsRef.current = currentIds;
+
+    if (newInstanceIds.length !== 1) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const target = container.querySelector<HTMLElement>(`[data-instance-id="${newInstanceIds[0]}"]`);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }, [dashboard.instances]);
+
   const gridItems = useMemo(
     () =>
       dashboard.instances.map((i) => (
-        <div key={i.instanceId}>
+        <div key={i.instanceId} data-instance-id={i.instanceId}>
           <WidgetHost instance={i} widget={getWidget(i.widgetId)} />
         </div>
       )),
