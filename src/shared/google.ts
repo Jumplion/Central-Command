@@ -64,6 +64,11 @@ export function isGoogleServiceId(value: unknown): value is GoogleServiceId {
   return typeof value === 'string' && value in GOOGLE_SERVICES;
 }
 
+export interface StoredGoogleCreds {
+  clientId: string;
+  clientSecret: string;
+}
+
 export function resolveGoogleScopes(options: GoogleConnectOptions): string[] {
   const scopes = options.scopes?.filter((scope) => typeof scope === 'string' && scope.trim().length > 0) ?? [];
   if (scopes.length > 0) return Array.from(new Set(scopes));
@@ -81,4 +86,22 @@ export function getGoogleCredsKey(service?: GoogleServiceId): string {
 
 export function getGoogleTokenKey(service?: GoogleServiceId): string {
   return `${OAUTH_TOKEN_KEY_PREFIX}:${getGoogleConnectionId(service)}`;
+}
+
+export function parseStoredGoogleCreds(raw: string | null): StoredGoogleCreds | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as StoredGoogleCreds;
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    if (typeof parsed.clientId !== 'string' || typeof parsed.clientSecret !== 'string') return null;
+    return { clientId: parsed.clientId, clientSecret: parsed.clientSecret };
+  } catch {
+    return null;
+  }
+}
+
+export function getGoogleReconnectOptions(raw: string | null, service?: GoogleServiceId): GoogleConnectOptions | null {
+  const creds = parseStoredGoogleCreds(raw);
+  if (!creds) return null;
+  return { clientId: creds.clientId, clientSecret: creds.clientSecret, service };
 }

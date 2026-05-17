@@ -1,6 +1,10 @@
 import type { DialogOpenPathOptions, GoogleConnectOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
 import type { GoogleServiceDefinition, GoogleServiceId } from '@shared/google';
-import { getGoogleCredsKey, SHARED_GOOGLE_WIDGET_ID } from '@shared/google';
+import {
+  getGoogleCredsKey,
+  SHARED_GOOGLE_WIDGET_ID,
+  getGoogleReconnectOptions,
+} from '@shared/google';
 import { emitApiCall } from './apiEvents';
 
 export interface WidgetApi {
@@ -152,9 +156,9 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
         hasCreds: (service) => window.cc.secrets.has(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service)),
         reconnect: async (service) => {
           const credsRaw = await window.cc.secrets.get(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service));
-          if (!credsRaw) return false;
-          const creds = JSON.parse(credsRaw) as { clientId: string; clientSecret: string };
-          await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, { ...creds, service });
+          const options = getGoogleReconnectOptions(credsRaw, service);
+          if (!options) return false;
+          await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options);
           return true;
         },
       },

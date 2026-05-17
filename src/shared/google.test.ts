@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { GOOGLE_SERVICES, getGoogleCredsKey, getGoogleTokenKey, resolveGoogleScopes } from './google';
+import {
+  GOOGLE_SERVICES,
+  getGoogleCredsKey,
+  getGoogleTokenKey,
+  resolveGoogleScopes,
+  parseStoredGoogleCreds,
+  getGoogleReconnectOptions,
+} from './google';
 
 describe('GOOGLE_SERVICES', () => {
   it('defines API base URLs for all built-in services', () => {
@@ -67,5 +74,26 @@ describe('google secret keys', () => {
     expect(getGoogleCredsKey('calendar')).toBe('google_oauth_creds:calendar');
     expect(getGoogleTokenKey('drive')).toBe('google_oauth_token:drive');
     expect(getGoogleTokenKey()).toBe('google_oauth_token:default');
+  });
+});
+
+describe('stored Google creds helpers', () => {
+  it('parses valid stored Google credentials', () => {
+    expect(
+      parseStoredGoogleCreds(JSON.stringify({ clientId: 'id', clientSecret: 'secret' })),
+    ).toEqual({ clientId: 'id', clientSecret: 'secret' });
+  });
+
+  it('returns null for invalid stored Google credentials', () => {
+    expect(parseStoredGoogleCreds(null)).toBeNull();
+    expect(parseStoredGoogleCreds('not-json')).toBeNull();
+    expect(parseStoredGoogleCreds(JSON.stringify({ clientId: 'id' }))).toBeNull();
+  });
+
+  it('builds reconnect options from stored credentials', () => {
+    expect(
+      getGoogleReconnectOptions(JSON.stringify({ clientId: 'id', clientSecret: 'secret' }), 'gmail'),
+    ).toEqual({ clientId: 'id', clientSecret: 'secret', service: 'gmail' });
+    expect(getGoogleReconnectOptions(null, 'gmail')).toBeNull();
   });
 });
