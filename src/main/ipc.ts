@@ -12,6 +12,7 @@ import type { SyncManager } from './sync';
 
 const isString = (x: unknown): x is string => typeof x === 'string';
 const isParams = (x: unknown): x is unknown[] => Array.isArray(x);
+const isObject = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null;
 
 /** Assert that an optional `service` argument is a valid Google service id. */
 function requireOptionalService(channel: string, service: unknown): void {
@@ -19,51 +20,71 @@ function requireOptionalService(channel: string, service: unknown): void {
     throw new Error(`${channel}: invalid service`);
 }
 
+type ArgValidator = (value: unknown) => boolean;
+type ArgDescriptor = ArgValidator | { validator: ArgValidator; optional: boolean };
+
+function unwrapValidator(descriptor: ArgDescriptor): ArgValidator {
+  return typeof descriptor === 'function' ? descriptor : descriptor.validator;
+}
+
+function withArgs<T extends unknown[]>(
+  channel: string,
+  validators: ArgDescriptor[],
+  fn: (...args: T) => unknown
+) {
+  return (_e: unknown, ...args: unknown[]) => {
+    for (let index = 0; index < validators.length; index += 1) {
+      const descriptor = validators[index];
+      const value = args[index];
+      const validator = unwrapValidator(descriptor);
+      if (value === undefined) {
+        if (typeof descriptor !== 'function' && descriptor.optional) continue;
+        throw new Error(`${channel}: invalid arguments`);
+      }
+      if (!validator(value)) throw new Error(`${channel}: invalid arguments`);
+    }
+    return fn(...(args as T));
+  };
+}
+
+function registerHandler<T extends unknown[]>(
+  channel: string,
+  validators: ArgDescriptor[],
+  fn: (...args: T) => unknown
+) {
+  ipcMain.handle(channel, withArgs(channel, validators, fn));
+}
+
 export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAuthManager, syncManager: SyncManager): void {
-  ipcMain.handle(IPC.STATE_LOAD, () => storage.loadState());
-  ipcMain.handle(IPC.STATE_SAVE, (_e, state: AppState) => storage.saveState(state));
+  registerHandler(IPC.STATE_LOAD, [], () => storage.loadState());
+  registerHandler(IPC.STATE_SAVE, [isObject], (state: AppState) => storage.saveState(state));
 
   // ─── KV handlers ─────────────────────────────────────────────────────────────
-  function kvHandler(channel: string, fn: (widgetId: string, key: string, value?: unknown) => unknown) {
-    ipcMain.handle(channel, (_e, widgetId: unknown, key: unknown, value?: unknown) => {
-      if (!isString(widgetId) || !isString(key)) throw new Error(`${channel}: invalid arguments`);
-      return fn(widgetId, key, value);
-    });
-  }
-  kvHandler(IPC.KV_GET,  (w, k) => storage.json.get(w, k));
-  kvHandler(IPC.KV_SET,  (w, k, v) => storage.json.set(w, k, v));
-  kvHandler(IPC.KV_DEL,  (w, k) => storage.json.del(w, k));
-  ipcMain.handle(IPC.KV_KEYS, (_e, widgetId: unknown) => {
-    if (!isString(widgetId)) throw new Error('kv.keys: invalid arguments');
-    return storage.json.keys(widgetId);
-  });
-  ipcMain.handle(IPC.KV_KEYS_PREFIX, (_e, widgetId: unknown, prefix: unknown) => {
-    if (!isString(widgetId) || !isString(prefix)) throw new Error('kv.keysWithPrefix: invalid arguments');
-    return storage.json.keysWithPrefix(widgetId, prefix);
-  });
+  registerHandler(IPC.KV_GET, [isString, isString], (widgetId: string, key: string) => storage.json.get(widgetId, key));
+  registerHandler(IPC.KV_SET, [isString, isString], (widgetId: string, key: string, value: unknown) => storage.json.set(widgetId, key, value));
+  registerHandler(IPC.KV_DEL, [isString, isString], (widgetId: string, key: string) => storage.json.del(widgetId, key));
+  registerHandler(IPC.KV_KEYS, [isString], (widgetId: string) => storage.json.keys(widgetId));
+  registerHandler(IPC.KV_KEYS_PREFIX, [isString, isString], (widgetId: string, prefix: string) =>
+    storage.json.keysWithPrefix(widgetId, prefix)
+  );
 
   // ─── SQL handlers ─────────────────────────────────────────────────────────────
-  function sqlQueryHandler(channel: string, method: 'run' | 'all' | 'get') {
-    ipcMain.handle(channel, (_e, widgetId: unknown, sql: unknown, params: unknown) => {
-      if (!isString(widgetId) || !isString(sql) || !isParams(params))
-        throw new Error(`${channel}: invalid arguments`);
-      return storage.sqlite[method](widgetId, sql, params);
-    });
-  }
-  sqlQueryHandler(IPC.SQL_RUN, 'run');
-  sqlQueryHandler(IPC.SQL_ALL, 'all');
-  sqlQueryHandler(IPC.SQL_GET, 'get');
-  ipcMain.handle(IPC.SQL_EXEC, (_e, widgetId: unknown, sql: unknown) => {
-    if (!isString(widgetId) || !isString(sql)) throw new Error('sql.exec: invalid arguments');
-    return storage.sqlite.exec(widgetId, sql);
-  });
-  ipcMain.handle(IPC.SQL_RUN_BATCH, (_e, widgetId: unknown, items: unknown) => {
-    if (!isString(widgetId) || !Array.isArray(items)) throw new Error('sql.runBatch: invalid arguments');
-    return storage.sqlite.runBatch(widgetId, items as { sql: string; params?: unknown[] }[]);
-  });
+  registerHandler(IPC.SQL_RUN, [isString, isString, isParams], (widgetId: string, sql: string, params: unknown[]) =>
+    storage.sqlite.run(widgetId, sql, params)
+  );
+  registerHandler(IPC.SQL_ALL, [isString, isString, isParams], (widgetId: string, sql: string, params: unknown[]) =>
+    storage.sqlite.all(widgetId, sql, params)
+  );
+  registerHandler(IPC.SQL_GET, [isString, isString, isParams], (widgetId: string, sql: string, params: unknown[]) =>
+    storage.sqlite.get(widgetId, sql, params)
+  );
+  registerHandler(IPC.SQL_EXEC, [isString, isString], (widgetId: string, sql: string) => storage.sqlite.exec(widgetId, sql));
+  registerHandler(IPC.SQL_RUN_BATCH, [isString, Array.isArray], (widgetId: string, items: { sql: string; params?: unknown[] }[]) =>
+    storage.sqlite.runBatch(widgetId, items)
+  );
 
-  ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, (_e, url: unknown) => {
-    if (!isString(url) || !/^(https?|mailto):/.test(url)) throw new Error('openExternal: url must be http(s) or mailto');
+  registerHandler(IPC.SHELL_OPEN_EXTERNAL, [isString], (url: string) => {
+    if (!/^(https?|mailto):/.test(url)) throw new Error('openExternal: url must be http(s) or mailto');
     if (IS_WSL) {
       // Pass the URL via an env var to avoid PowerShell command injection
       return new Promise<void>((resolve) => {
@@ -76,18 +97,11 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
     return shell.openExternal(url);
   });
 
-  ipcMain.handle(IPC.SHELL_OPEN_PATH, (_e, path: unknown) => {
-    if (!isString(path)) throw new Error('openPath: invalid argument');
-    return shell.openPath(path);
-  });
+  registerHandler(IPC.SHELL_OPEN_PATH, [isString], (path: string) => shell.openPath(path));
+  registerHandler(IPC.SHELL_SHOW_IN_FOLDER, [isString], (path: string) => shell.showItemInFolder(path));
 
-  ipcMain.handle(IPC.SHELL_SHOW_IN_FOLDER, (_e, path: unknown) => {
-    if (!isString(path)) throw new Error('showItemInFolder: invalid argument');
-    shell.showItemInFolder(path);
-  });
-
-  ipcMain.handle(IPC.DIALOG_OPEN_PATH, async (_e, options: unknown) => {
-    const opts = options && typeof options === 'object' ? (options as DialogOpenPathOptions) : {};
+  registerHandler(IPC.DIALOG_OPEN_PATH, [{ validator: () => true, optional: true }], async (options: unknown) => {
+    const opts = isObject(options) ? (options as DialogOpenPathOptions) : {};
     const result = await dialog.showOpenDialog({
       title: opts.title,
       defaultPath: opts.defaultPath,
@@ -96,10 +110,10 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
     return result.canceled ? null : result.filePaths;
   });
 
-  ipcMain.handle(IPC.NET_FETCH, async (_e, url: unknown, init: unknown) => {
+  registerHandler(IPC.NET_FETCH, [() => true, { validator: isObject, optional: true }], async (url: unknown, init: unknown) => {
     if (!isString(url) || !/^https?:\/\//.test(url)) throw new Error('net.fetch: url must be http(s)');
     const options: NetFetchInit = {};
-    if (init && typeof init === 'object') {
+    if (isObject(init)) {
       const i = init as Record<string, unknown>;
       if (typeof i.method === 'string') options.method = i.method;
       if (i.headers && typeof i.headers === 'object') options.headers = i.headers as Record<string, string>;
@@ -111,56 +125,38 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
   });
 
   // ─── Secrets handlers ─────────────────────────────────────────────────────
-
-  function secretsHandler(channel: string, fn: (widgetId: string, key: string) => unknown) {
-    ipcMain.handle(channel, (_e, widgetId: unknown, key: unknown) => {
-      if (!isString(widgetId) || !isString(key)) throw new Error(`${channel}: invalid arguments`);
-      return fn(widgetId, key);
-    });
-  }
-  secretsHandler(IPC.SECRETS_GET, (w, k) => secrets.get(w, k));
-  secretsHandler(IPC.SECRETS_DEL, (w, k) => secrets.del(w, k));
-  secretsHandler(IPC.SECRETS_HAS, (w, k) => secrets.has(w, k));
-
-  ipcMain.handle(IPC.SECRETS_SET, (_e, widgetId: unknown, key: unknown, value: unknown) => {
-    if (!isString(widgetId) || !isString(key) || !isString(value))
-      throw new Error('secrets.set: invalid arguments');
-    return secrets.set(widgetId, key, value);
-  });
+  registerHandler(IPC.SECRETS_GET, [isString, isString], (widgetId: string, key: string) => secrets.get(widgetId, key));
+  registerHandler(IPC.SECRETS_DEL, [isString, isString], (widgetId: string, key: string) => secrets.del(widgetId, key));
+  registerHandler(IPC.SECRETS_HAS, [isString, isString], (widgetId: string, key: string) => secrets.has(widgetId, key));
+  registerHandler(IPC.SECRETS_SET, [isString, isString, isString], (widgetId: string, key: string, value: string) =>
+    secrets.set(widgetId, key, value)
+  );
 
   // ─── Google OAuth handlers ─────────────────────────────────────────────────
-
-  ipcMain.handle(IPC.GOOGLE_CONNECT, (_e, widgetId: unknown, options: unknown) => {
-    if (!isString(widgetId) || !options || typeof options !== 'object')
-      throw new Error('google.connect: invalid arguments');
+  registerHandler(IPC.GOOGLE_CONNECT, [isString, isObject], (widgetId: string, options: unknown) => {
+    if (!isObject(options)) throw new Error('google.connect: invalid arguments');
     const o = options as Record<string, unknown>;
     if (!isString(o.clientId) || !isString(o.clientSecret))
       throw new Error('google.connect: invalid options');
     if (o.scopes !== undefined && !Array.isArray(o.scopes)) throw new Error('google.connect: invalid scopes');
     requireOptionalService('google.connect', o.service);
-    return oauth.connect(widgetId, options as GoogleConnectOptions);
+    return oauth.connect(widgetId, options as unknown as GoogleConnectOptions);
   });
 
-  function googleServiceHandler(
-    channel: string,
-    fn: (widgetId: string, service?: GoogleServiceId) => unknown
-  ) {
-    ipcMain.handle(channel, (_e, widgetId: unknown, service?: unknown) => {
-      if (!isString(widgetId)) throw new Error(`${channel}: invalid arguments`);
+  const googleServiceHandler = (channel: string, fn: (widgetId: string, service?: GoogleServiceId) => unknown) =>
+    registerHandler(channel, [isString, { validator: () => true, optional: true }], (widgetId: string, service?: unknown) => {
       requireOptionalService(channel, service);
       return fn(widgetId, service as GoogleServiceId | undefined);
     });
-  }
+
   googleServiceHandler(IPC.GOOGLE_GET_TOKEN,    (w, s) => oauth.getToken(w, s));
   googleServiceHandler(IPC.GOOGLE_DISCONNECT,   (w, s) => oauth.disconnect(w, s));
   googleServiceHandler(IPC.GOOGLE_IS_CONNECTED, (w, s) => oauth.isConnected(w, s));
 
   // ─── Drive Sync handlers ───────────────────────────────────────────────────
-
-  ipcMain.handle(IPC.DRIVE_SYNC_GET_STATUS, () => syncManager.getStatus());
-  ipcMain.handle(IPC.DRIVE_SYNC_ENABLE, () => syncManager.enable());
-  ipcMain.handle(IPC.DRIVE_SYNC_DISABLE, () => syncManager.disable());
-  ipcMain.handle(IPC.DRIVE_SYNC_FORCE_PUSH, () => syncManager.forcePush());
-  ipcMain.handle(IPC.DRIVE_SYNC_FORCE_PULL, () => syncManager.forcePull());
-
+  registerHandler(IPC.DRIVE_SYNC_GET_STATUS, [], () => syncManager.getStatus());
+  registerHandler(IPC.DRIVE_SYNC_ENABLE, [], () => syncManager.enable());
+  registerHandler(IPC.DRIVE_SYNC_DISABLE, [], () => syncManager.disable());
+  registerHandler(IPC.DRIVE_SYNC_FORCE_PUSH, [], () => syncManager.forcePush());
+  registerHandler(IPC.DRIVE_SYNC_FORCE_PULL, [], () => syncManager.forcePull());
 }
