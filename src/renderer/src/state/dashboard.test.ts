@@ -85,6 +85,21 @@ describe('activeDashboard', () => {
   });
 });
 
+describe('load normalization', () => {
+  it('normalizes a stale activeDashboardId to dashboards[0] on load', async () => {
+    const staleState: AppState = {
+      version: 1,
+      dashboards: [{ id: 'default', name: 'Home', instances: [] }],
+      activeDashboardId: 'stale-id',
+    };
+    mockLoad.mockResolvedValue(staleState);
+
+    await getActions().load();
+
+    expect(getState().activeDashboardId).toBe('default');
+  });
+});
+
 describe('addDashboard', () => {
   it('adds a new dashboard and makes it active', () => {
     const id = getActions().addDashboard('Work');
@@ -178,6 +193,27 @@ describe('addInstance', () => {
 
     const instances = getState().dashboards[0].instances;
     expect(instances[1].layout.y).toBe(4);
+  });
+
+  it('adds widget to dashboards[0] when activeDashboardId is stale', () => {
+    const widget = makeWidget();
+    mockGetWidget.mockReturnValue(widget as ReturnType<typeof getWidget>);
+    mockDefaultSettingsFor.mockReturnValue({});
+
+    useDashboard.setState({
+      state: {
+        version: 1,
+        dashboards: [{ id: 'default', name: 'Home', instances: [] }],
+        activeDashboardId: 'stale-id',
+      },
+    });
+
+    const instanceId = getActions().addInstance('test-widget');
+    expect(instanceId).toBeTypeOf('string');
+
+    const instances = getState().dashboards[0].instances;
+    expect(instances).toHaveLength(1);
+    expect(instances[0].widgetId).toBe('test-widget');
   });
 });
 

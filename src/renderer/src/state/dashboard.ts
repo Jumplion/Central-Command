@@ -33,10 +33,17 @@ interface DashboardStore {
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
+function resolveActiveId(state: AppState): DashboardId {
+  return state.dashboards.some((d) => d.id === state.activeDashboardId)
+    ? state.activeDashboardId
+    : state.dashboards[0]?.id ?? state.activeDashboardId;
+}
+
 function patchActive(state: AppState, fn: (d: Dashboard) => Dashboard): AppState {
+  const activeId = resolveActiveId(state);
   return {
     ...state,
-    dashboards: state.dashboards.map((d) => (d.id === state.activeDashboardId ? fn(d) : d))
+    dashboards: state.dashboards.map((d) => (d.id === activeId ? fn(d) : d))
   };
 }
 
@@ -53,7 +60,8 @@ export const useDashboard = create<DashboardStore>((set, get) => {
 
   async load() {
     const s = await window.cc.state.load();
-    set({ state: s, loaded: true });
+    const activeDashboardId = resolveActiveId(s);
+    set({ state: { ...s, activeDashboardId }, loaded: true });
   },
 
   persist() {
@@ -70,7 +78,8 @@ export const useDashboard = create<DashboardStore>((set, get) => {
 
   activeDashboard() {
     const s = get().state;
-    return s.dashboards.find((d) => d.id === s.activeDashboardId) ?? s.dashboards[0];
+    const activeId = resolveActiveId(s);
+    return s.dashboards.find((d) => d.id === activeId) ?? s.dashboards[0];
   },
 
   setActiveDashboard(id) {
