@@ -69,6 +69,31 @@ function patchActive(state: AppState, fn: (d: Dashboard) => Dashboard): AppState
   };
 }
 
+function updateWidgetInstance(
+  state: AppState,
+  instanceId: InstanceId,
+  updater: (instance: WidgetInstance) => WidgetInstance
+): AppState {
+  const activeId = resolveActiveId(state);
+  let changed = false;
+
+  const dashboards = state.dashboards.map((dashboard) => {
+    if (dashboard.id !== activeId) return dashboard;
+
+    const instances = dashboard.instances.map((instance) => {
+      if (instance.instanceId !== instanceId) return instance;
+      const updated = updater(instance);
+      if (updated === instance) return instance;
+      changed = true;
+      return updated;
+    });
+
+    return changed ? { ...dashboard, instances } : dashboard;
+  });
+
+  return changed ? { ...state, dashboards } : state;
+}
+
 export const useDashboard = create<DashboardStore>((set, get) => {
   /** Apply a state transform and schedule persistence in one call. */
   function mutate(updater: (s: AppState) => AppState): void {
@@ -232,10 +257,7 @@ export const useDashboard = create<DashboardStore>((set, get) => {
 
   updateSettings(instanceId, settings) {
     mutate((s) =>
-      patchActive(s, (d) => ({
-        ...d,
-        instances: d.instances.map((i) => (i.instanceId === instanceId ? { ...i, settings } : i))
-      }))
+      updateWidgetInstance(s, instanceId, (i) => ({ ...i, settings }))
     );
   },
 
@@ -245,10 +267,7 @@ export const useDashboard = create<DashboardStore>((set, get) => {
       const current = active?.instances.find((i) => i.instanceId === instanceId);
       if (!current || current.title === title) return s;
 
-      return patchActive(s, (d) => ({
-        ...d,
-        instances: d.instances.map((i) => (i.instanceId === instanceId ? { ...i, title } : i))
-      }));
+      return updateWidgetInstance(s, instanceId, (i) => ({ ...i, title }));
     });
   }
   };
