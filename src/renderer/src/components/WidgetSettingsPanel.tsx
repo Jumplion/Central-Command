@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { SettingsField, WidgetInstance } from '@shared/types';
+import type { SettingsField, SettingsFieldValue, WidgetInstance } from '@shared/types';
 import type { Widget } from '@renderer/plugins/registry';
 import { useDashboard } from '@renderer/state/dashboard';
 
@@ -9,15 +9,17 @@ interface Props {
   onClose: () => void;
 }
 
+type FieldValue = SettingsFieldValue;
+
 export function WidgetSettingsPanel({ widget, instance, onClose }: Props) {
   const updateSettings = useDashboard((s) => s.updateSettings);
   const setTitle = useDashboard((s) => s.setTitle);
-  const [draft, setDraft] = useState<Record<string, unknown>>({ ...instance.settings });
+  const [draft, setDraft] = useState<Record<string, FieldValue>>({ ...instance.settings });
   const [titleDraft, setTitleDraft] = useState(instance.title ?? '');
 
   const fields = widget.manifest.settings ?? [];
 
-  function update(key: string, value: unknown) {
+  function update(key: string, value: FieldValue) {
     setDraft((d) => ({ ...d, [key]: value }));
   }
 
@@ -42,12 +44,12 @@ export function WidgetSettingsPanel({ widget, instance, onClose }: Props) {
             onChange={(e) => setTitleDraft(e.target.value)}
           />
         </label>
-        {fields.map((f) => (
+        {fields.map((field) => (
           <Field
-            key={f.key}
-            field={f}
-            value={draft[f.key] ?? ('default' in f ? f.default : undefined)}
-            onChange={(v) => update(f.key, v)}
+            key={field.key}
+            field={field}
+            value={draft[field.key] ?? ('default' in field ? field.default : undefined)}
+            onChange={(value) => update(field.key, value)}
           />
         ))}
       </div>
@@ -61,69 +63,141 @@ export function WidgetSettingsPanel({ widget, instance, onClose }: Props) {
 
 interface FieldProps {
   field: SettingsField;
-  value: unknown;
-  onChange: (v: unknown) => void;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
 }
 
 function Field({ field, value, onChange }: FieldProps) {
   switch (field.kind) {
     case 'string':
       return (
-        <label className="field">
-          <span>{field.label}</span>
-          {field.multiline ? (
-            <textarea
-              value={(value as string) ?? ''}
-              placeholder={field.placeholder}
-              onChange={(e) => onChange(e.target.value)}
-              rows={4}
-            />
-          ) : (
-            <input
-              value={(value as string) ?? ''}
-              placeholder={field.placeholder}
-              onChange={(e) => onChange(e.target.value)}
-            />
-          )}
-        </label>
+        <SettingsFieldString
+          field={field}
+          value={(value as string) ?? ''}
+          onChange={onChange}
+        />
       );
     case 'number':
       return (
-        <label className="field">
-          <span>{field.label}</span>
-          <input
-            type="number"
-            value={value === undefined || value === null ? '' : String(value)}
-            min={field.min}
-            max={field.max}
-            step={field.step}
-            onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
-          />
-        </label>
+        <SettingsFieldNumber
+          field={field}
+          value={value as number | undefined}
+          onChange={onChange}
+        />
       );
     case 'boolean':
       return (
-        <label className="field field-checkbox">
-          <input
-            type="checkbox"
-            checked={Boolean(value)}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          <span>{field.label}</span>
-        </label>
+        <SettingsFieldBoolean
+          field={field}
+          value={Boolean(value)}
+          onChange={onChange}
+        />
       );
     case 'select':
       return (
-        <label className="field">
-          <span>{field.label}</span>
-          <select value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)}>
-            {field.options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SettingsFieldSelect
+          field={field}
+          value={(value as string) ?? ''}
+          onChange={onChange}
+        />
       );
   }
+}
+
+function SettingsFieldString({
+  field,
+  value,
+  onChange,
+}: {
+  field: Extract<SettingsField, { kind: 'string' }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="field">
+      <span>{field.label}</span>
+      {field.multiline ? (
+        <textarea
+          value={value}
+          placeholder={field.placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          rows={4}
+        />
+      ) : (
+        <input
+          value={value}
+          placeholder={field.placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </label>
+  );
+}
+
+function SettingsFieldNumber({
+  field,
+  value,
+  onChange,
+}: {
+  field: Extract<SettingsField, { kind: 'number' }>;
+  value: number | undefined;
+  onChange: (value: number | undefined) => void;
+}) {
+  return (
+    <label className="field">
+      <span>{field.label}</span>
+      <input
+        type="number"
+        value={value === undefined ? '' : String(value)}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+        onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+      />
+    </label>
+  );
+}
+
+function SettingsFieldBoolean({
+  field,
+  value,
+  onChange,
+}: {
+  field: Extract<SettingsField, { kind: 'boolean' }>;
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="field field-checkbox">
+      <input
+        type="checkbox"
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span>{field.label}</span>
+    </label>
+  );
+}
+
+function SettingsFieldSelect({
+  field,
+  value,
+  onChange,
+}: {
+  field: Extract<SettingsField, { kind: 'select' }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="field">
+      <span>{field.label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {field.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }

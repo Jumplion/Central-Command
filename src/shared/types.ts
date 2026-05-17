@@ -47,7 +47,8 @@ export interface WidgetManifest {
   platforms?: ('desktop' | 'mobile')[];
 }
 
-export type WidgetSettings = Record<string, unknown>;
+export type SettingsFieldValue = string | number | boolean | undefined;
+export type WidgetSettings = Record<string, SettingsFieldValue>;
 
 export interface WidgetInstance {
   instanceId: InstanceId;
