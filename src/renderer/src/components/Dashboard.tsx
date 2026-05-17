@@ -100,7 +100,8 @@ export function Dashboard() {
           draggableCancel=".widget-actions"
           onDragStop={handleChange}
           onResizeStop={handleChange}
-          compactType="vertical"
+          compactType={null}
+          preventCollision={true}
         >
           {gridItems}
         </GridLayout>
