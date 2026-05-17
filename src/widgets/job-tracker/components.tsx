@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { StackedBarChart } from '@widgets/_shared/StackedBarChart';
 import type { Application, AppFormData, Status } from './types';
 import { STATUSES, STATUS_COLOR } from './types';
@@ -112,10 +112,29 @@ function deriveSourceFromLink(url: string): string {
   return '';
 }
 
-export function AppForm({ initial, onSave, onCancel }: {
+const normalizePrefix = (value: string) => value.trim().toLowerCase();
+
+function getSuggestion(items: string[] | undefined, value: string): string {
+  const prefix = normalizePrefix(value);
+  if (!items?.length || !prefix) return '';
+  return items.find((item) => {
+    const candidate = normalizePrefix(item);
+    return candidate.startsWith(prefix) && candidate !== prefix;
+  }) ?? '';
+}
+
+export function AppForm({
+  initial,
+  onSave,
+  onCancel,
+  companySuggestions,
+  roleSuggestions,
+}: {
   initial?: Application;
   onSave: (data: AppFormData) => Promise<void>;
   onCancel: () => void;
+  companySuggestions?: string[];
+  roleSuggestions?: string[];
 }) {
   const [form, setForm] = useState<AppFormData>({
     company: initial?.company ?? '',
@@ -133,6 +152,60 @@ export function AppForm({ initial, onSave, onCancel }: {
     (key: keyof AppFormData) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const [activeField, setActiveField] = useState<'company' | 'role' | null>(null);
+  const blurTimer = useRef<number | null>(null);
+
+  const companySuggestion = useMemo(
+    () => getSuggestion(companySuggestions, form.company),
+    [companySuggestions, form.company]
+  );
+
+  const roleSuggestion = useMemo(
+    () => getSuggestion(roleSuggestions, form.role),
+    [roleSuggestions, form.role]
+  );
+
+  const matchingCompanySuggestions = useMemo(
+    () => companySuggestions?.filter((item) => {
+      const prefix = normalizePrefix(form.company);
+      const candidate = normalizePrefix(item);
+      return prefix && candidate.startsWith(prefix) && candidate !== prefix;
+    }).slice(0, 5) ?? [],
+    [companySuggestions, form.company]
+  );
+
+  const matchingRoleSuggestions = useMemo(
+    () => roleSuggestions?.filter((item) => {
+      const prefix = normalizePrefix(form.role);
+      const candidate = normalizePrefix(item);
+      return prefix && candidate.startsWith(prefix) && candidate !== prefix;
+    }).slice(0, 5) ?? [],
+    [roleSuggestions, form.role]
+  );
+
+  const completeSuggestion = (
+    key: 'company' | 'role',
+    suggestion: string,
+  ) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Tab' || e.shiftKey || !suggestion) return;
+    e.preventDefault();
+    setForm((f) => ({ ...f, [key]: suggestion }));
+  };
+
+  const hideSuggestions = () => {
+    blurTimer.current = window.setTimeout(() => {
+      setActiveField(null);
+      blurTimer.current = null;
+    }, 100);
+  };
+
+  const keepSuggestions = () => {
+    if (blurTimer.current) {
+      window.clearTimeout(blurTimer.current);
+      blurTimer.current = null;
+    }
+  };
 
   const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const link = e.target.value;
@@ -163,8 +236,106 @@ export function AppForm({ initial, onSave, onCancel }: {
       }}
     >
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-        <input style={inp} placeholder="Company *" value={form.company} onChange={set('company')} required />
-        <input style={inp} placeholder="Role *" value={form.role} onChange={set('role')} required />
+        <div style={{ position: 'relative' }} onMouseEnter={keepSuggestions} onMouseLeave={hideSuggestions}>
+          <input
+            style={inp}
+            placeholder="Company *"
+            value={form.company}
+            onChange={(e) => { set('company')(e); setActiveField('company'); }}
+            onFocus={() => { keepSuggestions(); setActiveField('company'); }}
+            onBlur={hideSuggestions}
+            onKeyDown={completeSuggestion('company', companySuggestion)}
+            autoComplete="off"
+            required
+          />
+          {activeField === 'company' && matchingCompanySuggestions.length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: '100%',
+                marginTop: 6,
+                background: 'var(--panel-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
+                zIndex: 20,
+                overflow: 'hidden',
+              }}
+            >
+              {matchingCompanySuggestions.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setForm((f) => ({ ...f, company: item })); setActiveField(null); }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    font: 'inherit',
+                    color: 'var(--text)',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ position: 'relative' }} onMouseEnter={keepSuggestions} onMouseLeave={hideSuggestions}>
+          <input
+            style={inp}
+            placeholder="Role *"
+            value={form.role}
+            onChange={(e) => { set('role')(e); setActiveField('role'); }}
+            onFocus={() => { keepSuggestions(); setActiveField('role'); }}
+            onBlur={hideSuggestions}
+            onKeyDown={completeSuggestion('role', roleSuggestion)}
+            autoComplete="off"
+            required
+          />
+          {activeField === 'role' && matchingRoleSuggestions.length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: '100%',
+                marginTop: 6,
+                background: 'var(--panel-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
+                zIndex: 20,
+                overflow: 'hidden',
+              }}
+            >
+              {matchingRoleSuggestions.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setForm((f) => ({ ...f, role: item })); setActiveField(null); }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    font: 'inherit',
+                    color: 'var(--text)',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <select style={inp} value={form.status} onChange={set('status')}>
           {STATUSES.map((s) => <option key={s}>{s}</option>)}
         </select>
@@ -176,6 +347,12 @@ export function AppForm({ initial, onSave, onCancel }: {
         <input style={inp} placeholder="Link" value={form.link} onChange={handleLinkChange} />
         <input style={inp} placeholder="Req # (optional)" value={form.req_number} onChange={set('req_number')} />
       </div>
+      <datalist id="job-company-suggestions">
+        {companySuggestions?.map((company) => <option key={company} value={company} />)}
+      </datalist>
+      <datalist id="job-role-suggestions">
+        {roleSuggestions?.map((role) => <option key={role} value={role} />)}
+      </datalist>
       <textarea
         style={{ ...inp, resize: 'vertical', minHeight: 44 }}
         placeholder="Notes"

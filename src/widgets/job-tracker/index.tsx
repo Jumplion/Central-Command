@@ -48,6 +48,16 @@ function JobTracker({ api }: WidgetProps) {
     [apps, filter]
   );
 
+  const companySuggestions = useMemo(
+    () => [...new Set(apps.map((a) => a.company).filter(Boolean))],
+    [apps]
+  );
+
+  const roleSuggestions = useMemo(
+    () => [...new Set(apps.map((a) => a.role).filter(Boolean))],
+    [apps]
+  );
+
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(
       'INSERT INTO applications (company,role,status,applied_at,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?)',
@@ -162,7 +172,12 @@ function JobTracker({ api }: WidgetProps) {
       </div>
 
       {showAdd && (
-        <AppForm onSave={handleAdd} onCancel={() => setShowAdd(false)} />
+        <AppForm
+          onSave={handleAdd}
+          onCancel={() => setShowAdd(false)}
+          companySuggestions={companySuggestions}
+          roleSuggestions={roleSuggestions}
+        />
       )}
 
       {view === 'emails' ? (
@@ -197,7 +212,13 @@ function JobTracker({ api }: WidgetProps) {
                   editingId === app.id ? (
                     <tr key={app.id}>
                       <td colSpan={5} style={{ padding: '4px 0' }}>
-                        <AppForm initial={app} onSave={handleEdit(app)} onCancel={() => setEditingId(null)} />
+                        <AppForm
+                          initial={app}
+                          onSave={handleEdit(app)}
+                          onCancel={() => setEditingId(null)}
+                          companySuggestions={companySuggestions}
+                          roleSuggestions={roleSuggestions}
+                        />
                       </td>
                     </tr>
                   ) : (
