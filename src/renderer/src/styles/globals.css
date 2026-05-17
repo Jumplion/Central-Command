@@ -10,17 +10,9 @@
   --radius: 8px;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
+html, body, #root { height: 100%; margin: 0; padding: 0; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, sans-serif;
@@ -41,46 +33,16 @@ button {
   cursor: pointer;
   transition: background 0.15s ease;
 }
+button:hover { background: #232732; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.primary { background: var(--accent); color: #0b1220; border-color: transparent; }
+button.primary:hover { background: #84b6ff; }
+button.ghost { background: transparent; border-color: transparent; }
+button.ghost:hover { background: rgba(255, 255, 255, 0.05); }
+button.danger { color: var(--danger); }
+button.block { width: 100%; }
 
-button:hover {
-  background: #232732;
-}
-
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-button.primary {
-  background: var(--accent);
-  color: #0b1220;
-  border-color: transparent;
-}
-
-button.primary:hover {
-  background: #84b6ff;
-}
-
-button.ghost {
-  background: transparent;
-  border-color: transparent;
-}
-
-button.ghost:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-button.danger {
-  color: var(--danger);
-}
-
-button.block {
-  width: 100%;
-}
-
-input,
-textarea,
-select {
+input, textarea, select {
   font: inherit;
   background: var(--panel);
   color: var(--text);
@@ -89,10 +51,7 @@ select {
   padding: 6px 8px;
   width: 100%;
 }
-
-input:focus,
-textarea:focus,
-select:focus {
+input:focus, textarea:focus, select:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
@@ -103,21 +62,10 @@ code {
   border-radius: 4px;
   font-size: 0.9em;
 }
+pre { white-space: pre-wrap; word-break: break-word; }
 
-pre {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.app {
-  display: flex;
-  height: 100%;
-}
-
-.loading {
-  padding: 24px;
-  color: var(--text-dim);
-}
+.app { display: flex; height: 100%; }
+.loading { padding: 24px; color: var(--text-dim); }
 
 /* Sidebar */
 .sidebar {
@@ -131,37 +79,28 @@ pre {
   gap: 16px;
   transition: width 0.2s ease, padding 0.2s ease;
 }
-
 .sidebar.collapsed {
   width: 60px;
   flex: 0 0 60px;
   padding: 16px 8px;
   align-items: center;
 }
-
 .brand {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px;
 }
-
 .sidebar.collapsed .brand {
   flex-direction: column;
   gap: 0;
   width: 100%;
 }
-
-.brand-mark {
-  font-size: 18px;
-  color: var(--accent);
-}
-
+.brand-mark { font-size: 18px; color: var(--accent); }
 .sidebar-toggle {
   margin-left: auto;
   flex-shrink: 0;
 }
-
 .sidebar.collapsed .sidebar-toggle {
   margin-left: 0;
   margin-top: 8px;
@@ -186,18 +125,13 @@ pre {
   flex-direction: column;
   gap: 2px;
 }
-
 .dashboards li {
   display: flex;
   align-items: center;
   border-radius: var(--radius);
 }
-
-.dashboards li.active {
-  background: rgba(110, 168, 255, 0.12);
-}
-
-.dashboards li>button:first-child {
+.dashboards li.active { background: rgba(110, 168, 255, 0.12); }
+.dashboards li > button:first-child {
   flex: 1;
   text-align: left;
   background: transparent;
@@ -205,106 +139,18 @@ pre {
   padding: 8px 10px;
   border-radius: var(--radius);
 }
-
-.dashboards li input {
-  padding: 8px;
-}
-
-.sidebar-actions {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.dashboards li input { padding: 8px; }
+.sidebar-actions { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
 
 /* Main */
-.main {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.top-panel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-}
-
-.top-panel-tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.top-panel-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.top-panel-tab {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-}
-
-.top-panel-tab-button {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 8px 12px;
-  white-space: nowrap;
-}
-
-.top-panel-tab.active .top-panel-tab-button {
-  background: rgba(110, 168, 255, 0.15);
-  color: var(--accent);
-  border-color: transparent;
-}
-
-.top-panel-tab-input {
-  min-width: 140px;
-  border-radius: 999px;
-  padding: 8px 12px;
-}
-
-.top-panel-tab-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.top-panel-tab-actions button {
-  padding: 6px 10px;
-}
-
-.top-panel-add {
-  border-color: transparent;
-  padding: 8px 12px;
-}
-
-.dashboard {
-  flex: 1;
-  min-height: 0;
-}
-
+.main { flex: 1; min-width: 0; overflow: auto; }
+.dashboard { min-height: 100%; }
 .empty {
   padding: 64px 24px;
   text-align: center;
   color: var(--text-dim);
 }
-
-.empty h2 {
-  margin-bottom: 4px;
-  color: var(--text);
-}
+.empty h2 { margin-bottom: 4px; color: var(--text); }
 
 /* Widget */
 .widget {
@@ -318,7 +164,6 @@ pre {
   overflow: hidden;
   contain: layout style paint;
 }
-
 .widget-header {
   display: flex;
   align-items: center;
@@ -329,11 +174,7 @@ pre {
   user-select: none;
   background: var(--panel-2);
 }
-
-.widget-icon {
-  font-size: 14px;
-}
-
+.widget-icon { font-size: 14px; }
 .widget-title {
   flex: 1;
   font-weight: 600;
@@ -341,34 +182,16 @@ pre {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.widget-actions {
-  display: flex;
-  gap: 6px;
-  pointer-events: auto;
-}
-
-.widget-actions button {
-  padding: 6px 12px;
-  font-size: 16px;
-  pointer-events: auto;
-}
-
+.widget-actions { display: flex; gap: 6px; pointer-events: auto; }
+.widget-actions button { padding: 6px 12px; font-size: 16px; pointer-events: auto; }
 .widget-body {
   flex: 1;
   padding: 12px;
   overflow: auto;
   min-height: 0;
 }
-
-.widget-error {
-  color: var(--danger);
-  padding: 12px;
-}
-
-.widget-missing {
-  border-color: var(--danger);
-}
+.widget-error { color: var(--danger); padding: 12px; }
+.widget-missing { border-color: var(--danger); }
 
 /* Settings panel overlay */
 .settings-panel {
@@ -379,7 +202,6 @@ pre {
   flex-direction: column;
   z-index: 10;
 }
-
 .settings-header,
 .settings-footer {
   display: flex;
@@ -387,15 +209,8 @@ pre {
   align-items: center;
   padding: 8px 12px;
 }
-
-.settings-header {
-  border-bottom: 1px solid var(--border);
-}
-
-.settings-footer {
-  border-top: 1px solid var(--border);
-}
-
+.settings-header { border-bottom: 1px solid var(--border); }
+.settings-footer { border-top: 1px solid var(--border); }
 .settings-body {
   padding: 12px;
   overflow: auto;
@@ -404,27 +219,17 @@ pre {
   flex-direction: column;
   gap: 12px;
 }
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field>span {
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field > span {
   font-size: 12px;
   color: var(--text-dim);
 }
-
 .field-checkbox {
   flex-direction: row;
   align-items: center;
   gap: 8px;
 }
-
-.field-checkbox input {
-  width: auto;
-}
+.field-checkbox input { width: auto; }
 
 /* Modal */
 .modal-backdrop {
@@ -436,7 +241,6 @@ pre {
   justify-content: center;
   z-index: 100;
 }
-
 .modal {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -447,7 +251,6 @@ pre {
   flex-direction: column;
   overflow: hidden;
 }
-
 .modal header {
   display: flex;
   justify-content: space-between;
@@ -455,29 +258,15 @@ pre {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
-
-.modal header h2 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.modal .search {
-  margin: 12px 16px 0;
-  width: calc(100% - 32px);
-}
-
-.modal .empty {
-  padding: 24px 16px;
-  text-align: left;
-}
-
+.modal header h2 { margin: 0; font-size: 16px; }
+.modal .search { margin: 12px 16px 0; width: calc(100% - 32px); }
+.modal .empty { padding: 24px 16px; text-align: left; }
 .widget-list {
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
   overflow: auto;
 }
-
 .widget-list li {
   display: flex;
   align-items: center;
@@ -485,23 +274,17 @@ pre {
   padding: 12px 16px;
   border-top: 1px solid var(--border);
 }
-
 .widget-meta {
   display: flex;
   flex: 1;
   gap: 12px;
   align-items: flex-start;
 }
-
-.widget-meta strong {
-  display: block;
-}
-
+.widget-meta strong { display: block; }
 .widget-meta p {
   margin: 4px 0;
   color: var(--text-dim);
 }
-
 .widget-meta small {
   color: var(--text-dim);
   font-size: 11px;
@@ -512,40 +295,31 @@ pre {
   flex-direction: column;
   overflow: hidden;
 }
-
 .app.mobile .main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 56px;
-  /* height of mobile-nav */
+  padding-bottom: 56px; /* height of mobile-nav */
 }
-
 .dashboard.mobile {
   min-height: 100%;
   padding: 0;
 }
-
 .mobile-layout {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 12px;
 }
-
 .mobile-widget-row {
   width: 100%;
   min-height: 240px;
 }
-
 .mobile-widget-row .widget {
   height: 100%;
   min-height: 240px;
 }
-
 /* Mobile widget headers are not draggable */
-.app.mobile .widget-header {
-  cursor: default;
-}
+.app.mobile .widget-header { cursor: default; }
 
 /* Mobile nav bar */
 .mobile-nav {
@@ -563,7 +337,6 @@ pre {
   z-index: 200;
   gap: 8px;
 }
-
 .mobile-nav-dashboards {
   display: flex;
   flex: 1;
@@ -571,11 +344,7 @@ pre {
   overflow-x: auto;
   scrollbar-width: none;
 }
-
-.mobile-nav-dashboards::-webkit-scrollbar {
-  display: none;
-}
-
+.mobile-nav-dashboards::-webkit-scrollbar { display: none; }
 .mobile-nav-tab {
   white-space: nowrap;
   padding: 6px 12px;
@@ -583,19 +352,16 @@ pre {
   border-radius: var(--radius);
   flex-shrink: 0;
 }
-
 .mobile-nav-tab.active {
   background: rgba(110, 168, 255, 0.15);
   color: var(--accent);
   border-color: transparent;
 }
-
 .mobile-nav-actions {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
 }
-
 .mobile-nav-btn {
   padding: 6px 10px;
   font-size: 13px;
@@ -607,11 +373,9 @@ pre {
   opacity: 0.18 !important;
   border-radius: var(--radius);
 }
-
-.react-grid-item>.react-resizable-handle::after {
+.react-grid-item > .react-resizable-handle::after {
   border-color: var(--text-dim) !important;
 }
-
 /* Promote dragging/resizing items to their own compositor layer */
 .react-grid-item.react-draggable-dragging,
 .react-grid-item.resizing {
