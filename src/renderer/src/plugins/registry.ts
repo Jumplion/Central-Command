@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { WidgetManifest, WidgetSettings } from '@shared/types';
-import { isValidWidgetId } from '@shared/validation';
 import type { WidgetApi } from './api';
+import { getWidgetRegistrationError } from './registry-validator';
 
 declare const __MOBILE__: boolean | undefined;
 
@@ -24,27 +24,21 @@ const modules = import.meta.glob<{ default: Widget }>('../../../widgets/*/index.
 });
 
 const registry = new Map<string, Widget>();
+const registeredIds = new Set<string>();
 
 for (const filePath in modules) {
   const mod = modules[filePath];
-  const widget = mod?.default;
-  if (!widget?.manifest || !widget.Component) {
-    console.warn(`[plugins] skipping invalid widget at ${filePath}`);
+  const error = getWidgetRegistrationError(mod, registeredIds, CURRENT_PLATFORM);
+  if (error) {
+    if (error !== 'unsupported platform') {
+      console.warn(`[plugins] skipping widget at ${filePath}: ${error}`);
+    }
     continue;
   }
-  const id = widget.manifest.id;
-  if (!isValidWidgetId(id)) {
-    console.warn(`[plugins] invalid widget id "${id}" at ${filePath}`);
-    continue;
-  }
-  if (registry.has(id)) {
-    console.warn(`[plugins] duplicate widget id "${id}" at ${filePath}`);
-    continue;
-  }
-  if (widget.manifest.platforms && !widget.manifest.platforms.includes(CURRENT_PLATFORM)) {
-    continue;
-  }
-  registry.set(id, widget);
+
+  const widget = mod!.default;
+  registeredIds.add(widget.manifest.id);
+  registry.set(widget.manifest.id, widget);
 }
 
 const sortedWidgets: Widget[] = Array.from(registry.values()).sort((a, b) =>
