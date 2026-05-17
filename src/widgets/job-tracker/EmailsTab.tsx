@@ -4,6 +4,7 @@ import type { Application, AppFormData, EmailSuggestion, ParsedJobEmail, Status 
 import { STATUSES, STATUS_COLOR } from './types';
 import { AppForm, StatusBadge } from './components';
 import { fetchJobEmails, buildSuggestion } from './gmail';
+import { INSERT_APPLICATION, UPDATE_APPLICATION_STATUS, DISMISS_EMAIL_JOB } from './queries';
 
 // ─── Auth state machine ───────────────────────────────────────────────────
 
@@ -426,22 +427,19 @@ export function EmailsTab({
 
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(
-      'INSERT INTO applications (company,role,status,applied_at,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?)',
+      INSERT_APPLICATION,
       [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, data.req_number, Date.now()]
     );
     onAppAdded();
   };
 
   const handleUpdate = async (app: Application, newStatus: Status) => {
-    await api.sql.run(
-      'UPDATE applications SET status=?,last_updated=? WHERE id=?',
-      [newStatus, Date.now(), app.id]
-    );
+    await api.sql.run(UPDATE_APPLICATION_STATUS, [newStatus, Date.now(), app.id]);
     onAppUpdated();
   };
 
   const handleDismiss = async (emailId: number) => {
-    await api.sql.run('UPDATE email_jobs SET dismissed=1 WHERE id=?', [emailId]);
+    await api.sql.run(DISMISS_EMAIL_JOB, [emailId]);
     setEmails((prev) => prev.map((e) => e.id === emailId ? { ...e, dismissed: 1 } : e));
   };
 

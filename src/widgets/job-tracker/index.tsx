@@ -11,7 +11,7 @@ import {
   Th, Td, StatusBadge,
 } from './components';
 import { EmailsTab } from './EmailsTab';
-
+import { INSERT_APPLICATION, UPDATE_APPLICATION, DELETE_APPLICATION } from './queries';
 function JobTracker({ api }: WidgetProps) {
   const [apps, setApps] = useState<Application[]>([]);
   const [filter, setFilter] = useState<Status | 'All'>('All');
@@ -65,7 +65,7 @@ function JobTracker({ api }: WidgetProps) {
 
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(
-      'INSERT INTO applications (company,role,status,applied_at,location,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      INSERT_APPLICATION,
       [data.company, data.role, data.status, data.applied_at, data.location, data.source, data.link, data.notes, data.req_number, Date.now()]
     );
     await load();
@@ -74,7 +74,7 @@ function JobTracker({ api }: WidgetProps) {
 
   const handleEdit = (app: Application) => async (data: AppFormData) => {
     await api.sql.run(
-      'UPDATE applications SET company=?,role=?,status=?,applied_at=?,location=?,source=?,link=?,notes=?,req_number=?,last_updated=? WHERE id=?',
+      UPDATE_APPLICATION,
       [data.company, data.role, data.status, data.applied_at, data.location, data.source, data.link, data.notes, data.req_number, Date.now(), app.id]
     );
     await load();
@@ -82,7 +82,7 @@ function JobTracker({ api }: WidgetProps) {
   };
 
   const handleDelete = async (id: number) => {
-    await api.sql.run('DELETE FROM applications WHERE id=?', [id]);
+    await api.sql.run(DELETE_APPLICATION, [id]);
     await load();
   };
 
@@ -111,7 +111,7 @@ function JobTracker({ api }: WidgetProps) {
         if (!company || !role) continue;
         const safeStatus = (STATUSES as string[]).includes(status) ? status : 'Applied';
         await api.sql.run(
-          'INSERT INTO applications (company,role,status,applied_at,location,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?,?)',
+          INSERT_APPLICATION,
           [company, role, safeStatus, applied_at || today(), location, source, link, notes, req_number, Date.now()]
         );
       }
