@@ -129,18 +129,21 @@ export function AppForm({
   onCancel,
   companySuggestions,
   roleSuggestions,
+  locationSuggestions,
 }: {
   initial?: Application;
   onSave: (data: AppFormData) => Promise<void>;
   onCancel: () => void;
   companySuggestions?: string[];
   roleSuggestions?: string[];
+  locationSuggestions?: string[];
 }) {
   const [form, setForm] = useState<AppFormData>({
     company: initial?.company ?? '',
     role: initial?.role ?? '',
     status: initial?.status ?? 'Applied',
     applied_at: initial?.applied_at ?? today(),
+    location: initial?.location ?? '',
     source: initial?.source ?? '',
     link: initial?.link ?? '',
     notes: initial?.notes ?? '',
@@ -153,7 +156,7 @@ export function AppForm({
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const [activeField, setActiveField] = useState<'company' | 'role' | null>(null);
+  const [activeField, setActiveField] = useState<'company' | 'role' | 'location' | null>(null);
   const blurTimer = useRef<number | null>(null);
 
   const companySuggestion = useMemo(
@@ -164,6 +167,11 @@ export function AppForm({
   const roleSuggestion = useMemo(
     () => getSuggestion(roleSuggestions, form.role),
     [roleSuggestions, form.role]
+  );
+
+  const locationSuggestion = useMemo(
+    () => getSuggestion(locationSuggestions, form.location),
+    [locationSuggestions, form.location]
   );
 
   const matchingCompanySuggestions = useMemo(
@@ -184,8 +192,17 @@ export function AppForm({
     [roleSuggestions, form.role]
   );
 
+  const matchingLocationSuggestions = useMemo(
+    () => locationSuggestions?.filter((item) => {
+      const prefix = normalizePrefix(form.location);
+      const candidate = normalizePrefix(item);
+      return prefix && candidate.startsWith(prefix) && candidate !== prefix;
+    }).slice(0, 5) ?? [],
+    [locationSuggestions, form.location]
+  );
+
   const completeSuggestion = (
-    key: 'company' | 'role',
+    key: 'company' | 'role' | 'location',
     suggestion: string,
   ) => (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Tab' || e.shiftKey || !suggestion) return;
@@ -235,7 +252,7 @@ export function AppForm({
         gap: 6,
       }}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
         <div style={{ position: 'relative' }} onMouseEnter={keepSuggestions} onMouseLeave={hideSuggestions}>
           <input
             style={inp}
@@ -340,6 +357,55 @@ export function AppForm({
           {STATUSES.map((s) => <option key={s}>{s}</option>)}
         </select>
         <input style={inp} type="date" value={form.applied_at} onChange={set('applied_at')} />
+        <div style={{ position: 'relative' }} onMouseEnter={keepSuggestions} onMouseLeave={hideSuggestions}>
+          <input
+            style={inp}
+            placeholder="Location (optional)"
+            value={form.location}
+            onChange={(e) => { set('location')(e); setActiveField('location'); }}
+            onFocus={() => { keepSuggestions(); setActiveField('location'); }}
+            onBlur={hideSuggestions}
+            onKeyDown={completeSuggestion('location', locationSuggestion)}
+            autoComplete="off"
+          />
+          {activeField === 'location' && matchingLocationSuggestions.length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: '100%',
+                marginTop: 6,
+                background: 'var(--panel-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
+                zIndex: 20,
+                overflow: 'hidden',
+              }}
+            >
+              {matchingLocationSuggestions.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setForm((f) => ({ ...f, location: item })); setActiveField(null); }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    font: 'inherit',
+                    color: 'var(--text)',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <input style={inp} placeholder="Source (LinkedIn, referral…)" value={form.source} onChange={set('source')} list="job-sources" autoComplete="off" />
         <datalist id="job-sources">
           {COMMON_SOURCES.map((s) => <option key={s} value={s} />)}

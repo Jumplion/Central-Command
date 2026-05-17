@@ -17,6 +17,7 @@ export interface Application {
   role: string;
   status: Status;
   applied_at: string;
+  location: string;
   source: string;
   link: string;
   notes: string;

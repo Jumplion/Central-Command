@@ -83,6 +83,7 @@ function EmailRow({
         role: editedRole,
         status: editedStatus,
         applied_at: email.received_at.slice(0, 10),
+        location: '',
         source: 'Gmail',
         link: `https://mail.google.com/mail/u/0/#inbox/${email.thread_id}`,
         notes: '',

@@ -24,10 +24,10 @@ function JobTracker({ api }: WidgetProps) {
   const ready = useSqlInit(api, INIT_SQL + EMAIL_INIT_SQL, SCHEMA_MIGRATIONS);
 
   const load = useCallback(async () => {
-    const rows = await api.sql.all<Application>(
+    const rows = await api.sql.all<Application & Partial<Pick<Application, 'location'>>>(
       'SELECT * FROM applications ORDER BY last_updated DESC'
     );
-    setApps(rows);
+    setApps(rows.map((row) => ({ ...row, location: row.location ?? '' })));
   }, [api]);
 
   useEffect(() => {
@@ -58,10 +58,15 @@ function JobTracker({ api }: WidgetProps) {
     [apps]
   );
 
+  const locationSuggestions = useMemo(
+    () => [...new Set(apps.map((a) => a.location).filter(Boolean))],
+    [apps]
+  );
+
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(
-      'INSERT INTO applications (company,role,status,applied_at,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?)',
-      [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, data.req_number, Date.now()]
+      'INSERT INTO applications (company,role,status,applied_at,location,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      [data.company, data.role, data.status, data.applied_at, data.location, data.source, data.link, data.notes, data.req_number, Date.now()]
     );
     await load();
     setShowAdd(false);
@@ -69,8 +74,8 @@ function JobTracker({ api }: WidgetProps) {
 
   const handleEdit = (app: Application) => async (data: AppFormData) => {
     await api.sql.run(
-      'UPDATE applications SET company=?,role=?,status=?,applied_at=?,source=?,link=?,notes=?,req_number=?,last_updated=? WHERE id=?',
-      [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, data.req_number, Date.now(), app.id]
+      'UPDATE applications SET company=?,role=?,status=?,applied_at=?,location=?,source=?,link=?,notes=?,req_number=?,last_updated=? WHERE id=?',
+      [data.company, data.role, data.status, data.applied_at, data.location, data.source, data.link, data.notes, data.req_number, Date.now(), app.id]
     );
     await load();
     setEditingId(null);
@@ -82,8 +87,8 @@ function JobTracker({ api }: WidgetProps) {
   };
 
   const handleExportCSV = () => {
-    const headers = ['company', 'role', 'status', 'applied_at', 'source', 'link', 'notes', 'req_number'];
-    const rows = apps.map((a) => [a.company, a.role, a.status, a.applied_at, a.source, a.link, a.notes, a.req_number]);
+    const headers = ['company', 'role', 'status', 'applied_at', 'location', 'source', 'link', 'notes', 'req_number'];
+    const rows = apps.map((a) => [a.company, a.role, a.status, a.applied_at, a.location, a.source, a.link, a.notes, a.req_number]);
     exportCsv(headers, rows, 'applications.csv');
   };
 
@@ -98,12 +103,16 @@ function JobTracker({ api }: WidgetProps) {
       for (const line of lines.slice(1)) {
         const fields = parseCSVLine(line);
         if (fields.length < 4) continue;
-        const [company, role, status, applied_at, source = '', link = '', notes = '', req_number = ''] = fields;
+        const [company, role, status, applied_at] = fields;
+        const [location, source, link, notes, req_number] =
+          fields.length === 9
+            ? fields.slice(4) as [string, string, string, string, string]
+            : ['', fields[4] ?? '', fields[5] ?? '', fields[6] ?? '', fields[7] ?? ''];
         if (!company || !role) continue;
         const safeStatus = (STATUSES as string[]).includes(status) ? status : 'Applied';
         await api.sql.run(
-          'INSERT INTO applications (company,role,status,applied_at,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?)',
-          [company, role, safeStatus, applied_at || today(), source, link, notes, req_number, Date.now()]
+          'INSERT INTO applications (company,role,status,applied_at,location,source,link,notes,req_number,last_updated) VALUES (?,?,?,?,?,?,?,?,?,?)',
+          [company, role, safeStatus, applied_at || today(), location, source, link, notes, req_number, Date.now()]
         );
       }
       await load();
@@ -177,6 +186,7 @@ function JobTracker({ api }: WidgetProps) {
           onCancel={() => setShowAdd(false)}
           companySuggestions={companySuggestions}
           roleSuggestions={roleSuggestions}
+          locationSuggestions={locationSuggestions}
         />
       )}
 
@@ -201,6 +211,7 @@ function JobTracker({ api }: WidgetProps) {
                 <tr style={{ color: 'var(--text-dim)' }}>
                   <Th>Company</Th>
                   <Th>Role</Th>
+                  <Th>Location</Th>
                   <Th>Status</Th>
                   <Th>Applied</Th>
                   <Th>Req #</Th>
@@ -211,13 +222,14 @@ function JobTracker({ api }: WidgetProps) {
                 {filtered.map((app) =>
                   editingId === app.id ? (
                     <tr key={app.id}>
-                      <td colSpan={5} style={{ padding: '4px 0' }}>
+                      <td colSpan={7} style={{ padding: '4px 0' }}>
                         <AppForm
                           initial={app}
                           onSave={handleEdit(app)}
                           onCancel={() => setEditingId(null)}
                           companySuggestions={companySuggestions}
                           roleSuggestions={roleSuggestions}
+                          locationSuggestions={locationSuggestions}
                         />
                       </td>
                     </tr>
@@ -234,6 +246,7 @@ function JobTracker({ api }: WidgetProps) {
                     >
                       <Td>{app.company}</Td>
                       <Td>{app.role}</Td>
+                      <Td>{app.location}</Td>
                       <Td><StatusBadge status={app.status} /></Td>
                       <Td>{app.applied_at}</Td>
                       <Td>{app.req_number}</Td>
