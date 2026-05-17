@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Sidebar } from './components/Sidebar';
+import { useEffect } from 'react';
 import { MobileNav } from './components/MobileNav';
+import { TopPanel } from './components/TopPanel';
 import { Dashboard } from './components/Dashboard';
 import { useDashboard } from './state/dashboard';
 
@@ -11,7 +11,6 @@ export default function App() {
   const load = useDashboard((s) => s.load);
   const loaded = useDashboard((s) => s.loaded);
   const applyRemoteState = useDashboard((s) => s.applyRemoteState);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     void load();
@@ -42,8 +41,8 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <main className="main">
+        <TopPanel />
         <Dashboard />
       </main>
     </div>
