@@ -94,30 +94,62 @@ function scoped(instanceId: InstanceId, key: string): string {
   return `${instanceId}${SCOPE_SEP}${key}`;
 }
 
+export function createKvApi(widgetId: WidgetId, instanceId: InstanceId): WidgetApi['kv'] {
+  return {
+    get: <T,>(key: string) =>
+      window.cc.kv.get(widgetId, scoped(instanceId, key)) as Promise<T | undefined>,
+    set: (key, value) => window.cc.kv.set(widgetId, scoped(instanceId, key), value),
+    del: (key) => window.cc.kv.del(widgetId, scoped(instanceId, key)),
+    keys: async () => {
+      const prefix = instanceId + SCOPE_SEP;
+      const prefixed = await window.cc.kv.keysWithPrefix(widgetId, prefix);
+      return prefixed.map((k) => k.slice(prefix.length));
+    },
+  };
+}
+
+export function createSqlApi(widgetId: WidgetId): WidgetApi['sql'] {
+  return {
+    run: (sql, params = []) => window.cc.sql.run(widgetId, sql, params),
+    all: <T,>(sql: string, params: unknown[] = []) =>
+      window.cc.sql.all(widgetId, sql, params) as Promise<T[]>,
+    get: <T,>(sql: string, params: unknown[] = []) =>
+      window.cc.sql.get(widgetId, sql, params) as Promise<T | undefined>,
+    exec: (sql) => window.cc.sql.exec(widgetId, sql),
+    runBatch: (items) => window.cc.sql.runBatch(widgetId, items),
+  };
+}
+
+export function createGoogleApi(widgetId: WidgetId): WidgetApi['google'] {
+  return {
+    services: window.cc.google.services,
+    connect: (options) => window.cc.google.connect(widgetId, options),
+    getToken: (service) => window.cc.google.getToken(widgetId, service),
+    disconnect: (service) => window.cc.google.disconnect(widgetId, service),
+    isConnected: (service) => window.cc.google.isConnected(widgetId, service),
+    shared: {
+      connect: (options) => window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options),
+      getToken: (service) => window.cc.google.getToken(SHARED_GOOGLE_WIDGET_ID, service),
+      isConnected: (service) => window.cc.google.isConnected(SHARED_GOOGLE_WIDGET_ID, service),
+      disconnect: (service) => window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID, service),
+      hasCreds: (service) => window.cc.secrets.has(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service)),
+      reconnect: async (service) => {
+        const credsRaw = await window.cc.secrets.get(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service));
+        const options = getGoogleReconnectOptions(credsRaw, service);
+        if (!options) return false;
+        await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options);
+        return true;
+      },
+    },
+  };
+}
+
 export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): WidgetApi {
   return {
     widgetId,
     instanceId,
-    kv: {
-      get: <T,>(key: string) =>
-        window.cc.kv.get(widgetId, scoped(instanceId, key)) as Promise<T | undefined>,
-      set: (key, value) => window.cc.kv.set(widgetId, scoped(instanceId, key), value),
-      del: (key) => window.cc.kv.del(widgetId, scoped(instanceId, key)),
-      keys: async () => {
-        const prefix = instanceId + SCOPE_SEP;
-        const prefixed = await window.cc.kv.keysWithPrefix(widgetId, prefix);
-        return prefixed.map((k) => k.slice(prefix.length));
-      }
-    },
-    sql: {
-      run: (sql, params = []) => window.cc.sql.run(widgetId, sql, params),
-      all: <T,>(sql: string, params: unknown[] = []) =>
-        window.cc.sql.all(widgetId, sql, params) as Promise<T[]>,
-      get: <T,>(sql: string, params: unknown[] = []) =>
-        window.cc.sql.get(widgetId, sql, params) as Promise<T | undefined>,
-      exec: (sql) => window.cc.sql.exec(widgetId, sql),
-      runBatch: (items) => window.cc.sql.runBatch(widgetId, items)
-    },
+    kv: createKvApi(widgetId, instanceId),
+    sql: createSqlApi(widgetId),
     shell: window.cc.shell,
     dialog: window.cc.dialog,
     net: {
@@ -134,7 +166,7 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
           ok: res.ok,
         });
         return res;
-      }
+      },
     },
     secrets: {
       get: (key) => window.cc.secrets.get(widgetId, key),
@@ -142,26 +174,6 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
       del: (key) => window.cc.secrets.del(widgetId, key),
       has: (key) => window.cc.secrets.has(widgetId, key),
     },
-    google: {
-      services: window.cc.google.services,
-      connect: (options) => window.cc.google.connect(widgetId, options),
-      getToken: (service) => window.cc.google.getToken(widgetId, service),
-      disconnect: (service) => window.cc.google.disconnect(widgetId, service),
-      isConnected: (service) => window.cc.google.isConnected(widgetId, service),
-      shared: {
-        connect: (options) => window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options),
-        getToken: (service) => window.cc.google.getToken(SHARED_GOOGLE_WIDGET_ID, service),
-        isConnected: (service) => window.cc.google.isConnected(SHARED_GOOGLE_WIDGET_ID, service),
-        disconnect: (service) => window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID, service),
-        hasCreds: (service) => window.cc.secrets.has(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service)),
-        reconnect: async (service) => {
-          const credsRaw = await window.cc.secrets.get(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service));
-          const options = getGoogleReconnectOptions(credsRaw, service);
-          if (!options) return false;
-          await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options);
-          return true;
-        },
-      },
-    },
+    google: createGoogleApi(widgetId),
   };
 }
