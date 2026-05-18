@@ -30,7 +30,6 @@ export class SqliteStore {
   }
 
   private dbFor(widgetId: string): Database.Database {
-    assertValidWidgetId(widgetId);
     let db = this.dbs.get(widgetId);
     if (db) return db;
     const dir = widgetDir(this.root, widgetId);

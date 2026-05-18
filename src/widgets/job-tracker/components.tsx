@@ -6,7 +6,8 @@ import { STATUSES, STATUS_COLOR } from './types';
 
 export { INIT_SQL, EMAIL_INIT_SQL, SCHEMA_MIGRATIONS } from './schema';
 
-export const today = (): string => new Date().toISOString().slice(0, 10);
+import { today } from '@shared/csv';
+export { today };
 
 export function StatusBar({
   counts, total, filter, onFilter,

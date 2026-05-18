@@ -1,6 +1,4 @@
-export { parseCSVLine } from '@shared/csv';
-
-export const today = () => new Date().toISOString().slice(0, 10);
+export { parseCSVLine, today } from '@shared/csv';
 
 export function formatAgo(ts: number | undefined): string {
   if (!ts) return 'never';

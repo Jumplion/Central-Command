@@ -49,10 +49,8 @@ function debugLog(event: string, details: Record<string, unknown>): void {
 
 function normalizeState(state: AppState): AppState {
   const dashboards = state.dashboards.length > 0 ? state.dashboards : DEFAULT_STATE.dashboards;
-  const activeDashboardId = dashboards.some((d) => d.id === state.activeDashboardId)
-    ? state.activeDashboardId
-    : dashboards[0].id;
-  return { ...state, dashboards, activeDashboardId };
+  const intermediate = { ...state, dashboards };
+  return { ...intermediate, activeDashboardId: resolveActiveId(intermediate) };
 }
 
 function resolveActiveId(state: AppState): DashboardId {

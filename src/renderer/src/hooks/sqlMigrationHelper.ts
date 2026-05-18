@@ -29,25 +29,9 @@ export function createMigration(table: string, column: string, sql: string): Sql
   if (!sql.toLowerCase().includes('add column')) {
     throw new Error(`createMigration: sql must ADD a column, got: ${sql}`);
   }
-  if (!column.includes(column)) {
+  if (!sql.includes(column)) {
     console.warn(`createMigration: column name "${column}" does not appear in sql statement`);
   }
   return { table, column, sql };
 }
 
-/**
- * Creates an empty migrations array (for widgets with no migrations yet).
- * Useful as a placeholder for future migrations.
- *
- * @example
- * ```ts
- * export const MIGRATIONS = emptyMigrations();
- * // Later, you can add:
- * // export const MIGRATIONS = [
- * //   createMigration('items', 'newField', '...'),
- * // ];
- * ```
- */
-export function emptyMigrations(): SqlMigration[] {
-  return [];
-}

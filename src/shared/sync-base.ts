@@ -69,17 +69,13 @@ export abstract class SyncManagerBase {
   }
 
   async forcePush(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      this._enqueue(async () => { await this._doUploadAll(); });
-      this._queue.then(resolve).catch(reject);
-    });
+    this._enqueue(async () => { await this._doUploadAll(); });
+    return this._queue;
   }
 
   async forcePull(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      this._enqueue(async () => { await this._doPull(); });
-      this._queue.then(resolve).catch(reject);
-    });
+    this._enqueue(async () => { await this._doPull(); });
+    return this._queue;
   }
 
   async initialSync(): Promise<void> {

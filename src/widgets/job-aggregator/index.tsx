@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
+import { useSqlInit } from '@renderer/hooks/useSqlInit';
 
 import type { SavedJob, CompanyFeed, FeedJob } from './types';
 import { DEFAULT_FEEDS, SEED_VERSION, INIT_SQL } from './constants';
@@ -11,20 +12,14 @@ import { BoardsTab } from './BoardsTab';
 
 function JobAggregator({ api, settings }: WidgetProps) {
   const [tab, setTab]           = useState<'search' | 'saved' | 'boards'>('search');
-  const [ready, setReady]       = useState(false);
+
+  const ready = useSqlInit(api, INIT_SQL);
 
   // Shared state lifted up so tabs can read/trigger refreshes
   const [savedJobs, setSavedJobs]     = useState<SavedJob[]>([]);
   const savedIds = useMemo(() => new Set(savedJobs.map((r) => r.job_id)), [savedJobs]);
   const [feeds, setFeeds]             = useState<CompanyFeed[]>([]);
   const [feedJobs, setFeedJobs]       = useState<Record<number, FeedJob[]>>({});
-
-  const ensureColumn = useCallback(async (table: string, column: string, alterSql: string) => {
-    const cols = await api.sql.all<{ name: string }>(`PRAGMA table_info(${table})`);
-    if (!cols.some((c) => c.name === column)) {
-      await api.sql.run(alterSql, []);
-    }
-  }, [api]);
 
   const loadSaved = useCallback(async () => {
     const rows = await api.sql.all<SavedJob>('SELECT * FROM saved_jobs ORDER BY saved_at DESC');
@@ -62,15 +57,13 @@ function JobAggregator({ api, settings }: WidgetProps) {
   }, [api]);
 
   useEffect(() => {
-    api.sql.exec(INIT_SQL).then(async () => {
-      // Migrations for columns added after initial release
-      await ensureColumn('company_feeds', 'company_type', "ALTER TABLE company_feeds ADD COLUMN company_type TEXT NOT NULL DEFAULT 'other'");
-      await ensureColumn('feed_jobs', 'ignored', 'ALTER TABLE feed_jobs ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0');
+    if (!ready) return;
+    const init = async () => {
       await seedDefaultFeeds();
       await Promise.all([loadSaved(), loadFeeds()]);
-      setReady(true);
-    });
-  }, []);
+    };
+    void init();
+  }, [ready]);
 
   if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
+import { useSqlInit } from '@renderer/hooks/useSqlInit';
 import type { Audition, AuditionFormData, CastingSite, ProjectType, Status } from './types';
 import { INIT_SQL, PROJECT_TYPES, STATUSES, CSV_HEADERS } from './constants';
 import { parseCSVLine, today } from './helpers';
@@ -20,8 +21,9 @@ function AuditionAggregator({ api }: WidgetProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [view, setView] = useState<'list' | 'chart'>('list');
   const [importing, setImporting] = useState(false);
-  const [ready, setReady] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+
+  const ready = useSqlInit(api, INIT_SQL);
 
   const load = useCallback(async () => {
     const rows = await api.sql.all<Audition>(
@@ -38,11 +40,9 @@ function AuditionAggregator({ api }: WidgetProps) {
   }, [api]);
 
   useEffect(() => {
-    api.sql.exec(INIT_SQL).then(async () => {
-      await Promise.all([load(), loadSiteChecks()]);
-      setReady(true);
-    });
-  }, []);
+    if (!ready) return;
+    void Promise.all([load(), loadSiteChecks()]);
+  }, [ready]);
 
   const statusCounts = STATUSES.reduce<Record<Status, number>>(
     (acc, s) => { acc[s] = auds.filter((a) => a.status === s).length; return acc; },

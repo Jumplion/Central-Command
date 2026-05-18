@@ -12,7 +12,7 @@ cd "src/widgets/$WIDGET_ID"
 
 # Create constants.ts with the correct schema pattern
 cat > constants.ts << 'EOF'
-import { createMigration, emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
+import { createMigration } from '@renderer/hooks/sqlMigrationHelper';
 import type { SqlMigration } from '@renderer/hooks/useSqlInit';
 
 // ─── SQL Schema ────────────────────────────────────────────────────────────
@@ -38,13 +38,13 @@ export const INIT_SQL = `
  * Important: Only add columns that were NOT in INIT_SQL.
  * The useSqlInit hook will validate this and throw an error if there's a conflict.
  * 
- * When you need to add a new column in a later version, replace emptyMigrations() with:
+ * When you need to add a new column in a later version, populate the array:
  * 
  *   export const MIGRATIONS: SqlMigration[] = [
  *     createMigration('items', 'priority', 'ALTER TABLE items ADD COLUMN priority INTEGER DEFAULT 0'),
  *   ];
  */
-export const MIGRATIONS: SqlMigration[] = emptyMigrations();
+export const MIGRATIONS: SqlMigration[] = [];
 EOF
 
 # Create types.ts

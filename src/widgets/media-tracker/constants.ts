@@ -1,5 +1,4 @@
 import type { FormState, LinkRelation, MediaStatus, MediaType, StatusFilter } from './types';
-import { emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
 import type { SqlMigration } from '@renderer/hooks/useSqlInit';
 
 export const MEDIA_TYPES: { value: MediaType; label: string; emoji: string }[] = [
@@ -93,7 +92,7 @@ export const INIT_SQL = `
   );
 `;
 
-export const MIGRATIONS: SqlMigration[] = emptyMigrations();
+export const MIGRATIONS: SqlMigration[] = [];
 // When adding columns after v1.0, replace with:
 // export const MIGRATIONS: SqlMigration[] = [
 //   createMigration('media_items', 'newColumn', 'ALTER TABLE media_items ADD COLUMN newColumn TEXT'),
