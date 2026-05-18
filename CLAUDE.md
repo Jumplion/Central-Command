@@ -13,6 +13,15 @@ npm run test:coverage # Run tests with v8 coverage report
 npm run package      # Build + package with electron-builder
 ```
 
+## Setup & Requirements
+
+**Node.js:** The project requires Node.js 20.19.0 or higher (see `package.json#engines.node`). Specifically:
+- ✅ Node 20.19.0+
+- ✅ Node 22.12.0+
+- ✅ Node 24.0.0+
+
+Use `node --version` to check your version. Install a compatible version via [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://fnm.io/) if needed.
+
 There is a Vitest unit test suite. Run `npm run test` before committing changes to `src/shared/`, `src/main/storage/`, or `src/main/ipc.ts`.
 
 ## Architecture
