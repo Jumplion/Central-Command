@@ -50,4 +50,33 @@ describe('getWidgetRegistrationError', () => {
     const usedIds = new Set<string>(['foo']);
     expect(getWidgetRegistrationError(widget, usedIds, currentPlatform)).toBe('duplicate widget id "foo"');
   });
+
+  it('rejects a non-string manifest.id', () => {
+    const widget = {
+      default: {
+        manifest: { id: 123, name: 'Foo', version: '0.1.0', defaultSize: { w: 1, h: 1 } },
+        Component: () => null
+      }
+    };
+    expect(getWidgetRegistrationError(widget, new Set(), currentPlatform)).toBe('manifest.id must be a string');
+  });
+
+  it('rejects a widget with no Component', () => {
+    const widget = {
+      default: {
+        manifest: { id: 'foo', name: 'Foo', version: '0.1.0', defaultSize: { w: 1, h: 1 } },
+      }
+    };
+    expect(getWidgetRegistrationError(widget, new Set(), currentPlatform)).toBe('export is not a valid widget');
+  });
+
+  it('accepts a widget that targets the current platform explicitly', () => {
+    const widget = {
+      default: {
+        manifest: { id: 'baz', name: 'Baz', version: '0.1.0', defaultSize: { w: 1, h: 1 }, platforms: ['desktop'] },
+        Component: () => null
+      }
+    };
+    expect(getWidgetRegistrationError(widget, new Set(), currentPlatform)).toBeUndefined();
+  });
 });

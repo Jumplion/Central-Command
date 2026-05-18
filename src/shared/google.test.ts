@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   GOOGLE_SERVICES,
+  isGoogleServiceId,
+  getGoogleConnectionId,
   getGoogleCredsKey,
   getGoogleTokenKey,
   resolveGoogleScopes,
@@ -95,5 +97,47 @@ describe('stored Google creds helpers', () => {
       getGoogleReconnectOptions(JSON.stringify({ clientId: 'id', clientSecret: 'secret' }), 'gmail'),
     ).toEqual({ clientId: 'id', clientSecret: 'secret', service: 'gmail' });
     expect(getGoogleReconnectOptions(null, 'gmail')).toBeNull();
+  });
+});
+
+describe('isGoogleServiceId', () => {
+  it('returns true for every built-in service id', () => {
+    for (const id of Object.keys(GOOGLE_SERVICES)) {
+      expect(isGoogleServiceId(id)).toBe(true);
+    }
+  });
+
+  it('returns false for an unknown string', () => {
+    expect(isGoogleServiceId('sheets')).toBe(false);
+    expect(isGoogleServiceId('')).toBe(false);
+  });
+
+  it('returns false for non-string values', () => {
+    expect(isGoogleServiceId(null)).toBe(false);
+    expect(isGoogleServiceId(42)).toBe(false);
+    expect(isGoogleServiceId(undefined)).toBe(false);
+    expect(isGoogleServiceId({})).toBe(false);
+  });
+});
+
+describe('getGoogleConnectionId', () => {
+  it('returns "default" when no service is provided', () => {
+    expect(getGoogleConnectionId()).toBe('default');
+    expect(getGoogleConnectionId(undefined)).toBe('default');
+  });
+
+  it('returns the service id when a service is provided', () => {
+    expect(getGoogleConnectionId('drive')).toBe('drive');
+    expect(getGoogleConnectionId('gmail')).toBe('gmail');
+  });
+});
+
+describe('getGoogleCredsKey', () => {
+  it('defaults to "default" connection when no service is provided', () => {
+    expect(getGoogleCredsKey()).toBe('google_oauth_creds:default');
+  });
+
+  it('uses the service id as the connection suffix', () => {
+    expect(getGoogleCredsKey('drive')).toBe('google_oauth_creds:drive');
   });
 });

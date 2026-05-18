@@ -159,6 +159,14 @@ describe('invalid widgetId', () => {
   it('throws for ids with uppercase letters', async () => {
     await expect(store.run('UpperCase', 'SELECT 1')).rejects.toThrow();
   });
+
+  it('throws for ids with special characters', async () => {
+    await expect(store.run('bad!id', 'SELECT 1')).rejects.toThrow(/Invalid widget id/);
+  });
+
+  it('throws for ids starting with a hyphen', async () => {
+    await expect(store.all('-bad', 'SELECT 1')).rejects.toThrow(/Invalid widget id/);
+  });
 });
 
 describe('backup', () => {

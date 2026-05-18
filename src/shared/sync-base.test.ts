@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DRIVE_STATE_FILE,
   SYNC_POLL_INTERVAL_MS,
+  SyncManagerBase,
   dbWidgetIdFromDriveName,
   driveDbName,
   driveKvName,
   kvWidgetIdFromDriveName,
+  type IDriveSync,
 } from './sync-base';
 
 describe('SYNC_POLL_INTERVAL_MS', () => {
@@ -89,5 +91,188 @@ describe('dbWidgetIdFromDriveName', () => {
 
   it('returns null for an empty string', () => {
     expect(dbWidgetIdFromDriveName('')).toBeNull();
+  });
+});
+
+// ─── SyncManagerBase concrete behaviour ───────────────────────────────────────
+
+/** Minimal concrete subclass for testing base class logic. */
+class TestSyncManager extends SyncManagerBase {
+  readonly notifications: boolean[] = [];
+  readonly uploadAllCalls: number[] = [];
+  readonly uploadDbCalls: string[] = [];
+  private _mockDrive: IDriveSync;
+
+  constructor(drive: IDriveSync) {
+    super();
+    this._mockDrive = drive;
+  }
+
+  protected _drive() { return this._mockDrive; }
+  protected async _doUploadAll() { this.uploadAllCalls.push(Date.now()); }
+  protected async _doPull() {}
+  protected async _uploadDb(widgetId: string) { this.uploadDbCalls.push(widgetId); }
+  protected async _isRemoteNewer(_localPath: string, _remoteMs: number) { return false; }
+  protected _notifyWithFlag(flag: boolean) { this.notifications.push(flag); }
+
+  /** Expose queue to allow tests to drain it. */
+  get queue(): Promise<void> { return (this as unknown as { _queue: Promise<void> })._queue; }
+
+  /** Expose protected trigger methods for whitebox tests. */
+  triggerKvFlushed(widgetId: string) { this._onKvFlushed(widgetId); }
+  triggerDbWritten(widgetId: string) { this._onDbWritten(widgetId); }
+}
+
+function makeDrive(connected = false): IDriveSync {
+  return {
+    isConnected: vi.fn().mockResolvedValue(connected),
+    listFiles: vi.fn().mockResolvedValue([]),
+    downloadFile: vi.fn().mockResolvedValue(''),
+    upsertFile: vi.fn().mockResolvedValue('file-id'),
+  };
+}
+
+describe('SyncManagerBase', () => {
+  let manager: TestSyncManager;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    manager = new TestSyncManager(makeDrive());
+  });
+
+  afterEach(() => {
+    manager.dispose();
+    vi.useRealTimers();
+  });
+
+  describe('getStatus', () => {
+    it('returns a fresh copy on each call', () => {
+      const a = manager.getStatus();
+      const b = manager.getStatus();
+      expect(a).not.toBe(b);
+      expect(a).toEqual(b);
+    });
+
+    it('starts with state "disabled" and enabled=false', () => {
+      const { state, enabled } = manager.getStatus();
+      expect(state).toBe('disabled');
+      expect(enabled).toBe(false);
+    });
+  });
+
+  describe('enable / disable', () => {
+    it('enable transitions state to "idle" and sets enabled=true', () => {
+      manager.enable();
+      const { state, enabled } = manager.getStatus();
+      expect(state).toBe('idle');
+      expect(enabled).toBe(true);
+    });
+
+    it('disable transitions state to "disabled" and sets enabled=false', () => {
+      manager.enable();
+      manager.disable();
+      const { state, enabled } = manager.getStatus();
+      expect(state).toBe('disabled');
+      expect(enabled).toBe(false);
+    });
+
+    it('disable cancels polling so no further pulls fire', () => {
+      const drive = makeDrive();
+      const m = new TestSyncManager(drive);
+      m.enable();
+      m.disable();
+      vi.advanceTimersByTime(SYNC_POLL_INTERVAL_MS * 3);
+      expect(drive.listFiles).not.toHaveBeenCalled();
+      m.dispose();
+    });
+
+    it('emits at least one notification on enable', () => {
+      const before = manager.notifications.length;
+      manager.enable();
+      expect(manager.notifications.length).toBeGreaterThan(before);
+    });
+
+    it('emits at least one notification on disable', () => {
+      manager.enable();
+      const before = manager.notifications.length;
+      manager.disable();
+      expect(manager.notifications.length).toBeGreaterThan(before);
+    });
+  });
+
+  describe('initialSync', () => {
+    it('enables when the drive reports connected', async () => {
+      const m = new TestSyncManager(makeDrive(true));
+      await m.initialSync();
+      expect(m.getStatus().enabled).toBe(true);
+      m.dispose();
+    });
+
+    it('does not enable when the drive reports disconnected', async () => {
+      await manager.initialSync();
+      expect(manager.getStatus().enabled).toBe(false);
+    });
+  });
+
+  describe('dispose', () => {
+    it('prevents queued tasks from running after disposal', async () => {
+      manager.enable();
+      manager.dispose();
+      const callsBefore = manager.uploadAllCalls.length;
+      manager.triggerKvFlushed('w');
+      await manager.queue;
+      expect(manager.uploadAllCalls.length).toBe(callsBefore);
+    });
+  });
+
+  describe('_onKvFlushed', () => {
+    it('does not enqueue an upload when disabled', async () => {
+      manager.triggerKvFlushed('w');
+      await manager.queue;
+      expect(manager.uploadAllCalls).toHaveLength(0);
+    });
+
+    it('enqueues an upload when enabled', async () => {
+      manager.enable();
+      manager.triggerKvFlushed('w');
+      await manager.queue;
+      expect(manager.uploadAllCalls.length).toBeGreaterThan(0);
+    });
+
+    it('coalesces rapid flushes into a single upload call', async () => {
+      manager.enable();
+      await manager.queue; // drain initial _doPull
+      manager.triggerKvFlushed('w');
+      manager.triggerKvFlushed('w');
+      manager.triggerKvFlushed('w');
+      await manager.queue;
+      // second and third triggers de-duplicate: uploadPending already set
+      expect(manager.uploadAllCalls).toHaveLength(1);
+    });
+  });
+
+  describe('_onDbWritten', () => {
+    it('does not enqueue a db upload when disabled', async () => {
+      manager.triggerDbWritten('w');
+      await manager.queue;
+      expect(manager.uploadDbCalls).toHaveLength(0);
+    });
+
+    it('enqueues a db upload when enabled', async () => {
+      manager.enable();
+      manager.triggerDbWritten('my-widget');
+      await manager.queue;
+      expect(manager.uploadDbCalls).toContain('my-widget');
+    });
+
+    it('batches multiple widgets into a single upload round', async () => {
+      manager.enable();
+      await manager.queue; // drain initial pull
+      manager.triggerDbWritten('widget-a');
+      manager.triggerDbWritten('widget-b');
+      await manager.queue;
+      expect(manager.uploadDbCalls).toContain('widget-a');
+      expect(manager.uploadDbCalls).toContain('widget-b');
+    });
   });
 });
