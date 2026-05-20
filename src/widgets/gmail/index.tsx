@@ -40,17 +40,14 @@ function formatFrom(from: string): string {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function SetupGuide() {
+function NotConnected() {
   return (
     <div style={{ padding: '12px 4px', lineHeight: 1.6, ...dimText, fontSize: 12 }}>
-      <p style={{ marginBottom: 8, color: 'var(--text)', fontWeight: 500 }}>Setup required</p>
-      <ol style={{ paddingLeft: 18, margin: 0 }}>
-        <li>Create a project in <a href="https://console.cloud.google.com/" style={{ color: 'var(--accent)' }}>Google Cloud Console</a></li>
-        <li>Enable the <strong>Gmail API</strong></li>
-        <li>Create OAuth 2.0 credentials for a <strong>Desktop app</strong></li>
-        <li>Add your email as a test user under the OAuth consent screen</li>
-        <li>Paste the Client ID and Client Secret in this widget&apos;s settings</li>
-      </ol>
+      <p style={{ marginBottom: 8, color: 'var(--text)', fontWeight: 500 }}>Google not connected</p>
+      <p style={{ margin: 0 }}>
+        Open <strong>App Settings</strong> (gear icon) and connect your Google account to use this
+        widget.
+      </p>
     </div>
   );
 }
@@ -127,12 +124,9 @@ function MessageRow({
 // ─── Main widget ───────────────────────────────────────────────────────────
 
 function GmailWidget({ api, settings, setTitle }: WidgetProps) {
-  const clientId = (settings.googleClientId as string) ?? '';
-  const clientSecret = (settings.googleClientSecret as string) ?? '';
   const maxMessages = Math.max(1, Math.min(50, (settings.maxMessages as number) || 10));
 
   const [connected, setConnected] = useState<boolean | null>(null);
-  const [connecting, setConnecting] = useState(false);
   const [messages, setMessages] = useState<GmailMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,7 +135,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
     setLoading(true);
     setError(null);
     try {
-      const token = await api.google.getToken('gmail');
+      const token = await api.google.shared.getToken();
       if (!token) {
         setConnected(false);
         return;
@@ -216,54 +210,19 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
   }, [api, maxMessages, setTitle]);
 
   useEffect(() => {
-    if (!clientId || !clientSecret) {
-      setConnected(false);
-      return;
-    }
-    api.google
-      .isConnected('gmail')
-      .then((c) => {
-        setConnected(c);
-      })
+    api.google.shared
+      .isConnected()
+      .then((c) => setConnected(c))
       .catch(() => setConnected(false));
-  }, [api, clientId, clientSecret]);
+  }, [api]);
 
   useEffect(() => {
     if (connected) void loadMessages();
   }, [connected, loadMessages]);
 
-  const handleConnect = async () => {
-    setConnecting(true);
-    setError(null);
-    try {
-      await api.google.connect({
-        clientId,
-        clientSecret,
-        service: 'gmail',
-      });
-      setConnected(true);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    await api.google.disconnect('gmail');
-    setConnected(false);
-    setMessages([]);
-    setTitle?.(undefined);
-  };
-
   const openInGmail = (threadId: string) => {
     void api.shell.openExternal(`https://mail.google.com/mail/u/0/#inbox/${threadId}`);
   };
-
-  // ── Not configured ──────────────────────────────────────────────────────
-  if (!clientId || !clientSecret) {
-    return <SetupGuide />;
-  }
 
   // ── Loading connection status ───────────────────────────────────────────
   if (connected === null) {
@@ -274,37 +233,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
 
   // ── Not connected ───────────────────────────────────────────────────────
   if (!connected) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 12,
-          padding: 16,
-        }}
-      >
-        <div style={{ fontSize: 32 }}>📬</div>
-        <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', margin: 0 }}>
-          Connect your Google account to see Gmail messages.
-        </p>
-        <button
-          className="primary"
-          style={{ fontSize: 13, padding: '6px 16px' }}
-          onClick={() => void handleConnect()}
-          disabled={connecting}
-        >
-          {connecting ? 'Waiting for browser…' : 'Connect with Google'}
-        </button>
-        {error && (
-          <p style={{ fontSize: 11, color: 'var(--danger)', textAlign: 'center', margin: 0 }}>
-            {error}
-          </p>
-        )}
-      </div>
-    );
+    return <NotConnected />;
   }
 
   // ── Connected ────────────────────────────────────────────────────────────
@@ -328,14 +257,6 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
           title="Refresh messages"
         >
           {loading ? '…' : '↻ Refresh'}
-        </button>
-        <button
-          className="ghost danger"
-          style={{ ...buttonSmall, marginLeft: 'auto' }}
-          onClick={() => void handleDisconnect()}
-          title="Disconnect Google account"
-        >
-          Disconnect
         </button>
       </div>
 
@@ -378,18 +299,6 @@ const widget: Widget = {
     minSize: { w: 4, h: 4 },
     permissions: { google: true },
     settings: [
-      {
-        kind: 'string',
-        key: 'googleClientId',
-        label: 'Google Client ID',
-        placeholder: 'Paste your OAuth 2.0 Client ID',
-      },
-      {
-        kind: 'string',
-        key: 'googleClientSecret',
-        label: 'Google Client Secret',
-        placeholder: 'Paste your OAuth 2.0 Client Secret',
-      },
       {
         kind: 'number',
         key: 'maxMessages',

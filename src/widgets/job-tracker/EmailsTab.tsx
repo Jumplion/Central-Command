@@ -10,7 +10,7 @@ import { INSERT_APPLICATION, UPDATE_APPLICATION_STATUS, DISMISS_EMAIL_JOB } from
 
 type AuthState =
   | 'loading'       // initial connection check
-  | 'no-creds'      // first time: need to enter clientId/clientSecret
+  | 'no-creds'      // not connected — user needs to connect via App Settings
   | 'connecting'    // OAuth browser flow in progress
   | 'connected'     // valid token available
   | 'error';        // unexpected failure (shown with a retry button)
@@ -268,52 +268,14 @@ function EmailRow({
 
 // ─── Credential setup form ────────────────────────────────────────────────
 
-function CredentialSetup({ onConnect }: { onConnect: (clientId: string, clientSecret: string) => void }) {
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-
+function NotConnected() {
   return (
     <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 420 }}>
-      <div style={{ fontSize: 13, fontWeight: 600 }}>Connect Google (one-time setup)</div>
+      <div style={{ fontSize: 13, fontWeight: 600 }}>Google not connected</div>
       <p style={{ ...dimText, lineHeight: 1.5, margin: 0 }}>
-        Enter your Google OAuth client credentials. These are stored securely and shared across all
-        widgets — you won't need to enter them again.
+        Open <strong>App Settings</strong> (gear icon at the top of the dashboard) and connect your
+        Google account to enable Gmail scanning.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <input
-          style={{ ...inp }}
-          placeholder="Google Client ID"
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-          autoComplete="off"
-        />
-        <input
-          style={{ ...inp }}
-          type="password"
-          placeholder="Google Client Secret"
-          value={clientSecret}
-          onChange={(e) => setClientSecret(e.target.value)}
-          autoComplete="off"
-        />
-      </div>
-      <a
-        href="#"
-        style={{ ...dimText, fontSize: 11 }}
-        onClick={(e) => {
-          e.preventDefault();
-          void window.cc.shell.openExternal('https://console.cloud.google.com/apis/credentials');
-        }}
-      >
-        Get credentials at console.cloud.google.com ↗
-      </a>
-      <button
-        className="primary"
-        style={{ fontSize: 12, padding: '5px 12px', alignSelf: 'flex-start' }}
-        disabled={!clientId.trim() || !clientSecret.trim()}
-        onClick={() => onConnect(clientId.trim(), clientSecret.trim())}
-      >
-        Connect with Google
-      </button>
     </div>
   );
 }
@@ -399,17 +361,7 @@ export function EmailsTab({
     setScanning(true);
     setScanError('');
     try {
-      let token = await api.google.shared.getToken('gmail');
-      if (!token) {
-        // Token silently expired — attempt reconnect before giving up
-        const hasCreds = await api.google.shared.hasCreds('gmail');
-        if (hasCreds) {
-          setAuthState('connecting');
-          await api.google.shared.reconnect('gmail');
-          setAuthState('connected');
-          token = await api.google.shared.getToken('gmail');
-        }
-      }
+      const token = await api.google.shared.getToken();
       if (!token) {
         setAuthState('no-creds');
         return;
@@ -448,7 +400,7 @@ export function EmailsTab({
   };
 
   const handleDisconnect = async () => {
-    await api.google.shared.disconnect('gmail');
+    await api.google.shared.disconnect();
     setEmails([]);
     setAuthState('no-creds');
   };
@@ -478,7 +430,7 @@ export function EmailsTab({
             {authError}
           </div>
         )}
-        <CredentialSetup onConnect={(id, secret) => void handleConnect(id, secret)} />
+        <NotConnected />
       </div>
     );
   }
