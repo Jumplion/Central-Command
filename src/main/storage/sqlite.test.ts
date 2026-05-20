@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
@@ -178,8 +179,8 @@ describe('backup', () => {
     await store.backup(W, destPath);
 
     // Open backup independently and verify the row is there
-    const { default: Database } = await import('better-sqlite3');
-    const backup = new Database(destPath, { readonly: true });
+    const { DatabaseSync } = await import('node:sqlite');
+    const backup = new DatabaseSync(destPath, { readOnly: true });
     const row = backup.prepare('SELECT name FROM items WHERE id = 1').get() as { name: string };
     backup.close();
     expect(row.name).toBe('snapshot');

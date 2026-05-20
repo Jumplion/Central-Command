@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 export default {
   test: {
     environment: 'jsdom',
+    environmentMatchGlobs: [['src/main/**', 'node']],
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',

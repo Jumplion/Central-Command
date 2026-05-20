@@ -1,11 +1,11 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import type { SqlRunResult } from '@shared/types';
 import { widgetDir } from './helpers';
 
 export class SqliteStore {
-  private dbs = new Map<string, Database.Database>();
+  private dbs = new Map<string, DatabaseSync>();
   private dirInit = new Map<string, Promise<void>>();
 
   /** Called after each write operation with the affected widgetId. */
@@ -27,33 +27,32 @@ export class SqliteStore {
     await pending;
   }
 
-  private dbFor(widgetId: string): Database.Database {
+  private dbFor(widgetId: string): DatabaseSync {
     let db = this.dbs.get(widgetId);
     if (db) return db;
     const dir = widgetDir(this.root, widgetId);
-    db = new Database(path.join(dir, 'data.db'));
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
+    db = new DatabaseSync(path.join(dir, 'data.db'));
+    db.exec('PRAGMA journal_mode = WAL');
+    db.exec('PRAGMA foreign_keys = ON');
     this.dbs.set(widgetId, db);
     return db;
   }
 
   async run(widgetId: string, sql: string, params: unknown[] = []): Promise<SqlRunResult> {
     await this.ensureWidgetDir(widgetId);
-    const stmt = this.dbFor(widgetId).prepare(sql);
-    const result = stmt.run(...(params as unknown[]));
+    const result = this.dbFor(widgetId).prepare(sql).run(...(params as SQLInputValue[]));
     this.onWritten(widgetId);
-    return { changes: result.changes, lastInsertRowid: Number(result.lastInsertRowid) };
+    return { changes: Number(result.changes), lastInsertRowid: Number(result.lastInsertRowid) };
   }
 
   async all(widgetId: string, sql: string, params: unknown[] = []): Promise<unknown[]> {
     await this.ensureWidgetDir(widgetId);
-    return this.dbFor(widgetId).prepare(sql).all(...(params as unknown[])) as unknown[];
+    return this.dbFor(widgetId).prepare(sql).all(...(params as SQLInputValue[])) as unknown[];
   }
 
   async get(widgetId: string, sql: string, params: unknown[] = []): Promise<unknown> {
     await this.ensureWidgetDir(widgetId);
-    return this.dbFor(widgetId).prepare(sql).get(...(params as unknown[]));
+    return this.dbFor(widgetId).prepare(sql).get(...(params as SQLInputValue[]));
   }
 
   async exec(widgetId: string, sql: string): Promise<void> {
@@ -66,22 +65,25 @@ export class SqliteStore {
     await this.ensureWidgetDir(widgetId);
     const db = this.dbFor(widgetId);
     const results: SqlRunResult[] = [];
-    const run = db.transaction(() => {
+    db.exec('BEGIN');
+    try {
       for (const item of items) {
-        const result = db.prepare(item.sql).run(...((item.params ?? []) as unknown[]));
-        results.push({ changes: result.changes, lastInsertRowid: Number(result.lastInsertRowid) });
+        const result = db.prepare(item.sql).run(...((item.params ?? []) as SQLInputValue[]));
+        results.push({ changes: Number(result.changes), lastInsertRowid: Number(result.lastInsertRowid) });
       }
-    });
-    run();
+      db.exec('COMMIT');
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch { /* ignore if already rolled back */ }
+      throw err;
+    }
     this.onWritten(widgetId);
     return results;
   }
 
-  /** Creates a safe hot backup of a widget's database to the given destination path. */
+  /** Creates a consistent copy of the database at the destination path. */
   async backup(widgetId: string, destPath: string): Promise<void> {
     await this.ensureWidgetDir(widgetId);
-    const db = this.dbFor(widgetId);
-    await db.backup(destPath);
+    this.dbFor(widgetId).exec(`VACUUM INTO '${destPath}'`);
   }
 
   /** Closes a single widget's database connection so it can be replaced on disk. */
