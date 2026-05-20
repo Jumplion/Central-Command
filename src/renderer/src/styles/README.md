@@ -4,8 +4,8 @@ This folder contains the application-wide CSS that styles the shell of Central C
 
 ## Files
 
-| File | What it does |
-| --- | --- |
+| File          | What it does                                                   |
+| ------------- | -------------------------------------------------------------- |
 | `globals.css` | Every CSS rule for the app shell — imported once in `main.tsx` |
 
 ---
@@ -15,7 +15,7 @@ This folder contains the application-wide CSS that styles the shell of Central C
 `globals.css` is imported at the top of `src/renderer/src/main.tsx`:
 
 ```ts
-import './styles/globals.css';
+import "./styles/globals.css";
 ```
 
 Vite processes this import: in development it injects the styles into the page via a `<style>` tag; in production it bundles the CSS into a `.css` file that `index.html` links to.
@@ -41,7 +41,7 @@ Widgets are responsible for their own internal styles. They can:
 - Import a CSS module (`import styles from './styles.module.css'`)
 - Use the CSS custom properties defined here for consistent colors and spacing
 
-Widget styles apply *inside* `.widget-body`, so they can't accidentally affect the rest of the dashboard.
+Widget styles apply _inside_ `.widget-body`, so they can't accidentally affect the rest of the dashboard.
 
 ---
 

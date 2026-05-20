@@ -1,5 +1,17 @@
-export type Status = 'Interested' | 'Submitted' | 'Callback' | 'Booked' | 'Released' | 'Passed';
-export type ProjectType = 'Film' | 'TV' | 'Commercial' | 'Theater' | 'Voiceover' | 'Student/Indie';
+export type Status =
+  | "Interested"
+  | "Submitted"
+  | "Callback"
+  | "Booked"
+  | "Released"
+  | "Passed";
+export type ProjectType =
+  | "Film"
+  | "TV"
+  | "Commercial"
+  | "Theater"
+  | "Voiceover"
+  | "Student/Indie";
 
 export interface Audition {
   id: number;
@@ -18,7 +30,7 @@ export interface Audition {
   last_updated: number;
 }
 
-export type AuditionFormData = Omit<Audition, 'id' | 'last_updated'>;
+export type AuditionFormData = Omit<Audition, "id" | "last_updated">;
 
 export interface CastingSite {
   id: string;

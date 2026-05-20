@@ -4,11 +4,11 @@ This folder is the engine that powers the widget system. It has three responsibi
 
 ## Files
 
-| File | What it does |
-| --- | --- |
-| `registry.ts` | Discovers all `src/widgets/*/index.tsx` files at build time and exposes them as a registry |
-| `api.ts` | Creates a `WidgetApi` object scoped to one specific widget instance |
-| `apiEvents.ts` | Simple event bus for tracking outgoing network requests (used by the api-tracker widget) |
+| File           | What it does                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| `registry.ts`  | Discovers all `src/widgets/*/index.tsx` files at build time and exposes them as a registry |
+| `api.ts`       | Creates a `WidgetApi` object scoped to one specific widget instance                        |
+| `apiEvents.ts` | Simple event bus for tracking outgoing network requests (used by the api-tracker widget)   |
 
 ---
 
@@ -21,9 +21,12 @@ The registry is how the app knows which widgets exist. You never register a widg
 Vite (the build tool) provides a special import called `import.meta.glob`. At build time, Vite scans the filesystem matching the given pattern and bundles all matching files. At runtime, those files are immediately available as a JavaScript object.
 
 ```ts
-const modules = import.meta.glob<{ default: Widget }>('../../../widgets/*/index.tsx', {
-  eager: true  // load all files immediately, not lazily
-});
+const modules = import.meta.glob<{ default: Widget }>(
+  "../../../widgets/*/index.tsx",
+  {
+    eager: true, // load all files immediately, not lazily
+  },
+);
 ```
 
 After this line, `modules` is an object like:
@@ -43,7 +46,7 @@ The registry then loops over every entry, validates it (checks for a valid manif
 Widgets can declare which platforms they support via `manifest.platforms`:
 
 ```ts
-platforms: ['desktop']  // only show on Electron desktop
+platforms: ["desktop"]; // only show on Electron desktop
 ```
 
 Widgets without a `platforms` field are shown by default.
@@ -51,9 +54,9 @@ Widgets without a `platforms` field are shown by default.
 ### Exported functions
 
 ```ts
-listWidgets()           // returns all valid widgets, sorted alphabetically by name
-getWidget(id)           // returns the Widget for a given id, or undefined
-defaultSettingsFor(manifest) // extracts default values from a manifest's settings array
+listWidgets(); // returns all valid widgets, sorted alphabetically by name
+getWidget(id); // returns the Widget for a given id, or undefined
+defaultSettingsFor(manifest); // extracts default values from a manifest's settings array
 ```
 
 ---
@@ -72,10 +75,10 @@ Each widget instance has a unique `instanceId` (a random 10-character string lik
 
 ```ts
 // Widget code writes:
-api.kv.set('lastRun', Date.now())
+api.kv.set("lastRun", Date.now());
 
 // Which actually calls:
-window.cc.kv.set('job-tracker', 'aB3xQ7mN2p::lastRun', Date.now())
+window.cc.kv.set("job-tracker", "aB3xQ7mN2p::lastRun", Date.now());
 ```
 
 This means two instances of `job-tracker` each get their own private KV namespace, even though they share the same underlying `store.json` file.

@@ -23,14 +23,14 @@ The first run creates a `userData` directory on your computer (Electron's app da
 
 ## Scripts
 
-| Script | What it does |
-| --- | --- |
-| `npm run dev` | Start the app in dev mode — changes hot-reload without restart |
-| `npm run build` | Compile all bundles (main process, preload, renderer) for production |
-| `npm run test` | Run the Vitest unit test suite |
-| `npm run test:coverage` | Run tests and generate a coverage report |
-| `npm run typecheck` | Check TypeScript types across all projects |
-| `npm run package` | Build + create a distributable installer |
+| Script                  | What it does                                                         |
+| ----------------------- | -------------------------------------------------------------------- |
+| `npm run dev`           | Start the app in dev mode — changes hot-reload without restart       |
+| `npm run build`         | Compile all bundles (main process, preload, renderer) for production |
+| `npm run test`          | Run the Vitest unit test suite                                       |
+| `npm run test:coverage` | Run tests and generate a coverage report                             |
+| `npm run typecheck`     | Check TypeScript types across all projects                           |
+| `npm run package`       | Build + create a distributable installer                             |
 
 ## Technology overview
 

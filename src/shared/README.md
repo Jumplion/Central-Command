@@ -4,23 +4,23 @@ This folder contains code that both the **main process** (Node.js backend) and t
 
 ## Why a shared folder?
 
-Electron compiles the main process and the renderer as two completely separate bundles. They never share runtime code. But they *do* need to share **type definitions** (so TypeScript can catch mismatches) and **constants** (like channel names, so a typo in one place causes a type error rather than a silent bug).
+Electron compiles the main process and the renderer as two completely separate bundles. They never share runtime code. But they _do_ need to share **type definitions** (so TypeScript can catch mismatches) and **constants** (like channel names, so a typo in one place causes a type error rather than a silent bug).
 
 `src/shared/` solves this: both bundles import from it at **compile time**, and the TypeScript aliases (`@shared`) make this easy.
 
 ## Files
 
-| File | What it provides |
-| --- | --- |
-| `types.ts` | All shared TypeScript types — `AppState`, `WidgetManifest`, `CCApi`, etc. |
-| `ipc.ts` | The `IPC` constant — all channel name strings as a typed object |
-| `google.ts` | Google service definitions (scopes, base URLs) and OAuth helper functions |
-| `defaults.ts` | The `DEFAULT_STATE` — the starting `AppState` for a fresh install |
-| `validation.ts` | `isValidWidgetId()` — ensures widget IDs match the required format |
-| `csv.ts` | CSV parsing and formatting utilities |
-| `sync-base.ts` | Abstract base types shared by desktop sync |
-| `google.test.ts` | Unit tests for the Google helper functions |
-| `validation.test.ts` | Unit tests for `isValidWidgetId` |
+| File                 | What it provides                                                          |
+| -------------------- | ------------------------------------------------------------------------- |
+| `types.ts`           | All shared TypeScript types — `AppState`, `WidgetManifest`, `CCApi`, etc. |
+| `ipc.ts`             | The `IPC` constant — all channel name strings as a typed object           |
+| `google.ts`          | Google service definitions (scopes, base URLs) and OAuth helper functions |
+| `defaults.ts`        | The `DEFAULT_STATE` — the starting `AppState` for a fresh install         |
+| `validation.ts`      | `isValidWidgetId()` — ensures widget IDs match the required format        |
+| `csv.ts`             | CSV parsing and formatting utilities                                      |
+| `sync-base.ts`       | Abstract base types shared by desktop sync                                |
+| `google.test.ts`     | Unit tests for the Google helper functions                                |
+| `validation.test.ts` | Unit tests for `isValidWidgetId`                                          |
 
 ---
 
@@ -45,8 +45,8 @@ When you change a type here, TypeScript will flag every place in the codebase th
 
 ```ts
 export const IPC = {
-  KV_SET: 'cc:kv:set',
-  SQL_ALL: 'cc:sql:all',
+  KV_SET: "cc:kv:set",
+  SQL_ALL: "cc:sql:all",
   // ...
 } as const;
 ```

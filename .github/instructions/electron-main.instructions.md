@@ -1,7 +1,7 @@
 ---
-name: 'Electron Main Process'
-description: 'Rules for the Electron main process and preload bridge'
-applyTo: '{src/main/**,src/preload/**}'
+name: "Electron Main Process"
+description: "Rules for the Electron main process and preload bridge"
+applyTo: "{src/main/**,src/preload/**}"
 ---
 
 ## IPC discipline

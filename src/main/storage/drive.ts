@@ -1,16 +1,19 @@
-import { net } from 'electron';
-import type { OAuthManager } from '../oauth';
-import { SHARED_GOOGLE_WIDGET_ID } from '@shared/google';
+import { net } from "electron";
+import type { OAuthManager } from "../oauth";
+import { SHARED_GOOGLE_WIDGET_ID } from "@shared/google";
 
-const DRIVE_SYNC_SERVICE = 'drive-sync' as const;
-const DRIVE_API = 'https://www.googleapis.com/drive/v3';
-const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
-const BOUNDARY = 'cc_drive_sync_boundary';
+const DRIVE_SYNC_SERVICE = "drive-sync" as const;
+const DRIVE_API = "https://www.googleapis.com/drive/v3";
+const UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
+const BOUNDARY = "cc_drive_sync_boundary";
 
 export class DriveError extends Error {
-  constructor(message: string, public readonly status: number) {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
     super(message);
-    this.name = 'DriveError';
+    this.name = "DriveError";
   }
 }
 
@@ -54,24 +57,24 @@ export class DriveSync {
 
   async createFile(name: string, content: string): Promise<string> {
     const token = await this.getToken();
-    const metadata = JSON.stringify({ name, parents: ['appDataFolder'] });
+    const metadata = JSON.stringify({ name, parents: ["appDataFolder"] });
     const body = [
       `--${BOUNDARY}`,
-      'Content-Type: application/json; charset=UTF-8',
-      '',
+      "Content-Type: application/json; charset=UTF-8",
+      "",
       metadata,
       `--${BOUNDARY}`,
-      'Content-Type: application/json; charset=UTF-8',
-      '',
+      "Content-Type: application/json; charset=UTF-8",
+      "",
       content,
       `--${BOUNDARY}--`,
-    ].join('\r\n');
+    ].join("\r\n");
 
     const resp = await net.fetch(`${UPLOAD_API}/files?uploadType=multipart`, {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': `multipart/related; boundary=${BOUNDARY}`,
+        "Content-Type": `multipart/related; boundary=${BOUNDARY}`,
       },
       body,
     });
@@ -85,20 +88,24 @@ export class DriveSync {
     const resp = await net.fetch(
       `${UPLOAD_API}/files/${fileId}?uploadType=media&fields=modifiedTime`,
       {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json; charset=UTF-8',
+          "Content-Type": "application/json; charset=UTF-8",
         },
         body: content,
-      }
+      },
     );
     if (!resp.ok) throw new DriveError(`updateFile failed`, resp.status);
     const data = (await resp.json()) as { modifiedTime: string };
     return data.modifiedTime;
   }
 
-  async upsertFile(name: string, content: string, knownId?: string): Promise<string> {
+  async upsertFile(
+    name: string,
+    content: string,
+    knownId?: string,
+  ): Promise<string> {
     if (knownId) {
       try {
         await this.updateFile(knownId, content);
@@ -114,8 +121,11 @@ export class DriveSync {
   }
 
   private async getToken(): Promise<string> {
-    const token = await this.oauth.getToken(SHARED_GOOGLE_WIDGET_ID, DRIVE_SYNC_SERVICE);
-    if (!token) throw new DriveError('Drive sync: not authenticated', 401);
+    const token = await this.oauth.getToken(
+      SHARED_GOOGLE_WIDGET_ID,
+      DRIVE_SYNC_SERVICE,
+    );
+    if (!token) throw new DriveError("Drive sync: not authenticated", 401);
     return token;
   }
 }

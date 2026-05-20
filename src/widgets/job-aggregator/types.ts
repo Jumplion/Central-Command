@@ -17,7 +17,13 @@ export interface JobListing {
   description: string;
 }
 
-export type SavedStatus = 'Interested' | 'Applied' | 'Phone' | 'Onsite' | 'Offer' | 'Rejected';
+export type SavedStatus =
+  | "Interested"
+  | "Applied"
+  | "Phone"
+  | "Onsite"
+  | "Offer"
+  | "Rejected";
 
 export interface SavedJob {
   id: number;
@@ -39,9 +45,15 @@ export interface SavedJob {
   saved_at: number;
 }
 
-export type FeedType = 'rss' | 'lever' | 'greenhouse' | 'search';
+export type FeedType = "rss" | "lever" | "greenhouse" | "search";
 
-export type CompanyType = 'gaming' | 'tech' | 'finance' | 'defense' | 'cybersecurity' | 'other';
+export type CompanyType =
+  | "gaming"
+  | "tech"
+  | "finance"
+  | "defense"
+  | "cybersecurity"
+  | "other";
 
 export interface CompanyFeed {
   id: number;
@@ -68,9 +80,9 @@ export interface FeedJob {
 
 export type NetFetcher = (
   url: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string }
+  init?: { method?: string; headers?: Record<string, string>; body?: string },
 ) => Promise<{ ok: boolean; status: number; body: string }>;
 
 // Internal parser types
-export type ParsedFeedJob  = Omit<FeedJob, 'id' | 'feed_id' | 'fetched_at'>;
+export type ParsedFeedJob = Omit<FeedJob, "id" | "feed_id" | "fetched_at">;
 export type StampedFeedJob = ParsedFeedJob & { fetched_at: number };

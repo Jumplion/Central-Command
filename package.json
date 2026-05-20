@@ -4,7 +4,7 @@
   "private": true,
   "description": "Personal extensible dashboard built on Electron + React.",
   "engines": {
-    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+    "node": "^22.13.0 || >=24.0.0"
   },
   "main": "./out/main/index.js",
   "sideEffects": [

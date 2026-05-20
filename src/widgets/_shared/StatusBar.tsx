@@ -1,4 +1,4 @@
-import { Chip } from './Chip';
+import { Chip } from "./Chip";
 
 export interface StatusBarItem<T extends string> {
   value: T;
@@ -9,8 +9,8 @@ export interface StatusBarItem<T extends string> {
 
 export interface StatusBarProps<T extends string> {
   items: StatusBarItem<T>[];
-  selected: T | 'All';
-  onSelect: (value: T | 'All') => void;
+  selected: T | "All";
+  onSelect: (value: T | "All") => void;
   allLabel: string;
   allCount: number;
   allColor?: string;
@@ -22,12 +22,18 @@ export function StatusBar<T extends string>({
   onSelect,
   allLabel,
   allCount,
-  allColor = 'var(--accent)',
+  allColor = "var(--accent)",
 }: StatusBarProps<T>) {
   return (
     <div style={{ flexShrink: 0 }}>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-        <Chip active={selected === 'All'} color={allColor} onClick={() => onSelect('All')}>
+      <div
+        style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 5 }}
+      >
+        <Chip
+          active={selected === "All"}
+          color={allColor}
+          onClick={() => onSelect("All")}
+        >
           {allLabel} ({allCount})
         </Chip>
         {items.map((item) => (
@@ -43,14 +49,27 @@ export function StatusBar<T extends string>({
       </div>
 
       {allCount > 0 && (
-        <div style={{ display: 'flex', height: 3, borderRadius: 2, overflow: 'hidden', gap: 1 }}>
-          {items.filter((item) => item.count > 0).map((item) => (
-            <div
-              key={item.value}
-              style={{ width: `${(item.count / allCount) * 100}%`, background: item.color }}
-              title={`${item.label}: ${item.count}`}
-            />
-          ))}
+        <div
+          style={{
+            display: "flex",
+            height: 3,
+            borderRadius: 2,
+            overflow: "hidden",
+            gap: 1,
+          }}
+        >
+          {items
+            .filter((item) => item.count > 0)
+            .map((item) => (
+              <div
+                key={item.value}
+                style={{
+                  width: `${(item.count / allCount) * 100}%`,
+                  background: item.color,
+                }}
+                title={`${item.label}: ${item.count}`}
+              />
+            ))}
         </div>
       )}
     </div>

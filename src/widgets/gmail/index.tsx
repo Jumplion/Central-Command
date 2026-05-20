@@ -1,7 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { Widget, WidgetProps } from '@renderer/plugins/registry';
-import { buttonDefault, buttonSmall, buttonTiny, dimText, smallDimText } from '../_shared/styles';
-import { NotConnected } from '../_shared/NotConnected';
+import { useState, useEffect, useCallback } from "react";
+import type { Widget, WidgetProps } from "@renderer/plugins/registry";
+import {
+  buttonDefault,
+  buttonSmall,
+  buttonTiny,
+  dimText,
+  smallDimText,
+} from "../_shared/styles";
+import { NotConnected } from "../_shared/NotConnected";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -31,7 +37,10 @@ interface RawMessage {
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getHeader(headers: RawHeader[], name: string): string {
-  return headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? '';
+  return (
+    headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ??
+    ""
+  );
 }
 
 function formatFrom(from: string): string {
@@ -40,7 +49,6 @@ function formatFrom(from: string): string {
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
-
 
 function MessageRow({
   msg,
@@ -52,22 +60,22 @@ function MessageRow({
   return (
     <div
       style={{
-        padding: '8px 4px',
-        borderBottom: '1px solid var(--border)',
-        display: 'grid',
-        gridTemplateColumns: '120px 1fr auto',
-        gap: '0 10px',
-        alignItems: 'start',
-        cursor: 'default',
+        padding: "8px 4px",
+        borderBottom: "1px solid var(--border)",
+        display: "grid",
+        gridTemplateColumns: "120px 1fr auto",
+        gap: "0 10px",
+        alignItems: "start",
+        cursor: "default",
       }}
     >
       <span
         style={{
           fontSize: 11,
-          color: 'var(--text-dim)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          color: "var(--text-dim)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
         title={msg.from}
       >
@@ -78,9 +86,9 @@ function MessageRow({
           style={{
             fontSize: 12,
             fontWeight: 500,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
           title={msg.subject}
         >
@@ -89,10 +97,10 @@ function MessageRow({
         <div
           style={{
             fontSize: 11,
-            color: 'var(--text-dim)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            color: "var(--text-dim)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
           title={msg.snippet}
         >
@@ -114,7 +122,10 @@ function MessageRow({
 // ─── Main widget ───────────────────────────────────────────────────────────
 
 function GmailWidget({ api, settings, setTitle }: WidgetProps) {
-  const maxMessages = Math.max(1, Math.min(50, (settings.maxMessages as number) || 10));
+  const maxMessages = Math.max(
+    1,
+    Math.min(50, (settings.maxMessages as number) || 10),
+  );
 
   const [connected, setConnected] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<GmailMessage[]>([]);
@@ -133,18 +144,18 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
 
       const listParams = new URLSearchParams({
         maxResults: String(maxMessages),
-        labelIds: 'INBOX',
-        fields: 'messages(id,threadId)',
+        labelIds: "INBOX",
+        fields: "messages(id,threadId)",
       });
       const listRes = await api.net.fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (!listRes.ok) {
         if (listRes.status === 401) {
           setConnected(false);
-          setError('Session expired — please reconnect.');
+          setError("Session expired — please reconnect.");
         } else {
           throw new Error(`Gmail API error: ${listRes.status}`);
         }
@@ -157,7 +168,7 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
 
       if (!listData.messages?.length) {
         setMessages([]);
-        setTitle?.('Gmail (0)');
+        setTitle?.("Gmail (0)");
         return;
       }
 
@@ -168,24 +179,24 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
               `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}` +
                 `?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date` +
                 `&fields=id,threadId,snippet,payload(headers)`,
-              { headers: { Authorization: `Bearer ${token}` } }
+              { headers: { Authorization: `Bearer ${token}` } },
             )
-            .then((r) => ({ r, threadId }))
-        )
+            .then((r) => ({ r, threadId })),
+        ),
       );
 
       const msgs: GmailMessage[] = [];
       for (const result of results) {
-        if (result.status === 'fulfilled' && result.value.r.ok) {
+        if (result.status === "fulfilled" && result.value.r.ok) {
           const raw = JSON.parse(result.value.r.body) as RawMessage;
           const headers = raw.payload?.headers ?? [];
           msgs.push({
             id: raw.id,
             threadId: result.value.threadId,
-            subject: getHeader(headers, 'Subject') || '(no subject)',
-            from: getHeader(headers, 'From'),
-            date: getHeader(headers, 'Date'),
-            snippet: raw.snippet ?? '',
+            subject: getHeader(headers, "Subject") || "(no subject)",
+            from: getHeader(headers, "From"),
+            date: getHeader(headers, "Date"),
+            snippet: raw.snippet ?? "",
           });
         }
       }
@@ -211,7 +222,9 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
   }, [connected, loadMessages]);
 
   const openInGmail = (threadId: string) => {
-    void api.shell.openExternal(`https://mail.google.com/mail/u/0/#inbox/${threadId}`);
+    void api.shell.openExternal(
+      `https://mail.google.com/mail/u/0/#inbox/${threadId}`,
+    );
   };
 
   // ── Loading connection status ───────────────────────────────────────────
@@ -228,15 +241,22 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
 
   // ── Connected ────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 6 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 6,
+      }}
+    >
       <div
         style={{
-          display: 'flex',
+          display: "flex",
           gap: 6,
-          alignItems: 'center',
+          alignItems: "center",
           flexShrink: 0,
           paddingBottom: 4,
-          borderBottom: '1px solid var(--border)',
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <button
@@ -246,20 +266,22 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
           disabled={loading}
           title="Refresh messages"
         >
-          {loading ? '…' : '↻ Refresh'}
+          {loading ? "…" : "↻ Refresh"}
         </button>
       </div>
 
       {error && (
-        <div style={{ fontSize: 11, color: 'var(--danger)', flexShrink: 0 }}>{error}</div>
+        <div style={{ fontSize: 11, color: "var(--danger)", flexShrink: 0 }}>
+          {error}
+        </div>
       )}
 
-      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
         {messages.length === 0 && !loading ? (
           <div
             style={{
-              padding: '24px 0',
-              textAlign: 'center',
+              padding: "24px 0",
+              textAlign: "center",
               ...dimText,
               fontSize: 12,
             }}
@@ -280,19 +302,20 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
 
 const widget: Widget = {
   manifest: {
-    id: 'gmail',
-    name: 'Gmail',
-    description: 'Show recent inbox messages via the Gmail API. Requires a Google Cloud OAuth app.',
-    version: '0.1.0',
-    icon: '📬',
+    id: "gmail",
+    name: "Gmail",
+    description:
+      "Show recent inbox messages via the Gmail API. Requires a Google Cloud OAuth app.",
+    version: "0.1.0",
+    icon: "📬",
     defaultSize: { w: 6, h: 7 },
     minSize: { w: 4, h: 4 },
     permissions: { google: true },
     settings: [
       {
-        kind: 'number',
-        key: 'maxMessages',
-        label: 'Messages to show',
+        kind: "number",
+        key: "maxMessages",
+        label: "Messages to show",
         default: 10,
         min: 1,
         max: 50,

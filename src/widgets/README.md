@@ -62,11 +62,15 @@ src/widgets/
 Every widget folder must contain `index.tsx` with a default export of type `Widget`:
 
 ```ts
-import type { Widget } from '@renderer/plugins/registry';
+import type { Widget } from "@renderer/plugins/registry";
 
 const widget: Widget = {
-  manifest: { /* see below */ },
-  Component: ({ api, settings, setTitle }) => { /* JSX */ }
+  manifest: {
+    /* see below */
+  },
+  Component: ({ api, settings, setTitle }) => {
+    /* JSX */
+  },
 };
 
 export default widget;
@@ -78,33 +82,33 @@ Larger widgets split their code across multiple files in the same folder (e.g., 
 
 The manifest tells the app everything it needs to know about a widget before rendering it:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `id` | `string` | Must equal the folder name. Used as the storage namespace on disk. |
-| `name` | `string` | Display name shown in the header and Add dialog |
-| `description` | `string?` | Shown in the Add widget dialog |
-| `version` | `string` | Semver string like `0.1.0` |
-| `icon` | `string?` | Emoji shown in the widget header |
-| `defaultSize` | `{ w, h }` | Size in grid units (12-col grid, 60px row height) |
-| `minSize` | `{ w, h }?` | Minimum size the user can resize to |
-| `settings` | `SettingsField[]?` | Declares the settings form fields shown in the ⚙ panel |
-| `permissions` | `{ sqlite?, google? }?` | Declare `true` to unlock `api.sql` or `api.google` |
-| `platforms` | `string[]?` | `['desktop']` — omit to support all widgets |
+| Field         | Type                    | Description                                                        |
+| ------------- | ----------------------- | ------------------------------------------------------------------ |
+| `id`          | `string`                | Must equal the folder name. Used as the storage namespace on disk. |
+| `name`        | `string`                | Display name shown in the header and Add dialog                    |
+| `description` | `string?`               | Shown in the Add widget dialog                                     |
+| `version`     | `string`                | Semver string like `0.1.0`                                         |
+| `icon`        | `string?`               | Emoji shown in the widget header                                   |
+| `defaultSize` | `{ w, h }`              | Size in grid units (12-col grid, 60px row height)                  |
+| `minSize`     | `{ w, h }?`             | Minimum size the user can resize to                                |
+| `settings`    | `SettingsField[]?`      | Declares the settings form fields shown in the ⚙ panel             |
+| `permissions` | `{ sqlite?, google? }?` | Declare `true` to unlock `api.sql` or `api.google`                 |
+| `platforms`   | `string[]?`             | `['desktop']` — omit to support all widgets                        |
 
 ## The `api` prop
 
 The `Component` receives an `api` object scoped to its instance. See `src/renderer/src/plugins/README.md` for a detailed breakdown. Quick reference:
 
-| API | Description |
-| --- | --- |
-| `api.kv` | Per-instance JSON key/value storage |
-| `api.sql` | Per-widget-type SQLite database (shared across all instances) |
-| `api.net.fetch` | HTTP requests (routed through Electron's `net` module, no CORS) |
-| `api.secrets` | Per-widget encrypted storage (for API keys etc.) |
-| `api.shell` | Open URLs, files, and folders in the OS |
-| `api.dialog` | Native file-picker dialog |
-| `api.google` | Google OAuth (connect, get token, disconnect) |
-| `api.google.shared` | Shared Google auth namespace — one login for all widgets |
+| API                 | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `api.kv`            | Per-instance JSON key/value storage                             |
+| `api.sql`           | Per-widget-type SQLite database (shared across all instances)   |
+| `api.net.fetch`     | HTTP requests (routed through Electron's `net` module, no CORS) |
+| `api.secrets`       | Per-widget encrypted storage (for API keys etc.)                |
+| `api.shell`         | Open URLs, files, and folders in the OS                         |
+| `api.dialog`        | Native file-picker dialog                                       |
+| `api.google`        | Google OAuth (connect, get token, disconnect)                   |
+| `api.google.shared` | Shared Google auth namespace — one login for all widgets        |
 
 ## The `settings` prop and `setTitle`
 
@@ -166,9 +170,9 @@ Components used by more than one widget live here. See `src/widgets/_shared/READ
 
 ```ts
 // JSON key/value (per instance)
-await api.kv.set('lastRun', Date.now());
-const last = await api.kv.get<number>('lastRun');  // undefined if not set
-await api.kv.del('lastRun');
+await api.kv.set("lastRun", Date.now());
+const last = await api.kv.get<number>("lastRun"); // undefined if not set
+await api.kv.del("lastRun");
 const allKeys = await api.kv.keys();
 
 // SQLite (per widget type, shared across instances)
@@ -177,41 +181,68 @@ await api.sql.exec(`CREATE TABLE IF NOT EXISTS entries (
   note TEXT    NOT NULL,
   ts   INTEGER NOT NULL
 )`);
-await api.sql.run('INSERT INTO entries (note, ts) VALUES (?, ?)', ['hello', Date.now()]);
+await api.sql.run("INSERT INTO entries (note, ts) VALUES (?, ?)", [
+  "hello",
+  Date.now(),
+]);
 const rows = await api.sql.all<{ id: number; note: string; ts: number }>(
-  'SELECT * FROM entries ORDER BY ts DESC LIMIT 50'
+  "SELECT * FROM entries ORDER BY ts DESC LIMIT 50",
 );
-const one = await api.sql.get<{ id: number }>('SELECT id FROM entries LIMIT 1');
+const one = await api.sql.get<{ id: number }>("SELECT id FROM entries LIMIT 1");
 
 // Secrets (per widget type, encrypted)
-await api.secrets.set('apiKey', 'super-secret-value');
-const key = await api.secrets.get('apiKey');  // string | null
-await api.secrets.has('apiKey');              // boolean
-await api.secrets.del('apiKey');
+await api.secrets.set("apiKey", "super-secret-value");
+const key = await api.secrets.get("apiKey"); // string | null
+await api.secrets.has("apiKey"); // boolean
+await api.secrets.del("apiKey");
 
 // Network (no CORS, routed through Electron)
-const res = await api.net.fetch('https://api.example.com/data', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ query: 'hello' }),
+const res = await api.net.fetch("https://api.example.com/data", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ query: "hello" }),
 });
 // res.ok: boolean, res.status: number, res.body: string
 
 // Shell and dialog
-await api.shell.openExternal('https://example.com');
-await api.shell.openPath('/home/user/documents');
-await api.shell.showItemInFolder('/home/user/file.txt');
-const paths = await api.dialog.openPath({ title: 'Pick a file', properties: ['openFile'] });
+await api.shell.openExternal("https://example.com");
+await api.shell.openPath("/home/user/documents");
+await api.shell.showItemInFolder("/home/user/file.txt");
+const paths = await api.dialog.openPath({
+  title: "Pick a file",
+  properties: ["openFile"],
+});
 ```
 
 ## Settings fields reference
 
 ```ts
 type SettingsField =
-  | { kind: 'string';  key: string; label: string; default?: string; placeholder?: string; multiline?: boolean }
-  | { kind: 'number';  key: string; label: string; default?: number; min?: number; max?: number; step?: number }
-  | { kind: 'boolean'; key: string; label: string; default?: boolean }
-  | { kind: 'select';  key: string; label: string; default?: string; options: { value: string; label: string }[] };
+  | {
+      kind: "string";
+      key: string;
+      label: string;
+      default?: string;
+      placeholder?: string;
+      multiline?: boolean;
+    }
+  | {
+      kind: "number";
+      key: string;
+      label: string;
+      default?: number;
+      min?: number;
+      max?: number;
+      step?: number;
+    }
+  | { kind: "boolean"; key: string; label: string; default?: boolean }
+  | {
+      kind: "select";
+      key: string;
+      label: string;
+      default?: string;
+      options: { value: string; label: string }[];
+    };
 ```
 
 The settings UI is generated automatically from this schema. Defaults are applied when an instance is first added to the dashboard.
@@ -232,41 +263,44 @@ async function handleConnect() {
   await api.google.shared.connect({
     clientId: settings.clientId as string,
     clientSecret: settings.clientSecret as string,
-    service: 'gmail',
+    service: "gmail",
   });
 }
 
 // Example: get a token for API calls
-const token = await api.google.shared.getToken('gmail');
+const token = await api.google.shared.getToken("gmail");
 if (!token) return; // not connected
 
-const res = await api.net.fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages', {
-  headers: { Authorization: `Bearer ${token}` },
-});
+const res = await api.net.fetch(
+  "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+  {
+    headers: { Authorization: `Bearer ${token}` },
+  },
+);
 ```
 
 ## Minimal widget example
 
 ```tsx
 // src/widgets/hello/index.tsx
-import type { Widget } from '@renderer/plugins/registry';
+import type { Widget } from "@renderer/plugins/registry";
 
 const widget: Widget = {
   manifest: {
-    id: 'hello',
-    name: 'Hello',
-    description: 'A minimal demo widget',
-    version: '0.1.0',
-    icon: '👋',
+    id: "hello",
+    name: "Hello",
+    description: "A minimal demo widget",
+    version: "0.1.0",
+    icon: "👋",
     defaultSize: { w: 4, h: 3 },
     settings: [
-      { kind: 'string', key: 'who', label: 'Who to greet', default: 'world' }
-    ]
+      { kind: "string", key: "who", label: "Who to greet", default: "world" },
+    ],
   },
   Component: ({ settings }) => {
-    const who = (settings.who as string) || 'world';
+    const who = (settings.who as string) || "world";
     return <p>Hello, {who}!</p>;
-  }
+  },
 };
 
 export default widget;

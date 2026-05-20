@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { useDashboard } from './state/dashboard';
+import { useEffect, useState } from "react";
+import { Sidebar } from "./components/Sidebar";
+import { Dashboard } from "./components/Dashboard";
+import { useDashboard } from "./state/dashboard";
 
 export default function App() {
   const load = useDashboard((s) => s.load);
@@ -27,7 +27,10 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
       <main className="main">
         <Dashboard />
       </main>

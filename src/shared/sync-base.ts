@@ -1,7 +1,7 @@
-import type { DriveSyncState, DriveSyncStatus } from './types';
+import type { DriveSyncState, DriveSyncStatus } from "./types";
 
 export const SYNC_POLL_INTERVAL_MS = 5 * 60 * 1000;
-export const DRIVE_STATE_FILE = 'cc-state.json';
+export const DRIVE_STATE_FILE = "cc-state.json";
 
 export function driveKvName(widgetId: string): string {
   return `cc-kv-${widgetId}.json`;
@@ -12,19 +12,21 @@ export function driveDbName(widgetId: string): string {
 }
 
 export function kvWidgetIdFromDriveName(name: string): string | null {
-  if (!name.startsWith('cc-kv-') || !name.endsWith('.json')) return null;
-  return name.slice('cc-kv-'.length, -'.json'.length);
+  if (!name.startsWith("cc-kv-") || !name.endsWith(".json")) return null;
+  return name.slice("cc-kv-".length, -".json".length);
 }
 
 export function dbWidgetIdFromDriveName(name: string): string | null {
-  if (!name.startsWith('cc-db-') || !name.endsWith('.db')) return null;
-  return name.slice('cc-db-'.length, -'.db'.length);
+  if (!name.startsWith("cc-db-") || !name.endsWith(".db")) return null;
+  return name.slice("cc-db-".length, -".db".length);
 }
 
 /** Minimal interface both DriveSync implementations satisfy. */
 export interface IDriveSync {
   isConnected(): Promise<boolean>;
-  listFiles(): Promise<Array<{ id: string; name: string; modifiedTime: string }>>;
+  listFiles(): Promise<
+    Array<{ id: string; name: string; modifiedTime: string }>
+  >;
   downloadFile(fileId: string): Promise<string>;
   upsertFile(name: string, content: string, knownId?: string): Promise<string>;
 }
@@ -40,7 +42,7 @@ export abstract class SyncManagerBase {
   protected _pollTimer: ReturnType<typeof setInterval> | null = null;
   protected _queue: Promise<void> = Promise.resolve();
   protected _status: DriveSyncStatus = {
-    state: 'disabled',
+    state: "disabled",
     enabled: false,
     lastSyncedAt: null,
     lastError: null,
@@ -53,7 +55,7 @@ export abstract class SyncManagerBase {
 
   enable(): void {
     this._enabled = true;
-    this._setState('idle');
+    this._setState("idle");
     this._status.enabled = true;
     this._notify();
     this._schedulePolling();
@@ -63,18 +65,22 @@ export abstract class SyncManagerBase {
   disable(): void {
     this._enabled = false;
     this._stopPolling();
-    this._setState('disabled');
+    this._setState("disabled");
     this._status.enabled = false;
     this._notify();
   }
 
   async forcePush(): Promise<void> {
-    this._enqueue(async () => { await this._doUploadAll(); });
+    this._enqueue(async () => {
+      await this._doUploadAll();
+    });
     return this._queue;
   }
 
   async forcePull(): Promise<void> {
-    this._enqueue(async () => { await this._doPull(); });
+    this._enqueue(async () => {
+      await this._doPull();
+    });
     return this._queue;
   }
 
@@ -137,7 +143,7 @@ export abstract class SyncManagerBase {
   }
 
   protected _setError(msg: string): void {
-    this._status.state = 'error';
+    this._status.state = "error";
     this._status.lastError = msg;
     this._notify();
   }
@@ -165,6 +171,9 @@ export abstract class SyncManagerBase {
   protected abstract _doUploadAll(): Promise<void>;
   protected abstract _doPull(): Promise<void>;
   protected abstract _uploadDb(widgetId: string): Promise<void>;
-  protected abstract _isRemoteNewer(localPath: string, remoteMs: number): Promise<boolean>;
+  protected abstract _isRemoteNewer(
+    localPath: string,
+    remoteMs: number,
+  ): Promise<boolean>;
   protected abstract _notifyWithFlag(stateChangedByRemote: boolean): void;
 }

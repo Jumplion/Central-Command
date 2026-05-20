@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties } from "react";
 
 export function normalizeSuggestionText(value: string): string {
   return value.trim().toLowerCase();
@@ -39,36 +39,36 @@ export function filterSuggestions<T>(
 
 export const autocompleteInputStyle: CSSProperties = {
   fontSize: 12,
-  padding: '6px 8px',
+  padding: "6px 8px",
   borderRadius: 6,
-  border: '1px solid var(--border)',
-  background: 'var(--panel-2)',
-  color: 'var(--text)',
-  width: '100%',
-  boxSizing: 'border-box',
+  border: "1px solid var(--border)",
+  background: "var(--panel-2)",
+  color: "var(--text)",
+  width: "100%",
+  boxSizing: "border-box",
 };
 
 export const suggestionMenuStyle: CSSProperties = {
-  position: 'absolute',
+  position: "absolute",
   left: 0,
   right: 0,
-  top: '100%',
+  top: "100%",
   marginTop: 6,
-  background: 'var(--panel-2)',
-  border: '1px solid var(--border)',
+  background: "var(--panel-2)",
+  border: "1px solid var(--border)",
   borderRadius: 8,
-  boxShadow: '0 16px 40px rgba(0,0,0,0.18)',
+  boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
   zIndex: 20,
-  overflow: 'hidden',
+  overflow: "hidden",
 };
 
 export const suggestionItemStyle: CSSProperties = {
-  width: '100%',
-  textAlign: 'left',
-  font: 'inherit',
-  color: 'var(--text)',
-  background: 'transparent',
-  border: 'none',
-  padding: '10px 12px',
-  cursor: 'pointer',
+  width: "100%",
+  textAlign: "left",
+  font: "inherit",
+  color: "var(--text)",
+  background: "transparent",
+  border: "none",
+  padding: "10px 12px",
+  cursor: "pointer",
 };

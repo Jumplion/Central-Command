@@ -1,5 +1,5 @@
-import { promises as fs } from 'node:fs';
-import { atomicWrite, ensureWidgetDir, widgetFile } from './helpers';
+import { promises as fs } from "node:fs";
+import { atomicWrite, ensureWidgetDir, widgetFile } from "./helpers";
 
 export class JsonStore {
   private cache = new Map<string, Record<string, unknown>>();
@@ -10,7 +10,6 @@ export class JsonStore {
 
   constructor(private root: string) {}
 
-
   private async load(widgetId: string): Promise<Record<string, unknown>> {
     const cached = this.cache.get(widgetId);
     if (cached) return cached;
@@ -18,13 +17,16 @@ export class JsonStore {
     if (pending) return pending;
     const promise = (async () => {
       try {
-        const text = await fs.readFile(this.file(widgetId), 'utf-8');
+        const text = await fs.readFile(this.file(widgetId), "utf-8");
         const parsed = JSON.parse(text);
-        const obj = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+        const obj =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? (parsed as Record<string, unknown>)
+            : {};
         this.cache.set(widgetId, obj);
         return obj;
       } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
           const obj: Record<string, unknown> = {};
           this.cache.set(widgetId, obj);
           return obj;
@@ -45,8 +47,10 @@ export class JsonStore {
       widgetId,
       setTimeout(() => {
         this.writers.delete(widgetId);
-        this.flush(widgetId).catch((err) => console.error(`[json] flush ${widgetId} failed:`, err));
-      }, 200)
+        this.flush(widgetId).catch((err) =>
+          console.error(`[json] flush ${widgetId} failed:`, err),
+        );
+      }, 200),
     );
   }
 
@@ -70,11 +74,13 @@ export class JsonStore {
   async flushAll(): Promise<void> {
     for (const t of this.writers.values()) clearTimeout(t);
     this.writers.clear();
-    await Promise.all(Array.from(this.cache.keys()).map((id) => this.flush(id)));
+    await Promise.all(
+      Array.from(this.cache.keys()).map((id) => this.flush(id)),
+    );
   }
 
   private file(widgetId: string): string {
-    return widgetFile(this.root, widgetId, 'store.json');
+    return widgetFile(this.root, widgetId, "store.json");
   }
 
   async get(widgetId: string, key: string): Promise<unknown> {

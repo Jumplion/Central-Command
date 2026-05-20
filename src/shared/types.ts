@@ -1,5 +1,13 @@
-import type { GoogleConnectOptions, GoogleServiceDefinition, GoogleServiceId } from './google';
-export type { GoogleConnectOptions, GoogleServiceDefinition, GoogleServiceId } from './google';
+import type {
+  GoogleConnectOptions,
+  GoogleServiceDefinition,
+  GoogleServiceId,
+} from "./google";
+export type {
+  GoogleConnectOptions,
+  GoogleServiceDefinition,
+  GoogleServiceId,
+} from "./google";
 
 export type WidgetId = string;
 export type InstanceId = string;
@@ -7,7 +15,7 @@ export type DashboardId = string;
 
 export type SettingsField =
   | {
-      kind: 'string';
+      kind: "string";
       key: string;
       label: string;
       default?: string;
@@ -15,7 +23,7 @@ export type SettingsField =
       multiline?: boolean;
     }
   | {
-      kind: 'number';
+      kind: "number";
       key: string;
       label: string;
       default?: number;
@@ -23,9 +31,9 @@ export type SettingsField =
       max?: number;
       step?: number;
     }
-  | { kind: 'boolean'; key: string; label: string; default?: boolean }
+  | { kind: "boolean"; key: string; label: string; default?: boolean }
   | {
-      kind: 'select';
+      kind: "select";
       key: string;
       label: string;
       default?: string;
@@ -44,7 +52,7 @@ export interface WidgetManifest {
   settings?: SettingsField[];
   permissions?: { sqlite?: boolean; google?: boolean };
   /** Platforms this widget supports. Omit to support all platforms. */
-  platforms?: ('desktop')[];
+  platforms?: "desktop"[];
 }
 
 export type SettingsFieldValue = string | number | boolean | undefined;
@@ -78,7 +86,7 @@ export interface SqlRunResult {
 export interface DialogOpenPathOptions {
   title?: string;
   defaultPath?: string;
-  properties?: ('openFile' | 'openDirectory' | 'multiSelections')[];
+  properties?: ("openFile" | "openDirectory" | "multiSelections")[];
 }
 
 export interface NetFetchInit {
@@ -93,7 +101,12 @@ export interface NetFetchResponse {
   body: string;
 }
 
-export type DriveSyncState = 'disabled' | 'idle' | 'uploading' | 'downloading' | 'error';
+export type DriveSyncState =
+  | "disabled"
+  | "idle"
+  | "uploading"
+  | "downloading"
+  | "error";
 
 export interface DriveSyncStatus {
   state: DriveSyncState;
@@ -116,11 +129,18 @@ export interface CCApi {
     keysWithPrefix(widgetId: string, prefix: string): Promise<string[]>;
   };
   sql: {
-    run(widgetId: string, sql: string, params?: unknown[]): Promise<SqlRunResult>;
+    run(
+      widgetId: string,
+      sql: string,
+      params?: unknown[],
+    ): Promise<SqlRunResult>;
     all(widgetId: string, sql: string, params?: unknown[]): Promise<unknown[]>;
     get(widgetId: string, sql: string, params?: unknown[]): Promise<unknown>;
     exec(widgetId: string, sql: string): Promise<void>;
-    runBatch(widgetId: string, items: { sql: string; params?: unknown[] }[]): Promise<SqlRunResult[]>;
+    runBatch(
+      widgetId: string,
+      items: { sql: string; params?: unknown[] }[],
+    ): Promise<SqlRunResult[]>;
   };
   shell: {
     openExternal(url: string): Promise<void>;
@@ -142,7 +162,10 @@ export interface CCApi {
   google: {
     services: Record<GoogleServiceId, GoogleServiceDefinition>;
     connect(widgetId: string, options: GoogleConnectOptions): Promise<void>;
-    getToken(widgetId: string, service?: GoogleServiceId): Promise<string | null>;
+    getToken(
+      widgetId: string,
+      service?: GoogleServiceId,
+    ): Promise<string | null>;
     disconnect(widgetId: string, service?: GoogleServiceId): Promise<void>;
     isConnected(widgetId: string, service?: GoogleServiceId): Promise<boolean>;
   };

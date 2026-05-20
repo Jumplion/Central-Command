@@ -1,6 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { Widget, WidgetProps } from '@renderer/plugins/registry';
-import { buttonDefault, buttonExtraSmall, buttonTiny, centeredEmptyState, inputBase, dimText } from '../_shared/styles';
+import { useEffect, useMemo, useState } from "react";
+import type { Widget, WidgetProps } from "@renderer/plugins/registry";
+import {
+  buttonDefault,
+  buttonExtraSmall,
+  buttonTiny,
+  centeredEmptyState,
+  inputBase,
+  dimText,
+} from "../_shared/styles";
 
 interface CopyEntry {
   id: string;
@@ -15,21 +22,21 @@ async function writeClipboard(text: string): Promise<void> {
     return;
   }
 
-  const area = document.createElement('textarea');
+  const area = document.createElement("textarea");
   area.value = text;
-  area.setAttribute('readonly', 'true');
-  area.style.position = 'fixed';
-  area.style.opacity = '0';
+  area.setAttribute("readonly", "true");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
   document.body.appendChild(area);
   area.select();
-  document.execCommand('copy');
+  document.execCommand("copy");
   document.body.removeChild(area);
 }
 
 function QuickCopy({ api }: WidgetProps) {
   const [entries, setEntries] = useState<CopyEntry[]>([]);
-  const [draftTitle, setDraftTitle] = useState('');
-  const [draftValue, setDraftValue] = useState('');
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftValue, setDraftValue] = useState("");
   const [composerOpen, setComposerOpen] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -40,7 +47,7 @@ function QuickCopy({ api }: WidgetProps) {
 
   useEffect(() => {
     api.kv
-      .get<CopyEntry[]>('entries')
+      .get<CopyEntry[]>("entries")
       .then((saved) => {
         setEntries(saved ?? []);
       })
@@ -53,12 +60,12 @@ function QuickCopy({ api }: WidgetProps) {
 
   const persist = async (next: CopyEntry[]) => {
     setEntries(next);
-    await api.kv.set('entries', next);
+    await api.kv.set("entries", next);
   };
 
   const resetForm = () => {
-    setDraftTitle('');
-    setDraftValue('');
+    setDraftTitle("");
+    setDraftValue("");
   };
 
   const saveEntry = async () => {
@@ -67,7 +74,10 @@ function QuickCopy({ api }: WidgetProps) {
 
     const title = draftTitle.trim();
     const now = Date.now();
-    const next = [...entries, { id: crypto.randomUUID(), title, value, createdAt: now }];
+    const next = [
+      ...entries,
+      { id: crypto.randomUUID(), title, value, createdAt: now },
+    ];
 
     try {
       await persist(next);
@@ -97,7 +107,7 @@ function QuickCopy({ api }: WidgetProps) {
         setCopiedId((curr) => (curr === entry.id ? null : curr));
       }, 1200);
     } catch {
-      setError('Could not copy to clipboard.');
+      setError("Could not copy to clipboard.");
     }
   };
 
@@ -114,16 +124,30 @@ function QuickCopy({ api }: WidgetProps) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 10 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <button
             className="ghost"
-            style={{ ...buttonExtraSmall, color: 'var(--text-dim)' }}
+            style={{ ...buttonExtraSmall, color: "var(--text-dim)" }}
             onClick={() => setComposerOpen((open) => !open)}
-            title={composerOpen ? 'Collapse' : 'Expand'}
+            title={composerOpen ? "Collapse" : "Expand"}
           >
-            {composerOpen ? '▾' : '▸'}
+            {composerOpen ? "▾" : "▸"}
           </button>
           <button
             className="primary"
@@ -133,7 +157,7 @@ function QuickCopy({ api }: WidgetProps) {
               else void saveEntry();
             }}
           >
-            {composerOpen ? 'Add' : '+ Add'}
+            {composerOpen ? "Add" : "+ Add"}
           </button>
         </div>
 
@@ -149,23 +173,21 @@ function QuickCopy({ api }: WidgetProps) {
               value={draftValue}
               onChange={(e) => setDraftValue(e.target.value)}
               placeholder="Paste or type text to save..."
-              style={{ ...inputBase, minHeight: 64, resize: 'vertical' }}
+              style={{ ...inputBase, minHeight: 64, resize: "vertical" }}
             />
           </>
         )}
       </div>
 
       {error && (
-        <div style={{ color: 'var(--danger)', fontSize: 12 }}>
-          {error}
-        </div>
+        <div style={{ color: "var(--danger)", fontSize: 12 }}>{error}</div>
       )}
 
       {ordered.length === 0 ? (
         <div
           style={{
             ...centeredEmptyState,
-            border: '1px dashed var(--border)',
+            border: "1px dashed var(--border)",
             borderRadius: 6,
             fontSize: 13,
             padding: 12,
@@ -178,11 +200,11 @@ function QuickCopy({ api }: WidgetProps) {
           style={{
             flex: 1,
             minHeight: 0,
-            overflow: 'auto',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            overflow: "auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
             gap: 8,
-            alignContent: 'start',
+            alignContent: "start",
           }}
         >
           {ordered.map((entry) => {
@@ -191,10 +213,10 @@ function QuickCopy({ api }: WidgetProps) {
             const isCopied = copiedId === entry.id;
             const isDragging = draggingId === entry.id;
             const isDropTarget = dropTargetId === entry.id;
-            let bg = 'var(--surface)';
-            if (isCopied) bg = 'rgba(72,199,142,0.12)';
-            else if (isPressed) bg = 'rgba(110,168,255,0.18)';
-            else if (isHovered) bg = 'rgba(110,168,255,0.07)';
+            let bg = "var(--surface)";
+            if (isCopied) bg = "rgba(72,199,142,0.12)";
+            else if (isPressed) bg = "rgba(110,168,255,0.18)";
+            else if (isHovered) bg = "rgba(110,168,255,0.07)";
 
             return (
               <div
@@ -202,19 +224,28 @@ function QuickCopy({ api }: WidgetProps) {
                 role="button"
                 tabIndex={0}
                 onMouseEnter={() => setHoveredId(entry.id)}
-                onMouseLeave={() => { setHoveredId(null); setPressedId(null); }}
+                onMouseLeave={() => {
+                  setHoveredId(null);
+                  setPressedId(null);
+                }}
                 onMouseDown={(e) => {
-                  if ((e.target as HTMLElement).closest('button, [draggable]')) return;
+                  if ((e.target as HTMLElement).closest("button, [draggable]"))
+                    return;
                   setPressedId(entry.id);
                 }}
                 onMouseUp={() => setPressedId(null)}
                 onClick={() => void copyEntry(entry)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') void copyEntry(entry); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") void copyEntry(entry);
+                }}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  if (draggingId && draggingId !== entry.id) setDropTargetId(entry.id);
+                  if (draggingId && draggingId !== entry.id)
+                    setDropTargetId(entry.id);
                 }}
-                onDragLeave={() => { if (dropTargetId === entry.id) setDropTargetId(null); }}
+                onDragLeave={() => {
+                  if (dropTargetId === entry.id) setDropTargetId(null);
+                }}
                 onDrop={(e) => {
                   e.preventDefault();
                   if (!draggingId || draggingId === entry.id) return;
@@ -226,32 +257,40 @@ function QuickCopy({ api }: WidgetProps) {
                 }}
                 style={{
                   border: isDropTarget
-                    ? '1px solid var(--accent)'
+                    ? "1px solid var(--accent)"
                     : isCopied
-                    ? '1px solid rgba(72,199,142,0.5)'
-                    : '1px solid var(--border)',
+                      ? "1px solid rgba(72,199,142,0.5)"
+                      : "1px solid var(--border)",
                   borderRadius: 6,
                   background: bg,
                   padding: 6,
-                  display: 'flex',
-                  flexDirection: 'column',
+                  display: "flex",
+                  flexDirection: "column",
                   gap: 4,
-                  cursor: 'pointer',
+                  cursor: "pointer",
                   opacity: isDragging ? 0.35 : 1,
-                  transition: 'background 0.1s, border-color 0.1s, opacity 0.15s',
-                  userSelect: 'none',
-                  outline: 'none',
+                  transition:
+                    "background 0.1s, border-color 0.1s, opacity 0.15s",
+                  userSelect: "none",
+                  outline: "none",
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
                   <span
                     draggable
                     style={{
                       fontSize: 14,
                       lineHeight: 1,
-                      padding: '1px 3px',
-                      cursor: isDragging ? 'grabbing' : 'grab',
-                      color: 'var(--text-dim)',
+                      padding: "1px 3px",
+                      cursor: isDragging ? "grabbing" : "grab",
+                      color: "var(--text-dim)",
                       flexShrink: 0,
                     }}
                     title="Drag to reorder"
@@ -260,8 +299,8 @@ function QuickCopy({ api }: WidgetProps) {
                     onDragStart={(e) => {
                       e.stopPropagation();
                       setDraggingId(entry.id);
-                      e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('text/plain', entry.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", entry.id);
                     }}
                     onDragEnd={(e) => {
                       e.stopPropagation();
@@ -276,16 +315,16 @@ function QuickCopy({ api }: WidgetProps) {
                     style={{
                       fontSize: 12,
                       fontWeight: 600,
-                      color: isCopied ? 'var(--accent)' : 'var(--text)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      color: isCopied ? "var(--accent)" : "var(--text)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                       flex: 1,
-                      transition: 'color 0.1s',
+                      transition: "color 0.1s",
                     }}
-                    title={entry.title || 'Untitled'}
+                    title={entry.title || "Untitled"}
                   >
-                    {isCopied ? '✓ Copied!' : (entry.title || 'Untitled')}
+                    {isCopied ? "✓ Copied!" : entry.title || "Untitled"}
                   </div>
 
                   <button
@@ -303,14 +342,14 @@ function QuickCopy({ api }: WidgetProps) {
                 <div
                   style={{
                     fontSize: 12,
-                    color: 'var(--text-dim)',
+                    color: "var(--text-dim)",
                     lineHeight: 1.35,
-                    whiteSpace: 'pre-wrap',
-                    overflow: 'hidden',
-                    overflowWrap: 'anywhere',
-                    display: '-webkit-box',
+                    whiteSpace: "pre-wrap",
+                    overflow: "hidden",
+                    overflowWrap: "anywhere",
+                    display: "-webkit-box",
                     WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
+                    WebkitBoxOrient: "vertical",
                   }}
                   title={entry.value}
                 >
@@ -327,11 +366,11 @@ function QuickCopy({ api }: WidgetProps) {
 
 const widget: Widget = {
   manifest: {
-    id: 'quick-copy',
-    name: 'Quick Copy',
-    description: 'Save snippets and copy them to clipboard with one click.',
-    version: '0.1.0',
-    icon: '📋',
+    id: "quick-copy",
+    name: "Quick Copy",
+    description: "Save snippets and copy them to clipboard with one click.",
+    version: "0.1.0",
+    icon: "📋",
     defaultSize: { w: 4, h: 6 },
     minSize: { w: 3, h: 3 },
   },

@@ -14,7 +14,9 @@ const listeners = new Set<Listener>();
 
 export function subscribeApiCalls(listener: Listener): () => void {
   listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function emitApiCall(record: ApiCallRecord): void {

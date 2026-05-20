@@ -23,7 +23,7 @@ Electron apps are split into two completely separate JavaScript environments:
 
 **Main process** (`src/main/`) — This is a regular Node.js program. It can read files, open databases, make network requests without CORS, access the OS keychain, spawn child processes, etc. There is exactly one main process per running app.
 
-**Renderer process** (`src/renderer/`) — This is essentially a Chromium browser tab. It runs your React UI. For security reasons, it has *no* direct access to Node.js or the filesystem. It's sandboxed just like a webpage.
+**Renderer process** (`src/renderer/`) — This is essentially a Chromium browser tab. It runs your React UI. For security reasons, it has _no_ direct access to Node.js or the filesystem. It's sandboxed just like a webpage.
 
 **The bridge** (`src/preload/`) — Because these two worlds can't talk directly, Electron provides a "preload script." It runs in a special context that can reach both sides, and it uses `contextBridge` to expose a safe, controlled API (`window.cc`) that the renderer can call.
 

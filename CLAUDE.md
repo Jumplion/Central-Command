@@ -16,6 +16,7 @@ npm run package      # Build + package with electron-builder
 ## Setup & Requirements
 
 **Node.js:** The project requires Node.js 20.19.0 or higher (see `package.json#engines.node`). Specifically:
+
 - ✅ Node 20.19.0+
 - ✅ Node 22.12.0+
 - ✅ Node 24.0.0+
@@ -36,12 +37,12 @@ This is an Electron desktop app (Central Command) — a personal extensible dash
 
 ### Path aliases
 
-| Alias | Resolves to |
-| --- | --- |
-| `@shared` | `src/shared/` |
-| `@main` | `src/main/` (node project only) |
-| `@renderer` | `src/renderer/src/` |
-| `@widgets` | `src/widgets/` |
+| Alias       | Resolves to                     |
+| ----------- | ------------------------------- |
+| `@shared`   | `src/shared/`                   |
+| `@main`     | `src/main/` (node project only) |
+| `@renderer` | `src/renderer/src/`             |
+| `@widgets`  | `src/widgets/`                  |
 
 ### Security model
 
@@ -57,34 +58,34 @@ This is an Electron desktop app (Central Command) — a personal extensible dash
 
 #### IPC channels reference
 
-| Channel | Direction | Description |
-| --- | --- | --- |
-| `cc:state:load` | renderer → main | Load `AppState` from `userData/state.json` |
-| `cc:state:save` | renderer → main | Persist `AppState` to `userData/state.json` |
-| `cc:kv:get` | renderer → main | Get a KV value |
-| `cc:kv:set` | renderer → main | Set a KV value |
-| `cc:kv:del` | renderer → main | Delete a KV key |
-| `cc:kv:keys` | renderer → main | List all keys for a widget |
-| `cc:kv:keys-prefix` | renderer → main | List keys matching a prefix |
-| `cc:sql:run` | renderer → main | INSERT / UPDATE / DELETE |
-| `cc:sql:all` | renderer → main | SELECT multiple rows |
-| `cc:sql:get` | renderer → main | SELECT first row |
-| `cc:sql:exec` | renderer → main | Execute arbitrary SQL |
-| `cc:sql:runBatch` | renderer → main | Transactional batch of statements |
-| `cc:shell:openExternal` | renderer → main | Open URL in system browser |
-| `cc:shell:openPath` | renderer → main | Open file/folder with OS default |
-| `cc:shell:showInFolder` | renderer → main | Reveal in file manager |
-| `cc:dialog:openPath` | renderer → main | Native file-picker dialog |
-| `cc:net:fetch` | renderer → main | HTTP via Electron's `net` module |
-| `cc:secrets:get/set/del/has` | renderer → main | Encrypted per-widget secrets |
-| `cc:google:connect` | renderer → main | Trigger PKCE OAuth flow |
-| `cc:google:get-token` | renderer → main | Get/refresh Google access token |
-| `cc:google:is-connected` | renderer → main | Check auth status |
-| `cc:google:disconnect` | renderer → main | Revoke credentials |
-| `cc:drive-sync:get-status` | renderer → main | Get current sync status |
-| `cc:drive-sync:enable/disable` | renderer → main | Toggle Drive sync |
-| `cc:drive-sync:force-push/pull` | renderer → main | Manual sync |
-| `cc:drive-sync:status-changed` | main → renderer | Push: sync state changed |
+| Channel                         | Direction       | Description                                 |
+| ------------------------------- | --------------- | ------------------------------------------- |
+| `cc:state:load`                 | renderer → main | Load `AppState` from `userData/state.json`  |
+| `cc:state:save`                 | renderer → main | Persist `AppState` to `userData/state.json` |
+| `cc:kv:get`                     | renderer → main | Get a KV value                              |
+| `cc:kv:set`                     | renderer → main | Set a KV value                              |
+| `cc:kv:del`                     | renderer → main | Delete a KV key                             |
+| `cc:kv:keys`                    | renderer → main | List all keys for a widget                  |
+| `cc:kv:keys-prefix`             | renderer → main | List keys matching a prefix                 |
+| `cc:sql:run`                    | renderer → main | INSERT / UPDATE / DELETE                    |
+| `cc:sql:all`                    | renderer → main | SELECT multiple rows                        |
+| `cc:sql:get`                    | renderer → main | SELECT first row                            |
+| `cc:sql:exec`                   | renderer → main | Execute arbitrary SQL                       |
+| `cc:sql:runBatch`               | renderer → main | Transactional batch of statements           |
+| `cc:shell:openExternal`         | renderer → main | Open URL in system browser                  |
+| `cc:shell:openPath`             | renderer → main | Open file/folder with OS default            |
+| `cc:shell:showInFolder`         | renderer → main | Reveal in file manager                      |
+| `cc:dialog:openPath`            | renderer → main | Native file-picker dialog                   |
+| `cc:net:fetch`                  | renderer → main | HTTP via Electron's `net` module            |
+| `cc:secrets:get/set/del/has`    | renderer → main | Encrypted per-widget secrets                |
+| `cc:google:connect`             | renderer → main | Trigger PKCE OAuth flow                     |
+| `cc:google:get-token`           | renderer → main | Get/refresh Google access token             |
+| `cc:google:is-connected`        | renderer → main | Check auth status                           |
+| `cc:google:disconnect`          | renderer → main | Revoke credentials                          |
+| `cc:drive-sync:get-status`      | renderer → main | Get current sync status                     |
+| `cc:drive-sync:enable/disable`  | renderer → main | Toggle Drive sync                           |
+| `cc:drive-sync:force-push/pull` | renderer → main | Manual sync                                 |
+| `cc:drive-sync:status-changed`  | main → renderer | Push: sync state changed                    |
 
 ### State management
 
@@ -131,35 +132,35 @@ The grid uses a 12-column layout with 60 px row height (`react-grid-layout`). Si
 
 ### Widget manifest fields
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | `string` | Must equal the folder name |
-| `name` | `string` | Display name |
-| `description` | `string?` | Shown in the Add dialog |
-| `version` | `string` | Semver-ish, e.g. `0.1.0` |
-| `icon` | `string?` | Emoji or short string used in header |
-| `defaultSize` | `{ w, h }` | Grid cells (12-col, 60 px rows) |
-| `minSize` | `{ w, h }?` | Minimum drag/resize size |
-| `settings` | `SettingsField[]?` | Schema for per-instance settings UI |
-| `permissions` | `{ sqlite?, google? }?` | Declare capabilities used |
-| `platforms` | `('desktop')[]?` | Omit = all platforms |
+| Field         | Type                    | Notes                                |
+| ------------- | ----------------------- | ------------------------------------ |
+| `id`          | `string`                | Must equal the folder name           |
+| `name`        | `string`                | Display name                         |
+| `description` | `string?`               | Shown in the Add dialog              |
+| `version`     | `string`                | Semver-ish, e.g. `0.1.0`             |
+| `icon`        | `string?`               | Emoji or short string used in header |
+| `defaultSize` | `{ w, h }`              | Grid cells (12-col, 60 px rows)      |
+| `minSize`     | `{ w, h }?`             | Minimum drag/resize size             |
+| `settings`    | `SettingsField[]?`      | Schema for per-instance settings UI  |
+| `permissions` | `{ sqlite?, google? }?` | Declare capabilities used            |
+| `platforms`   | `('desktop')[]?`        | Omit = all platforms                 |
 
 ### WidgetApi surface
 
 `api` in the component props is an instance-scoped wrapper defined in `src/renderer/src/plugins/api.ts`:
 
 ```ts
-api.widgetId       // widget type id
-api.instanceId     // unique instance id
+api.widgetId; // widget type id
+api.instanceId; // unique instance id
 
-api.kv             // instance-scoped JSON KV (instanceId:: prefix auto-applied)
-api.sql            // widget-shared SQLite (declare permissions.sqlite)
-api.shell          // openExternal / openPath / showItemInFolder
-api.dialog         // openPath (native file picker)
-api.net            // fetch via Electron net (avoids browser CORS)
-api.secrets        // encrypted per-widget KV (widget-shared, not per-instance)
-api.google         // PKCE OAuth + token management (declare permissions.google)
-api.google.shared  // shared OAuth namespace ('google' widgetId)
+api.kv; // instance-scoped JSON KV (instanceId:: prefix auto-applied)
+api.sql; // widget-shared SQLite (declare permissions.sqlite)
+api.shell; // openExternal / openPath / showItemInFolder
+api.dialog; // openPath (native file picker)
+api.net; // fetch via Electron net (avoids browser CORS)
+api.secrets; // encrypted per-widget KV (widget-shared, not per-instance)
+api.google; // PKCE OAuth + token management (declare permissions.google)
+api.google.shared; // shared OAuth namespace ('google' widgetId)
 ```
 
 ### Widget conventions
@@ -173,33 +174,33 @@ api.google.shared  // shared OAuth namespace ('google' widgetId)
 
 ## Key files
 
-| Purpose | File |
-| --- | --- |
-| Shared type definitions | `src/shared/types.ts` |
-| IPC channel constants | `src/shared/ipc.ts` |
-| Google service presets | `src/shared/google.ts` |
-| Default AppState | `src/shared/defaults.ts` |
-| Widget ID validation | `src/shared/validation.ts` |
-| Main process entry | `src/main/index.ts` |
-| IPC handler registration | `src/main/ipc.ts` |
-| Storage orchestrator | `src/main/storage/index.ts` |
-| JSON KV store | `src/main/storage/json.ts` |
-| SQLite store | `src/main/storage/sqlite.ts` |
-| Google Drive wrapper | `src/main/storage/drive.ts` |
-| Google OAuth | `src/main/oauth.ts` |
-| Encrypted secrets | `src/main/secrets.ts` |
-| Drive sync manager | `src/main/sync.ts` |
-| WSL detection | `src/main/platform.ts` |
-| Preload contextBridge | `src/preload/index.ts` |
-| Dashboard Zustand store | `src/renderer/src/state/dashboard.ts` |
-| Widget registry | `src/renderer/src/plugins/registry.ts` |
-| WidgetApi wrapper | `src/renderer/src/plugins/api.ts` |
-| GridLayout component | `src/renderer/src/components/Dashboard.tsx` |
-| Widget error boundary | `src/renderer/src/components/WidgetHost.tsx` |
-| App settings UI | `src/renderer/src/components/AppSettings.tsx` |
-| Build config | `electron.vite.config.ts` |
-| Vitest config | `vitest.config.ts` |
-| Widget authoring guide | `src/widgets/README.md` |
+| Purpose                  | File                                          |
+| ------------------------ | --------------------------------------------- |
+| Shared type definitions  | `src/shared/types.ts`                         |
+| IPC channel constants    | `src/shared/ipc.ts`                           |
+| Google service presets   | `src/shared/google.ts`                        |
+| Default AppState         | `src/shared/defaults.ts`                      |
+| Widget ID validation     | `src/shared/validation.ts`                    |
+| Main process entry       | `src/main/index.ts`                           |
+| IPC handler registration | `src/main/ipc.ts`                             |
+| Storage orchestrator     | `src/main/storage/index.ts`                   |
+| JSON KV store            | `src/main/storage/json.ts`                    |
+| SQLite store             | `src/main/storage/sqlite.ts`                  |
+| Google Drive wrapper     | `src/main/storage/drive.ts`                   |
+| Google OAuth             | `src/main/oauth.ts`                           |
+| Encrypted secrets        | `src/main/secrets.ts`                         |
+| Drive sync manager       | `src/main/sync.ts`                            |
+| WSL detection            | `src/main/platform.ts`                        |
+| Preload contextBridge    | `src/preload/index.ts`                        |
+| Dashboard Zustand store  | `src/renderer/src/state/dashboard.ts`         |
+| Widget registry          | `src/renderer/src/plugins/registry.ts`        |
+| WidgetApi wrapper        | `src/renderer/src/plugins/api.ts`             |
+| GridLayout component     | `src/renderer/src/components/Dashboard.tsx`   |
+| Widget error boundary    | `src/renderer/src/components/WidgetHost.tsx`  |
+| App settings UI          | `src/renderer/src/components/AppSettings.tsx` |
+| Build config             | `electron.vite.config.ts`                     |
+| Vitest config            | `vitest.config.ts`                            |
+| Widget authoring guide   | `src/widgets/README.md`                       |
 
 ## Testing
 

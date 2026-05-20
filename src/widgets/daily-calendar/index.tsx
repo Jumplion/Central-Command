@@ -1,7 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { Widget, WidgetProps } from '@renderer/plugins/registry';
-import { buttonSmall, buttonTiny, dimText, centeredEmptyState } from '../_shared/styles';
-import { NotConnected } from '../_shared/NotConnected';
+import { useState, useEffect, useCallback } from "react";
+import type { Widget, WidgetProps } from "@renderer/plugins/registry";
+import {
+  buttonSmall,
+  buttonTiny,
+  dimText,
+  centeredEmptyState,
+} from "../_shared/styles";
+import { NotConnected } from "../_shared/NotConnected";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -23,23 +28,41 @@ interface CalendarEventsResponse {
 
 function todayBounds(): { timeMin: string; timeMax: string } {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const start = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+  );
+  const end = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
   return { timeMin: start.toISOString(), timeMax: end.toISOString() };
 }
 
 function formatTime(dt: string | undefined, date: string | undefined): string {
-  if (date && !dt) return 'All day';
-  if (!dt) return '';
+  if (date && !dt) return "All day";
+  if (!dt) return "";
   const d = new Date(dt);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function formatDateHeading(): string {
   return new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
+    weekday: "long",
+    month: "long",
+    day: "numeric",
   });
 }
 
@@ -48,7 +71,6 @@ function isAllDay(event: CalendarEvent): boolean {
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
-
 
 function EventRow({
   event,
@@ -60,23 +82,23 @@ function EventRow({
   const allDay = isAllDay(event);
   const startTime = formatTime(event.start.dateTime, event.start.date);
   const endTime = formatTime(event.end.dateTime, event.end.date);
-  const timeLabel = allDay ? 'All day' : `${startTime} – ${endTime}`;
+  const timeLabel = allDay ? "All day" : `${startTime} – ${endTime}`;
 
   return (
     <div
       style={{
-        padding: '8px 4px',
-        borderBottom: '1px solid var(--border)',
-        display: 'grid',
-        gridTemplateColumns: '80px 1fr auto',
-        gap: '0 10px',
-        alignItems: 'start',
+        padding: "8px 4px",
+        borderBottom: "1px solid var(--border)",
+        display: "grid",
+        gridTemplateColumns: "80px 1fr auto",
+        gap: "0 10px",
+        alignItems: "start",
       }}
     >
       <span
         style={{
           fontSize: 11,
-          color: 'var(--text-dim)',
+          color: "var(--text-dim)",
           paddingTop: 2,
           flexShrink: 0,
         }}
@@ -88,22 +110,22 @@ function EventRow({
           style={{
             fontSize: 12,
             fontWeight: 500,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
           title={event.summary}
         >
-          {event.summary || '(No title)'}
+          {event.summary || "(No title)"}
         </div>
         {event.location && (
           <div
             style={{
               fontSize: 11,
-              color: 'var(--text-dim)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              color: "var(--text-dim)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
               marginTop: 1,
             }}
             title={event.location}
@@ -115,10 +137,10 @@ function EventRow({
           <div
             style={{
               fontSize: 11,
-              color: 'var(--text-dim)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              color: "var(--text-dim)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
               marginTop: 1,
             }}
             title={event.description}
@@ -163,20 +185,20 @@ function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
       const params = new URLSearchParams({
         timeMin,
         timeMax,
-        singleEvents: 'true',
-        orderBy: 'startTime',
-        maxResults: '50',
+        singleEvents: "true",
+        orderBy: "startTime",
+        maxResults: "50",
       });
 
       const res = await api.net.fetch(
         `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (!res.ok) {
         if (res.status === 401) {
           setConnected(false);
-          setError('Session expired — please reconnect.');
+          setError("Session expired — please reconnect.");
         } else {
           throw new Error(`Calendar API error: ${res.status}`);
         }
@@ -186,7 +208,7 @@ function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
       const data = JSON.parse(res.body) as CalendarEventsResponse;
       const items = data.items ?? [];
       setEvents(items);
-      setTitle?.(items.length > 0 ? `Calendar (${items.length})` : 'Calendar');
+      setTitle?.(items.length > 0 ? `Calendar (${items.length})` : "Calendar");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -211,7 +233,9 @@ function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
 
   // ── Loading connection status ───────────────────────────────────────────
   if (connected === null) {
-    return <div style={{ padding: 12, ...dimText, fontSize: 12 }}>Loading…</div>;
+    return (
+      <div style={{ padding: 12, ...dimText, fontSize: 12 }}>Loading…</div>
+    );
   }
 
   // ── Not connected ───────────────────────────────────────────────────────
@@ -221,18 +245,34 @@ function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
 
   // ── Connected ────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 6 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 6,
+      }}
+    >
       <div
         style={{
-          display: 'flex',
+          display: "flex",
           gap: 6,
-          alignItems: 'center',
+          alignItems: "center",
           flexShrink: 0,
           paddingBottom: 4,
-          borderBottom: '1px solid var(--border)',
+          borderBottom: "1px solid var(--border)",
         }}
       >
-        <span style={{ fontSize: 12, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            flex: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {formatDateHeading()}
         </span>
         <button
@@ -242,17 +282,21 @@ function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
           disabled={loading}
           title="Refresh events"
         >
-          {loading ? '…' : '↻'}
+          {loading ? "…" : "↻"}
         </button>
       </div>
 
       {error && (
-        <div style={{ fontSize: 11, color: 'var(--danger)', flexShrink: 0 }}>{error}</div>
+        <div style={{ fontSize: 11, color: "var(--danger)", flexShrink: 0 }}>
+          {error}
+        </div>
       )}
 
-      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
         {events.length === 0 && !loading ? (
-          <div style={{ ...centeredEmptyState, fontSize: 12, padding: '24px 0' }}>
+          <div
+            style={{ ...centeredEmptyState, fontSize: 12, padding: "24px 0" }}
+          >
             No events today.
           </div>
         ) : (
@@ -269,11 +313,12 @@ function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
 
 const widget: Widget = {
   manifest: {
-    id: 'daily-calendar',
-    name: 'Daily Calendar',
-    description: "Shows today's events from your primary Google Calendar. Requires a Google Cloud OAuth app.",
-    version: '0.1.0',
-    icon: '📅',
+    id: "daily-calendar",
+    name: "Daily Calendar",
+    description:
+      "Shows today's events from your primary Google Calendar. Requires a Google Cloud OAuth app.",
+    version: "0.1.0",
+    icon: "📅",
     defaultSize: { w: 5, h: 7 },
     minSize: { w: 3, h: 4 },
     permissions: { google: true },

@@ -25,27 +25,27 @@
 //   api.secrets        ─ OS-keychain-backed encrypted storage
 //   api.shell          ─ open a URL in the system browser
 
-import { useState, useEffect, useCallback } from 'react';
-import type { Widget, WidgetProps } from '@renderer/plugins/registry';
-import { useSqlInit } from '@renderer/hooks/useSqlInit';
+import { useState, useEffect, useCallback } from "react";
+import type { Widget, WidgetProps } from "@renderer/plugins/registry";
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
 import {
   buttonDefault,
   buttonTiny,
   centeredEmptyState,
   inputBase,
-} from '../_shared/styles';
-import { INIT_SQL, MIGRATIONS } from './constants';
-import type { Note } from './types';
+} from "../_shared/styles";
+import { INIT_SQL, MIGRATIONS } from "./constants";
+import type { Note } from "./types";
 
 // ─── Helper ────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
   try {
     return new Intl.DateTimeFormat(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(new Date(iso));
   } catch {
     return iso;
@@ -72,13 +72,13 @@ function NoteRow({
   return (
     <div
       style={{
-        background: note.pinned ? 'rgba(110,168,255,0.07)' : 'var(--surface)',
-        border: `1px solid ${note.pinned ? 'var(--accent)' : 'var(--border)'}`,
+        background: note.pinned ? "rgba(110,168,255,0.07)" : "var(--surface)",
+        border: `1px solid ${note.pinned ? "var(--accent)" : "var(--border)"}`,
         borderRadius: 6,
-        padding: '6px 8px',
-        display: 'flex',
+        padding: "6px 8px",
+        display: "flex",
         gap: 6,
-        alignItems: 'flex-start',
+        alignItems: "flex-start",
       }}
     >
       <div
@@ -86,23 +86,27 @@ function NoteRow({
           flex: 1,
           fontSize: 12,
           lineHeight: 1.5,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          color: 'var(--text)',
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          color: "var(--text)",
         }}
       >
         {note.body}
         {showDate && (
-          <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>
             {formatDate(note.created_at)}
           </div>
         )}
       </div>
       <button
         className="ghost"
-        style={{ ...buttonTiny, flexShrink: 0, opacity: note.pinned ? 1 : 0.35 }}
+        style={{
+          ...buttonTiny,
+          flexShrink: 0,
+          opacity: note.pinned ? 1 : 0.35,
+        }}
         onClick={onPin}
-        title={note.pinned ? 'Unpin' : 'Pin to top'}
+        title={note.pinned ? "Unpin" : "Pin to top"}
       >
         📌
       </button>
@@ -121,7 +125,6 @@ function NoteRow({
 // ─── Main component ────────────────────────────────────────────────────────
 
 function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
-
   // ── Settings ──────────────────────────────────────────────────────────────
   //
   // `settings` is a plain Record<string, unknown> populated from the defaults
@@ -132,18 +135,18 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
   // Settings are stored in AppState (userData/state.json), NOT in api.kv or
   // api.sql. They are passed fresh on every render, so there is no need to
   // cache them in local state.
-  const headerLabel = (settings.headerLabel as string) || 'Notes';
-  const maxNotes    = Math.max(1, Math.min(500, Number(settings.maxNotes ?? 50)));
-  const showDates   = settings.showDates !== false;  // default true
-  const sortNewest  = (settings.sortOrder as string ?? 'newest') === 'newest';
+  const headerLabel = (settings.headerLabel as string) || "Notes";
+  const maxNotes = Math.max(1, Math.min(500, Number(settings.maxNotes ?? 50)));
+  const showDates = settings.showDates !== false; // default true
+  const sortNewest = ((settings.sortOrder as string) ?? "newest") === "newest";
 
   // ── Component state ───────────────────────────────────────────────────────
-  const [notes,       setNotes]       = useState<Note[]>([]);
-  const [draft,       setDraft]       = useState('');
-  const [fetching,    setFetching]    = useState(false);
-  const [fetchError,  setFetchError]  = useState<string | null>(null);
-  const [authorName,  setAuthorName]  = useState('');
-  const [authorDraft, setAuthorDraft] = useState('');
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [draft, setDraft] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [authorName, setAuthorName] = useState("");
+  const [authorDraft, setAuthorDraft] = useState("");
   const [authorSaved, setAuthorSaved] = useState(false);
 
   // ── Database init ──────────────────────────────────────────────────────────
@@ -178,7 +181,7 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
   // stable refetch callback. Use it when your query doesn't depend on a
   // `ready` gate or on settings-driven SQL fragments.
   const loadNotes = useCallback(async () => {
-    const dir = sortNewest ? 'DESC' : 'ASC';
+    const dir = sortNewest ? "DESC" : "ASC";
     const rows = await api.sql.all<Note>(
       `SELECT * FROM notes ORDER BY pinned DESC, created_at ${dir} LIMIT ?`,
       [maxNotes],
@@ -197,7 +200,9 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
   // Pass undefined to restore the manifest `name` value.
   // This effect runs whenever the note count or the user's custom label changes.
   useEffect(() => {
-    setTitle(notes.length > 0 ? `${headerLabel} (${notes.length})` : headerLabel);
+    setTitle(
+      notes.length > 0 ? `${headerLabel} (${notes.length})` : headerLabel,
+    );
   }, [notes.length, headerLabel, setTitle]);
 
   // ── KV: last-opened tracking ───────────────────────────────────────────────
@@ -216,7 +221,7 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
   // effect starts a timer, subscription, or any resource that outlives the
   // component — see the timer example in src/widgets/README.md.
   useEffect(() => {
-    void api.kv.set('lastOpened', new Date().toISOString());
+    void api.kv.set("lastOpened", new Date().toISOString());
   }, [api]);
 
   // ── Secrets: author name ───────────────────────────────────────────────────
@@ -229,8 +234,8 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
   //
   // api.secrets.get returns string | null (null if the key has never been set).
   useEffect(() => {
-    api.secrets.get('authorName').then((val) => {
-      const name = val ?? '';
+    api.secrets.get("authorName").then((val) => {
+      const name = val ?? "";
       setAuthorName(name);
       setAuthorDraft(name);
     });
@@ -238,28 +243,37 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const addNote = useCallback(async (body: string) => {
-    const trimmed = body.trim();
-    if (!trimmed || !ready) return;
-    // api.sql.run is for INSERT / UPDATE / DELETE. Pass user input as a
-    // parameterized value (?) — never interpolate it into the SQL string.
-    await api.sql.run('INSERT INTO notes (body) VALUES (?)', [trimmed]);
-    await loadNotes();
-    setDraft('');
-  }, [api, ready, loadNotes]);
+  const addNote = useCallback(
+    async (body: string) => {
+      const trimmed = body.trim();
+      if (!trimmed || !ready) return;
+      // api.sql.run is for INSERT / UPDATE / DELETE. Pass user input as a
+      // parameterized value (?) — never interpolate it into the SQL string.
+      await api.sql.run("INSERT INTO notes (body) VALUES (?)", [trimmed]);
+      await loadNotes();
+      setDraft("");
+    },
+    [api, ready, loadNotes],
+  );
 
-  const deleteNote = useCallback(async (id: number) => {
-    await api.sql.run('DELETE FROM notes WHERE id = ?', [id]);
-    await loadNotes();
-  }, [api, loadNotes]);
+  const deleteNote = useCallback(
+    async (id: number) => {
+      await api.sql.run("DELETE FROM notes WHERE id = ?", [id]);
+      await loadNotes();
+    },
+    [api, loadNotes],
+  );
 
-  const togglePin = useCallback(async (note: Note) => {
-    await api.sql.run('UPDATE notes SET pinned = ? WHERE id = ?', [
-      note.pinned ? 0 : 1,
-      note.id,
-    ]);
-    await loadNotes();
-  }, [api, loadNotes]);
+  const togglePin = useCallback(
+    async (note: Note) => {
+      await api.sql.run("UPDATE notes SET pinned = ? WHERE id = ?", [
+        note.pinned ? 0 : 1,
+        note.id,
+      ]);
+      await loadNotes();
+    },
+    [api, loadNotes],
+  );
 
   // Fetch a random piece of advice and add it as a note.
   //
@@ -275,8 +289,8 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
     setFetching(true);
     setFetchError(null);
     try {
-      const res = await api.net.fetch('https://api.adviceslip.com/advice', {
-        headers: { Accept: 'application/json' },
+      const res = await api.net.fetch("https://api.adviceslip.com/advice", {
+        headers: { Accept: "application/json" },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = JSON.parse(res.body) as { slip: { advice: string } };
@@ -290,7 +304,7 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
 
   const saveAuthor = useCallback(async () => {
     const name = authorDraft.trim();
-    await api.secrets.set('authorName', name);
+    await api.secrets.set("authorName", name);
     setAuthorName(name);
     setAuthorSaved(true);
     setTimeout(() => setAuthorSaved(false), 1500);
@@ -300,7 +314,7 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
   // The main process only allows http, https, and mailto schemes — all others
   // are rejected before the OS shell call is made.
   const openDocs = () =>
-    void api.shell.openExternal('https://github.com/jumplion/central-command');
+    void api.shell.openExternal("https://github.com/jumplion/central-command");
 
   // ── Render ─────────────────────────────────────────────────────────────────
   //
@@ -315,33 +329,46 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
   if (!ready) {
     // Guard against rendering SQL queries before the schema is initialized.
     return (
-      <div style={{ padding: 12, color: 'var(--text-dim)', fontSize: 13 }}>
+      <div style={{ padding: 12, color: "var(--text-dim)", fontSize: 13 }}>
         Setting up database…
       </div>
     );
   }
 
-  const pinnedNotes   = notes.filter((n) => n.pinned);
+  const pinnedNotes = notes.filter((n) => n.pinned);
   const unpinnedNotes = notes.filter((n) => !n.pinned);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 10 }}>
-
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 10,
+      }}
+    >
       {/* ── New note form ── */}
-      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
               void addNote(draft);
             }
           }}
           placeholder="New note… (Ctrl+Enter to save)"
-          style={{ ...inputBase, flex: 1, minHeight: 56, resize: 'vertical' }}
+          style={{ ...inputBase, flex: 1, minHeight: 56, resize: "vertical" }}
         />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            flexShrink: 0,
+          }}
+        >
           <button
             className="primary"
             style={buttonDefault}
@@ -357,13 +384,13 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
             onClick={() => void fetchQuote()}
             title="Fetch a random piece of advice via api.net.fetch"
           >
-            {fetching ? '…' : '💡 Quote'}
+            {fetching ? "…" : "💡 Quote"}
           </button>
         </div>
       </div>
 
       {fetchError && (
-        <div style={{ fontSize: 12, color: 'var(--danger)', flexShrink: 0 }}>
+        <div style={{ fontSize: 12, color: "var(--danger)", flexShrink: 0 }}>
           Fetch failed: {fetchError}
         </div>
       )}
@@ -373,7 +400,7 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
         <div
           style={{
             ...centeredEmptyState,
-            border: '1px dashed var(--border)',
+            border: "1px dashed var(--border)",
             borderRadius: 6,
             fontSize: 13,
             padding: 12,
@@ -385,10 +412,10 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
         <div
           style={{
             flex: 1,
-            overflow: 'auto',
+            overflow: "auto",
             minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             gap: 4,
           }}
         >
@@ -396,9 +423,9 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
             <div
               style={{
                 fontSize: 10,
-                color: 'var(--text-dim)',
+                color: "var(--text-dim)",
                 fontWeight: 600,
-                textTransform: 'uppercase',
+                textTransform: "uppercase",
                 letterSpacing: 0.5,
               }}
             >
@@ -427,11 +454,11 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
       <div
         style={{
           flexShrink: 0,
-          borderTop: '1px solid var(--border)',
+          borderTop: "1px solid var(--border)",
           paddingTop: 8,
-          display: 'flex',
+          display: "flex",
           gap: 6,
-          alignItems: 'center',
+          alignItems: "center",
         }}
       >
         <input
@@ -441,12 +468,12 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
           style={{ ...inputBase, flex: 1, fontSize: 11 }}
         />
         <button style={buttonTiny} onClick={() => void saveAuthor()}>
-          {authorSaved ? '✓' : 'Save'}
+          {authorSaved ? "✓" : "Save"}
         </button>
         {/* Demonstrates api.shell.openExternal */}
         <button
           className="ghost"
-          style={{ ...buttonTiny, color: 'var(--text-dim)' }}
+          style={{ ...buttonTiny, color: "var(--text-dim)" }}
           onClick={openDocs}
           title="Open project repo (api.shell.openExternal)"
         >
@@ -455,9 +482,11 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
       </div>
 
       {authorName && (
-        <div style={{ fontSize: 10, color: 'var(--text-dim)', flexShrink: 0 }}>
-          Signed as <strong>{authorName}</strong>{' '}
-          <span style={{ opacity: 0.6 }}>— stored encrypted in api.secrets</span>
+        <div style={{ fontSize: 10, color: "var(--text-dim)", flexShrink: 0 }}>
+          Signed as <strong>{authorName}</strong>{" "}
+          <span style={{ opacity: 0.6 }}>
+            — stored encrypted in api.secrets
+          </span>
         </div>
       )}
     </div>
@@ -495,29 +524,29 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
 
 const widget: Widget = {
   manifest: {
-    id: 'example-widget',
-    name: 'Example Widget',
+    id: "example-widget",
+    name: "Example Widget",
     description:
-      'Fully-annotated reference implementation. Demonstrates KV, SQL, net.fetch, secrets, shell, and all four settings field types.',
-    version: '0.1.0',
-    icon: '📓',
+      "Fully-annotated reference implementation. Demonstrates KV, SQL, net.fetch, secrets, shell, and all four settings field types.",
+    version: "0.1.0",
+    icon: "📓",
     defaultSize: { w: 5, h: 7 },
     minSize: { w: 3, h: 4 },
     permissions: { sqlite: true },
     settings: [
       // kind: 'string' → text input; supports `placeholder` and `multiline`
       {
-        kind: 'string',
-        key: 'headerLabel',
-        label: 'Header label',
-        default: 'Notes',
-        placeholder: 'e.g. My Notes',
+        kind: "string",
+        key: "headerLabel",
+        label: "Header label",
+        default: "Notes",
+        placeholder: "e.g. My Notes",
       },
       // kind: 'number' → number input; supports `min`, `max`, `step`
       {
-        kind: 'number',
-        key: 'maxNotes',
-        label: 'Max notes shown',
+        kind: "number",
+        key: "maxNotes",
+        label: "Max notes shown",
         default: 50,
         min: 1,
         max: 500,
@@ -525,20 +554,20 @@ const widget: Widget = {
       },
       // kind: 'boolean' → checkbox toggle
       {
-        kind: 'boolean',
-        key: 'showDates',
-        label: 'Show timestamps',
+        kind: "boolean",
+        key: "showDates",
+        label: "Show timestamps",
         default: true,
       },
       // kind: 'select' → dropdown; each option has a `value` and display `label`
       {
-        kind: 'select',
-        key: 'sortOrder',
-        label: 'Sort order',
-        default: 'newest',
+        kind: "select",
+        key: "sortOrder",
+        label: "Sort order",
+        default: "newest",
         options: [
-          { value: 'newest', label: 'Newest first' },
-          { value: 'oldest', label: 'Oldest first' },
+          { value: "newest", label: "Newest first" },
+          { value: "oldest", label: "Oldest first" },
         ],
       },
     ],

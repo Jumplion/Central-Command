@@ -1,8 +1,8 @@
-import { safeStorage } from 'electron';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-import { assertValidWidgetId } from '@shared/validation';
-import { atomicWrite } from './storage/helpers';
+import { safeStorage } from "electron";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { assertValidWidgetId } from "@shared/validation";
+import { atomicWrite } from "./storage/helpers";
 
 export class SecretsStore {
   private cache = new Map<string, Record<string, string>>();
@@ -13,14 +13,14 @@ export class SecretsStore {
     this.available = safeStorage.isEncryptionAvailable();
     if (!this.available) {
       console.warn(
-        '[secrets] safeStorage encryption is unavailable; secrets are stored with base64 encoding only. ' +
-          'Avoid storing sensitive data on headless or shared systems.'
+        "[secrets] safeStorage encryption is unavailable; secrets are stored with base64 encoding only. " +
+          "Avoid storing sensitive data on headless or shared systems.",
       );
     }
   }
 
   private dir(): string {
-    return path.join(this.root, 'secrets');
+    return path.join(this.root, "secrets");
   }
 
   private file(namespace: string): string {
@@ -29,17 +29,17 @@ export class SecretsStore {
 
   private encrypt(value: string): string {
     if (this.available) {
-      return safeStorage.encryptString(value).toString('base64');
+      return safeStorage.encryptString(value).toString("base64");
     }
-    return Buffer.from(value, 'utf-8').toString('base64');
+    return Buffer.from(value, "utf-8").toString("base64");
   }
 
   private decrypt(stored: string): string {
-    const buf = Buffer.from(stored, 'base64');
+    const buf = Buffer.from(stored, "base64");
     if (this.available) {
       return safeStorage.decryptString(buf);
     }
-    return buf.toString('utf-8');
+    return buf.toString("utf-8");
   }
 
   private async load(namespace: string): Promise<Record<string, string>> {
@@ -47,16 +47,16 @@ export class SecretsStore {
     const cached = this.cache.get(namespace);
     if (cached) return cached;
     try {
-      const text = await fs.readFile(this.file(namespace), 'utf-8');
+      const text = await fs.readFile(this.file(namespace), "utf-8");
       const parsed: unknown = JSON.parse(text);
       const obj =
-        parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
           ? (parsed as Record<string, string>)
           : {};
       this.cache.set(namespace, obj);
       return obj;
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         const obj: Record<string, string> = {};
         this.cache.set(namespace, obj);
         return obj;
@@ -75,10 +75,13 @@ export class SecretsStore {
   private scheduleSave(namespace: string): void {
     const existing = this.saveTimers.get(namespace);
     if (existing) clearTimeout(existing);
-    this.saveTimers.set(namespace, setTimeout(() => {
-      this.saveTimers.delete(namespace);
-      void this.save(namespace);
-    }, 200));
+    this.saveTimers.set(
+      namespace,
+      setTimeout(() => {
+        this.saveTimers.delete(namespace);
+        void this.save(namespace);
+      }, 200),
+    );
   }
 
   async get(namespace: string, key: string): Promise<string | null> {

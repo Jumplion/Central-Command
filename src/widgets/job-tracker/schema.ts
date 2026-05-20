@@ -32,10 +32,14 @@ export const EMAIL_INIT_SQL = `
   );
 `;
 
-export const SCHEMA_MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
+export const SCHEMA_MIGRATIONS: Array<{
+  table: string;
+  column: string;
+  sql: string;
+}> = [
   {
-    table: 'applications',
-    column: 'location',
+    table: "applications",
+    column: "location",
     sql: 'ALTER TABLE applications ADD COLUMN location TEXT NOT NULL DEFAULT ""',
   },
 ];

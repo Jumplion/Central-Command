@@ -1,8 +1,8 @@
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
-import path from 'node:path';
-import { promises as fs } from 'node:fs';
-import type { SqlRunResult } from '@shared/types';
-import { widgetDir } from './helpers';
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import path from "node:path";
+import { promises as fs } from "node:fs";
+import type { SqlRunResult } from "@shared/types";
+import { widgetDir } from "./helpers";
 
 export class SqliteStore {
   private dbs = new Map<string, DatabaseSync>();
@@ -18,9 +18,12 @@ export class SqliteStore {
 
     let pending = this.dirInit.get(widgetId);
     if (!pending) {
-      pending = fs.mkdir(dir, { recursive: true }).then(() => undefined).finally(() => {
-        this.dirInit.delete(widgetId);
-      });
+      pending = fs
+        .mkdir(dir, { recursive: true })
+        .then(() => undefined)
+        .finally(() => {
+          this.dirInit.delete(widgetId);
+        });
       this.dirInit.set(widgetId, pending);
     }
 
@@ -31,28 +34,49 @@ export class SqliteStore {
     let db = this.dbs.get(widgetId);
     if (db) return db;
     const dir = widgetDir(this.root, widgetId);
-    db = new DatabaseSync(path.join(dir, 'data.db'));
-    db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA foreign_keys = ON');
+    db = new DatabaseSync(path.join(dir, "data.db"));
+    db.exec("PRAGMA journal_mode = WAL");
+    db.exec("PRAGMA foreign_keys = ON");
     this.dbs.set(widgetId, db);
     return db;
   }
 
-  async run(widgetId: string, sql: string, params: unknown[] = []): Promise<SqlRunResult> {
+  async run(
+    widgetId: string,
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<SqlRunResult> {
     await this.ensureWidgetDir(widgetId);
-    const result = this.dbFor(widgetId).prepare(sql).run(...(params as SQLInputValue[]));
+    const result = this.dbFor(widgetId)
+      .prepare(sql)
+      .run(...(params as SQLInputValue[]));
     this.onWritten(widgetId);
-    return { changes: Number(result.changes), lastInsertRowid: Number(result.lastInsertRowid) };
+    return {
+      changes: Number(result.changes),
+      lastInsertRowid: Number(result.lastInsertRowid),
+    };
   }
 
-  async all(widgetId: string, sql: string, params: unknown[] = []): Promise<unknown[]> {
+  async all(
+    widgetId: string,
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<unknown[]> {
     await this.ensureWidgetDir(widgetId);
-    return this.dbFor(widgetId).prepare(sql).all(...(params as SQLInputValue[])) as unknown[];
+    return this.dbFor(widgetId)
+      .prepare(sql)
+      .all(...(params as SQLInputValue[])) as unknown[];
   }
 
-  async get(widgetId: string, sql: string, params: unknown[] = []): Promise<unknown> {
+  async get(
+    widgetId: string,
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<unknown> {
     await this.ensureWidgetDir(widgetId);
-    return this.dbFor(widgetId).prepare(sql).get(...(params as SQLInputValue[]));
+    return this.dbFor(widgetId)
+      .prepare(sql)
+      .get(...(params as SQLInputValue[]));
   }
 
   async exec(widgetId: string, sql: string): Promise<void> {
@@ -61,19 +85,31 @@ export class SqliteStore {
     this.onWritten(widgetId);
   }
 
-  async runBatch(widgetId: string, items: { sql: string; params?: unknown[] }[]): Promise<SqlRunResult[]> {
+  async runBatch(
+    widgetId: string,
+    items: { sql: string; params?: unknown[] }[],
+  ): Promise<SqlRunResult[]> {
     await this.ensureWidgetDir(widgetId);
     const db = this.dbFor(widgetId);
     const results: SqlRunResult[] = [];
-    db.exec('BEGIN');
+    db.exec("BEGIN");
     try {
       for (const item of items) {
-        const result = db.prepare(item.sql).run(...((item.params ?? []) as SQLInputValue[]));
-        results.push({ changes: Number(result.changes), lastInsertRowid: Number(result.lastInsertRowid) });
+        const result = db
+          .prepare(item.sql)
+          .run(...((item.params ?? []) as SQLInputValue[]));
+        results.push({
+          changes: Number(result.changes),
+          lastInsertRowid: Number(result.lastInsertRowid),
+        });
       }
-      db.exec('COMMIT');
+      db.exec("COMMIT");
     } catch (err) {
-      try { db.exec('ROLLBACK'); } catch { /* ignore if already rolled back */ }
+      try {
+        db.exec("ROLLBACK");
+      } catch {
+        /* ignore if already rolled back */
+      }
       throw err;
     }
     this.onWritten(widgetId);
@@ -90,13 +126,21 @@ export class SqliteStore {
   closeDb(widgetId: string): void {
     const db = this.dbs.get(widgetId);
     if (!db) return;
-    try { db.close(); } catch { /* ignore */ }
+    try {
+      db.close();
+    } catch {
+      /* ignore */
+    }
     this.dbs.delete(widgetId);
   }
 
   closeAll(): void {
     for (const db of this.dbs.values()) {
-      try { db.close(); } catch { /* ignore */ }
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
     }
     this.dbs.clear();
   }

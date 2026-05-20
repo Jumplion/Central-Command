@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { WidgetApi } from '@renderer/plugins/api';
+import { useState, useEffect } from "react";
+import type { WidgetApi } from "@renderer/plugins/api";
 
 export interface SqlMigration {
   table: string;
@@ -11,10 +11,13 @@ export interface SqlMigration {
  * Extracts column names from a CREATE TABLE statement.
  * Used for validation to catch duplicate columns between INIT_SQL and migrations.
  */
-function extractColumnsFromCreateTable(initSql: string): Record<string, Set<string>> {
+function extractColumnsFromCreateTable(
+  initSql: string,
+): Record<string, Set<string>> {
   const tables: Record<string, Set<string>> = {};
   // Simple regex to find CREATE TABLE statements and their columns
-  const createTableRegex = /CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*?)\);/gi;
+  const createTableRegex =
+    /CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*?)\);/gi;
   let match;
 
   while ((match = createTableRegex.exec(initSql)) !== null) {
@@ -50,10 +53,10 @@ export function useSqlInit(
           if (cols && cols.has(m.column)) {
             console.error(
               `[useSqlInit] Migration tries to add column "${m.column}" to table "${m.table}", ` +
-              `but it's already defined in INIT_SQL. Remove it from INIT_SQL or remove this migration.`
+                `but it's already defined in INIT_SQL. Remove it from INIT_SQL or remove this migration.`,
             );
             throw new Error(
-              `Migration conflict: "${m.column}" already exists in table "${m.table}"`
+              `Migration conflict: "${m.column}" already exists in table "${m.table}"`,
             );
           }
         }
@@ -62,7 +65,9 @@ export function useSqlInit(
       await api.sql.exec(initSql);
       if (migrations?.length) {
         for (const m of migrations) {
-          const cols = await api.sql.all<{ name: string }>(`PRAGMA table_info(${m.table})`);
+          const cols = await api.sql.all<{ name: string }>(
+            `PRAGMA table_info(${m.table})`,
+          );
           if (!cols.find((c) => c.name === m.column)) {
             await api.sql.run(m.sql, []);
           }
@@ -71,7 +76,7 @@ export function useSqlInit(
       setReady(true);
     };
     void run();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return ready;

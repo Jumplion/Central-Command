@@ -1,7 +1,7 @@
 ---
-name: 'Testing'
-description: 'Test conventions for this project'
-applyTo: '**/*.test.{ts,tsx}'
+name: "Testing"
+description: "Test conventions for this project"
+applyTo: "**/*.test.{ts,tsx}"
 ---
 
 ## Conventions

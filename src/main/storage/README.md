@@ -4,14 +4,14 @@ This folder contains everything responsible for reading and writing data to disk
 
 ## Files
 
-| File | What it does |
-|---|---|
-| `index.ts` | The `Storage` class — orchestrates both backends and handles `state.json` |
-| `json.ts` | `JsonStore` — simple key/value storage backed by JSON files |
-| `json.test.ts` | Unit tests for `JsonStore` |
-| `sqlite.ts` | `SqliteStore` — relational data backed by SQLite databases |
-| `sqlite.test.ts` | Unit tests for `SqliteStore` |
-| `drive.ts` | `DriveSync` — wraps the Google Drive API for uploading/downloading storage files |
+| File             | What it does                                                                     |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `index.ts`       | The `Storage` class — orchestrates both backends and handles `state.json`        |
+| `json.ts`        | `JsonStore` — simple key/value storage backed by JSON files                      |
+| `json.test.ts`   | Unit tests for `JsonStore`                                                       |
+| `sqlite.ts`      | `SqliteStore` — relational data backed by SQLite databases                       |
+| `sqlite.test.ts` | Unit tests for `SqliteStore`                                                     |
+| `drive.ts`       | `DriveSync` — wraps the Google Drive API for uploading/downloading storage files |
 
 ## The three storage layers
 
@@ -26,6 +26,7 @@ Managed directly in `index.ts`. This is a single JSON file that stores the entir
 `JsonStore` is a simple key/value store where each widget gets its own file at `{userData}/widgets/{widgetId}/store.json`.
 
 **How it works:**
+
 - When a widget reads or writes a key, the file is loaded into an **in-memory cache** (a JavaScript `Map`).
 - Writes update the cache immediately and schedule a disk flush 200 ms in the future (debouncing).
 - If many writes happen in quick succession, only one disk write happens — the last scheduled flush.
@@ -42,10 +43,12 @@ Managed directly in `index.ts`. This is a single JSON file that stores the entir
 **What is SQLite?** SQLite is a file-based database — no separate database server needed. The entire database is a single `.db` file. It supports full SQL: `CREATE TABLE`, `INSERT`, `SELECT`, `JOIN`, etc. The `better-sqlite3` npm package provides the Node.js bindings.
 
 **Key settings applied to every database:**
+
 - `WAL` (Write-Ahead Logging) journal mode — allows reads and writes to happen simultaneously without blocking each other
 - `foreign_keys=ON` — enforces `FOREIGN KEY` constraints (database integrity)
 
 **The five SQL operations exposed:**
+
 - `run(sql, params)` — INSERT, UPDATE, DELETE — returns `{ changes, lastInsertRowid }`
 - `all(sql, params)` — SELECT multiple rows — returns an array
 - `get(sql, params)` — SELECT one row — returns one object or `undefined`
@@ -63,6 +66,7 @@ Managed directly in `index.ts`. This is a single JSON file that stores the entir
 It uses `api.google.getToken()` to get a fresh access token before each request, and uses Electron's `net.fetch` (not the browser's `fetch`) to make HTTPS calls to the Google Drive REST API.
 
 The three file types it syncs:
+
 - `cc-state.json` — dashboard state
 - `cc-kv-{widgetId}.json` — per-widget JSON KV exports
 - `cc-db-{widgetId}.db` — SQLite database files (as binary uploads)
