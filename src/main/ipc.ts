@@ -1,7 +1,6 @@
-import { spawn } from 'child_process';
 import { ipcMain, shell, dialog, net } from 'electron';
 import { IPC } from '@shared/ipc';
-import { IS_WSL } from './platform';
+import { openExternal } from './platform';
 import type { AppState, DialogOpenPathOptions, GoogleConnectOptions, NetFetchInit } from '@shared/types';
 import { isGoogleServiceId } from '@shared/google';
 import type { GoogleServiceId } from '@shared/google';
@@ -85,16 +84,7 @@ export function registerIpc(storage: Storage, secrets: SecretsStore, oauth: OAut
 
   registerHandler(IPC.SHELL_OPEN_EXTERNAL, [isString], (url: string) => {
     if (!/^(https?|mailto):/.test(url)) throw new Error('openExternal: url must be http(s) or mailto');
-    if (IS_WSL) {
-      // Pass the URL via an env var to avoid PowerShell command injection
-      return new Promise<void>((resolve) => {
-        spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Start-Process -FilePath $env:CC_OPEN_URL'], {
-          stdio: 'ignore',
-          env: { ...process.env, CC_OPEN_URL: url },
-        }).on('close', () => resolve());
-      });
-    }
-    return shell.openExternal(url);
+    return openExternal(url);
   });
 
   registerHandler(IPC.SHELL_OPEN_PATH, [isString], (path: string) => shell.openPath(path));

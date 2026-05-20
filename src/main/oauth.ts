@@ -1,8 +1,6 @@
 import { createServer } from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
-import { spawn } from 'node:child_process';
-import { shell } from 'electron';
-import { IS_WSL } from './platform';
+import { IS_WSL, openExternal } from './platform';
 import type { SecretsStore } from './secrets';
 import type { GoogleConnectOptions } from '@shared/types';
 import { getGoogleCredsKey, getGoogleTokenKey, getGoogleConnectionId, resolveGoogleScopes } from '@shared/google';
@@ -69,18 +67,7 @@ export class OAuthManager {
       });
 
       const authUrl = `${GOOGLE_AUTH_URL}?${params.toString()}`;
-      if (IS_WSL) {
-        // shell.openExternal doesn't work in WSL. Pass the URL via an env var
-        // to avoid PowerShell command injection.
-        await new Promise<void>((resolve) => {
-          spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Start-Process -FilePath $env:CC_OPEN_URL'], {
-            stdio: 'ignore',
-            env: { ...process.env, CC_OPEN_URL: authUrl },
-          }).on('close', () => resolve());
-        });
-      } else {
-        await shell.openExternal(authUrl);
-      }
+      await openExternal(authUrl);
 
       const code = await waitForCode;
 
