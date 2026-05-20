@@ -1,7 +1,11 @@
-import { useState } from 'react';
-import type { SettingsField, SettingsFieldValue, WidgetInstance } from '@shared/types';
-import type { Widget } from '@renderer/plugins/registry';
-import { useDashboard } from '@renderer/state/dashboard';
+import { useState } from "react";
+import type {
+  SettingsField,
+  SettingsFieldValue,
+  WidgetInstance,
+} from "@shared/types";
+import type { Widget } from "@renderer/plugins/registry";
+import { useDashboard } from "@renderer/state/dashboard";
 
 interface Props {
   widget: Widget;
@@ -14,8 +18,10 @@ type FieldValue = SettingsFieldValue;
 export function WidgetSettingsPanel({ widget, instance, onClose }: Props) {
   const updateSettings = useDashboard((s) => s.updateSettings);
   const setTitle = useDashboard((s) => s.setTitle);
-  const [draft, setDraft] = useState<Record<string, FieldValue>>({ ...instance.settings });
-  const [titleDraft, setTitleDraft] = useState(instance.title ?? '');
+  const [draft, setDraft] = useState<Record<string, FieldValue>>({
+    ...instance.settings,
+  });
+  const [titleDraft, setTitleDraft] = useState(instance.title ?? "");
 
   const fields = widget.manifest.settings ?? [];
 
@@ -30,10 +36,16 @@ export function WidgetSettingsPanel({ widget, instance, onClose }: Props) {
   }
 
   return (
-    <div className="settings-panel" role="dialog" aria-label={`${widget.manifest.name} settings`}>
+    <div
+      className="settings-panel"
+      role="dialog"
+      aria-label={`${widget.manifest.name} settings`}
+    >
       <div className="settings-header">
         <strong>{widget.manifest.name} settings</strong>
-        <button className="ghost" onClick={onClose} aria-label="Close">✕</button>
+        <button className="ghost" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
       </div>
       <div className="settings-body">
         <label className="field">
@@ -48,14 +60,19 @@ export function WidgetSettingsPanel({ widget, instance, onClose }: Props) {
           <Field
             key={field.key}
             field={field}
-            value={draft[field.key] ?? ('default' in field ? field.default : undefined)}
+            value={
+              draft[field.key] ??
+              ("default" in field ? field.default : undefined)
+            }
             onChange={(value) => update(field.key, value)}
           />
         ))}
       </div>
       <div className="settings-footer">
         <button onClick={onClose}>Cancel</button>
-        <button className="primary" onClick={save}>Save</button>
+        <button className="primary" onClick={save}>
+          Save
+        </button>
       </div>
     </div>
   );
@@ -69,15 +86,15 @@ interface FieldProps {
 
 function Field({ field, value, onChange }: FieldProps) {
   switch (field.kind) {
-    case 'string':
+    case "string":
       return (
         <SettingsFieldString
           field={field}
-          value={(value as string) ?? ''}
+          value={(value as string) ?? ""}
           onChange={onChange}
         />
       );
-    case 'number':
+    case "number":
       return (
         <SettingsFieldNumber
           field={field}
@@ -85,7 +102,7 @@ function Field({ field, value, onChange }: FieldProps) {
           onChange={onChange}
         />
       );
-    case 'boolean':
+    case "boolean":
       return (
         <SettingsFieldBoolean
           field={field}
@@ -93,11 +110,11 @@ function Field({ field, value, onChange }: FieldProps) {
           onChange={onChange}
         />
       );
-    case 'select':
+    case "select":
       return (
         <SettingsFieldSelect
           field={field}
-          value={(value as string) ?? ''}
+          value={(value as string) ?? ""}
           onChange={onChange}
         />
       );
@@ -109,7 +126,7 @@ function SettingsFieldString({
   value,
   onChange,
 }: {
-  field: Extract<SettingsField, { kind: 'string' }>;
+  field: Extract<SettingsField, { kind: "string" }>;
   value: string;
   onChange: (value: string) => void;
 }) {
@@ -139,7 +156,7 @@ function SettingsFieldNumber({
   value,
   onChange,
 }: {
-  field: Extract<SettingsField, { kind: 'number' }>;
+  field: Extract<SettingsField, { kind: "number" }>;
   value: number | undefined;
   onChange: (value: number | undefined) => void;
 }) {
@@ -148,11 +165,13 @@ function SettingsFieldNumber({
       <span>{field.label}</span>
       <input
         type="number"
-        value={value === undefined ? '' : String(value)}
+        value={value === undefined ? "" : String(value)}
         min={field.min}
         max={field.max}
         step={field.step}
-        onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+        onChange={(e) =>
+          onChange(e.target.value === "" ? undefined : Number(e.target.value))
+        }
       />
     </label>
   );
@@ -163,7 +182,7 @@ function SettingsFieldBoolean({
   value,
   onChange,
 }: {
-  field: Extract<SettingsField, { kind: 'boolean' }>;
+  field: Extract<SettingsField, { kind: "boolean" }>;
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
@@ -184,7 +203,7 @@ function SettingsFieldSelect({
   value,
   onChange,
 }: {
-  field: Extract<SettingsField, { kind: 'select' }>;
+  field: Extract<SettingsField, { kind: "select" }>;
   value: string;
   onChange: (value: string) => void;
 }) {

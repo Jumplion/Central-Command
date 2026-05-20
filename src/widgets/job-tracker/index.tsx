@@ -1,34 +1,45 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { Widget, WidgetProps } from '@renderer/plugins/registry';
-import { useSqlInit } from '@renderer/hooks/useSqlInit';
-import { STATUSES, STATUS_COLOR } from './types';
-import type { Application, AppFormData, Status } from './types';
-import { parseCSVLine } from '@shared/csv';
-import { exportCsv } from '@renderer/utils/csv';
-import { buttonDefault, WidgetLoading } from '../_shared';
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import type { Widget, WidgetProps } from "@renderer/plugins/registry";
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
+import { STATUSES, STATUS_COLOR } from "./types";
+import type { Application, AppFormData, Status } from "./types";
+import { parseCSVLine } from "@shared/csv";
+import { exportCsv } from "@renderer/utils/csv";
+import { buttonDefault, WidgetLoading } from "../_shared";
 import {
-  INIT_SQL, EMAIL_INIT_SQL, SCHEMA_MIGRATIONS, today,
-  StatusBar, AppForm, WeeklyChart,
-  Th, Td, StatusBadge,
-} from './components';
-import { EmailsTab } from './EmailsTab';
-import { INSERT_APPLICATION, UPDATE_APPLICATION, DELETE_APPLICATION } from './queries';
+  INIT_SQL,
+  EMAIL_INIT_SQL,
+  SCHEMA_MIGRATIONS,
+  today,
+  StatusBar,
+  AppForm,
+  WeeklyChart,
+  Th,
+  Td,
+  StatusBadge,
+} from "./components";
+import { EmailsTab } from "./EmailsTab";
+import {
+  INSERT_APPLICATION,
+  UPDATE_APPLICATION,
+  DELETE_APPLICATION,
+} from "./queries";
 function JobTracker({ api }: WidgetProps) {
   const [apps, setApps] = useState<Application[]>([]);
-  const [filter, setFilter] = useState<Status | 'All'>('All');
+  const [filter, setFilter] = useState<Status | "All">("All");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [view, setView] = useState<'list' | 'chart' | 'emails'>('list');
+  const [view, setView] = useState<"list" | "chart" | "emails">("list");
   const [importing, setImporting] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
 
   const ready = useSqlInit(api, INIT_SQL + EMAIL_INIT_SQL, SCHEMA_MIGRATIONS);
 
   const load = useCallback(async () => {
-    const rows = await api.sql.all<Application & Partial<Pick<Application, 'location'>>>(
-      'SELECT * FROM applications ORDER BY last_updated DESC'
-    );
-    setApps(rows.map((row) => ({ ...row, location: row.location ?? '' })));
+    const rows = await api.sql.all<
+      Application & Partial<Pick<Application, "location">>
+    >("SELECT * FROM applications ORDER BY last_updated DESC");
+    setApps(rows.map((row) => ({ ...row, location: row.location ?? "" })));
   }, [api]);
 
   useEffect(() => {
@@ -37,47 +48,67 @@ function JobTracker({ api }: WidgetProps) {
 
   const counts = useMemo(() => {
     const acc = STATUSES.reduce<Record<Status, number>>(
-      (a, s) => { a[s] = 0; return a; },
-      {} as Record<Status, number>
+      (a, s) => {
+        a[s] = 0;
+        return a;
+      },
+      {} as Record<Status, number>,
     );
     for (const a of apps) if (a.status in acc) acc[a.status as Status]++;
     return acc;
   }, [apps]);
 
   const filtered = useMemo(
-    () => (filter === 'All' ? apps : apps.filter((a) => a.status === filter)),
-    [apps, filter]
+    () => (filter === "All" ? apps : apps.filter((a) => a.status === filter)),
+    [apps, filter],
   );
 
   const companySuggestions = useMemo(
     () => [...new Set(apps.map((a) => a.company).filter(Boolean))],
-    [apps]
+    [apps],
   );
 
   const roleSuggestions = useMemo(
     () => [...new Set(apps.map((a) => a.role).filter(Boolean))],
-    [apps]
+    [apps],
   );
 
   const locationSuggestions = useMemo(
     () => [...new Set(apps.map((a) => a.location).filter(Boolean))],
-    [apps]
+    [apps],
   );
 
   const handleAdd = async (data: AppFormData) => {
-    await api.sql.run(
-      INSERT_APPLICATION,
-      [data.company, data.role, data.status, data.applied_at, data.location, data.source, data.link, data.notes, data.req_number, Date.now()]
-    );
+    await api.sql.run(INSERT_APPLICATION, [
+      data.company,
+      data.role,
+      data.status,
+      data.applied_at,
+      data.location,
+      data.source,
+      data.link,
+      data.notes,
+      data.req_number,
+      Date.now(),
+    ]);
     await load();
     setShowAdd(false);
   };
 
   const handleEdit = (app: Application) => async (data: AppFormData) => {
-    await api.sql.run(
-      UPDATE_APPLICATION,
-      [data.company, data.role, data.status, data.applied_at, data.location, data.source, data.link, data.notes, data.req_number, Date.now(), app.id]
-    );
+    await api.sql.run(UPDATE_APPLICATION, [
+      data.company,
+      data.role,
+      data.status,
+      data.applied_at,
+      data.location,
+      data.source,
+      data.link,
+      data.notes,
+      data.req_number,
+      Date.now(),
+      app.id,
+    ]);
     await load();
     setEditingId(null);
   };
@@ -88,9 +119,29 @@ function JobTracker({ api }: WidgetProps) {
   };
 
   const handleExportCSV = () => {
-    const headers = ['company', 'role', 'status', 'applied_at', 'location', 'source', 'link', 'notes', 'req_number'];
-    const rows = apps.map((a) => [a.company, a.role, a.status, a.applied_at, a.location, a.source, a.link, a.notes, a.req_number]);
-    exportCsv(headers, rows, 'applications.csv');
+    const headers = [
+      "company",
+      "role",
+      "status",
+      "applied_at",
+      "location",
+      "source",
+      "link",
+      "notes",
+      "req_number",
+    ];
+    const rows = apps.map((a) => [
+      a.company,
+      a.role,
+      a.status,
+      a.applied_at,
+      a.location,
+      a.source,
+      a.link,
+      a.notes,
+      a.req_number,
+    ]);
+    exportCsv(headers, rows, "applications.csv");
   };
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,7 +150,10 @@ function JobTracker({ api }: WidgetProps) {
     setImporting(true);
     try {
       const text = await file.text();
-      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+      const lines = text
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
       if (lines.length < 2) return;
       for (const line of lines.slice(1)) {
         const fields = parseCSVLine(line);
@@ -107,60 +161,101 @@ function JobTracker({ api }: WidgetProps) {
         const [company, role, status, applied_at] = fields;
         const [location, source, link, notes, req_number] =
           fields.length === 9
-            ? fields.slice(4) as [string, string, string, string, string]
-            : ['', fields[4] ?? '', fields[5] ?? '', fields[6] ?? '', fields[7] ?? ''];
+            ? (fields.slice(4) as [string, string, string, string, string])
+            : [
+                "",
+                fields[4] ?? "",
+                fields[5] ?? "",
+                fields[6] ?? "",
+                fields[7] ?? "",
+              ];
         if (!company || !role) continue;
-        const safeStatus = (STATUSES as string[]).includes(status) ? status : 'Applied';
-        await api.sql.run(
-          INSERT_APPLICATION,
-          [company, role, safeStatus, applied_at || today(), location, source, link, notes, req_number, Date.now()]
-        );
+        const safeStatus = (STATUSES as string[]).includes(status)
+          ? status
+          : "Applied";
+        await api.sql.run(INSERT_APPLICATION, [
+          company,
+          role,
+          safeStatus,
+          applied_at || today(),
+          location,
+          source,
+          link,
+          notes,
+          req_number,
+          Date.now(),
+        ]);
       }
       await load();
     } finally {
       setImporting(false);
-      e.target.value = '';
+      e.target.value = "";
     }
   };
 
   if (!ready) return <WidgetLoading />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>
-      <StatusBar counts={counts} total={apps.length} filter={filter} onFilter={setFilter} />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 8,
+      }}
+    >
+      <StatusBar
+        counts={counts}
+        total={apps.length}
+        filter={filter}
+        onFilter={setFilter}
+      />
 
-      <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+      <div
+        style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}
+      >
         <button
           className="primary"
           style={buttonDefault}
-          onClick={() => { setShowAdd(true); setEditingId(null); setView('list'); }}
+          onClick={() => {
+            setShowAdd(true);
+            setEditingId(null);
+            setView("list");
+          }}
         >
           + Add
         </button>
-        <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-          {(['list', 'chart', 'emails'] as const).map((v) => (
+        <div
+          style={{
+            display: "flex",
+            border: "1px solid var(--border)",
+            borderRadius: 4,
+            overflow: "hidden",
+          }}
+        >
+          {(["list", "chart", "emails"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               style={{
                 fontSize: 11,
-                padding: '3px 10px',
-                background: view === v ? 'var(--accent)22' : 'transparent',
-                color: view === v ? 'var(--accent)' : 'var(--text-dim)',
-                border: 'none',
-                cursor: 'pointer',
+                padding: "3px 10px",
+                background: view === v ? "var(--accent)22" : "transparent",
+                color: view === v ? "var(--accent)" : "var(--text-dim)",
+                border: "none",
+                cursor: "pointer",
               }}
             >
-              {v === 'list' ? 'List' : v === 'chart' ? 'Chart' : 'Emails'}
+              {v === "list" ? "List" : v === "chart" ? "Chart" : "Emails"}
             </button>
           ))}
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
           <input
             ref={importRef}
             type="file"
             accept=".csv"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={handleImportCSV}
           />
           <button
@@ -169,7 +264,7 @@ function JobTracker({ api }: WidgetProps) {
             disabled={importing}
             title="Import CSV"
           >
-            {importing ? 'Importing…' : 'Import CSV'}
+            {importing ? "Importing…" : "Import CSV"}
           </button>
           <button
             style={buttonDefault}
@@ -191,25 +286,40 @@ function JobTracker({ api }: WidgetProps) {
         />
       )}
 
-      {view === 'emails' ? (
+      {view === "emails" ? (
         <EmailsTab
           api={api}
           apps={apps}
           onAppAdded={load}
           onAppUpdated={load}
         />
-      ) : view === 'chart' ? (
+      ) : view === "chart" ? (
         <WeeklyChart apps={apps} />
       ) : (
-        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+        <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
           {filtered.length === 0 ? (
-            <div style={{ color: 'var(--text-dim)', padding: '16px 0', textAlign: 'center', fontSize: 13 }}>
-              {apps.length === 0 ? 'No applications yet — click + Add to get started.' : 'No results for this filter.'}
+            <div
+              style={{
+                color: "var(--text-dim)",
+                padding: "16px 0",
+                textAlign: "center",
+                fontSize: 13,
+              }}
+            >
+              {apps.length === 0
+                ? "No applications yet — click + Add to get started."
+                : "No results for this filter."}
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 12,
+              }}
+            >
               <thead>
-                <tr style={{ color: 'var(--text-dim)' }}>
+                <tr style={{ color: "var(--text-dim)" }}>
                   <Th>Company</Th>
                   <Th>Role</Th>
                   <Th>Location</Th>
@@ -223,7 +333,7 @@ function JobTracker({ api }: WidgetProps) {
                 {filtered.map((app) =>
                   editingId === app.id ? (
                     <tr key={app.id}>
-                      <td colSpan={7} style={{ padding: '4px 0' }}>
+                      <td colSpan={7} style={{ padding: "4px 0" }}>
                         <AppForm
                           initial={app}
                           onSave={handleEdit(app)}
@@ -238,25 +348,40 @@ function JobTracker({ api }: WidgetProps) {
                     <tr
                       key={app.id}
                       style={{
-                        borderTop: '1px solid var(--border)',
-                        transition: 'background-color 0.15s',
-                        cursor: 'pointer',
+                        borderTop: "1px solid var(--border)",
+                        transition: "background-color 0.15s",
+                        cursor: "pointer",
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(110, 168, 255, 0.07)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          "rgba(110, 168, 255, 0.07)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "")
+                      }
                     >
                       <Td>{app.company}</Td>
                       <Td>{app.role}</Td>
                       <Td>{app.location}</Td>
-                      <Td><StatusBadge status={app.status} /></Td>
+                      <Td>
+                        <StatusBadge status={app.status} />
+                      </Td>
                       <Td>{app.applied_at}</Td>
                       <Td>{app.req_number}</Td>
-                      <td style={{ padding: '4px 6px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <td
+                        style={{
+                          padding: "4px 6px",
+                          textAlign: "right",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {app.link && (
                           <button
                             className="ghost"
-                            style={{ fontSize: 11, padding: '1px 6px' }}
-                            onClick={() => void api.shell.openExternal(app.link)}
+                            style={{ fontSize: 11, padding: "1px 6px" }}
+                            onClick={() =>
+                              void api.shell.openExternal(app.link)
+                            }
                             title="Open link"
                           >
                             ↗
@@ -264,21 +389,21 @@ function JobTracker({ api }: WidgetProps) {
                         )}
                         <button
                           className="ghost"
-                          style={{ fontSize: 11, padding: '1px 6px' }}
+                          style={{ fontSize: 11, padding: "1px 6px" }}
                           onClick={() => setEditingId(app.id)}
                         >
                           Edit
                         </button>
                         <button
                           className="ghost danger"
-                          style={{ fontSize: 11, padding: '1px 6px' }}
+                          style={{ fontSize: 11, padding: "1px 6px" }}
                           onClick={() => handleDelete(app.id)}
                         >
                           ✕
                         </button>
                       </td>
                     </tr>
-                  )
+                  ),
                 )}
               </tbody>
             </table>
@@ -293,11 +418,12 @@ function JobTracker({ api }: WidgetProps) {
 
 const widget: Widget = {
   manifest: {
-    id: 'job-tracker',
-    name: 'Job Tracker',
-    description: 'Track job applications with status, weekly chart, and CSV import/export.',
-    version: '0.2.0',
-    icon: '💼',
+    id: "job-tracker",
+    name: "Job Tracker",
+    description:
+      "Track job applications with status, weekly chart, and CSV import/export.",
+    version: "0.2.0",
+    icon: "💼",
     defaultSize: { w: 8, h: 8 },
     minSize: { w: 5, h: 5 },
     permissions: { sqlite: true, google: true },

@@ -1,34 +1,81 @@
-import type { CastingSite, ProjectType, Status } from './types';
+import type { CastingSite, ProjectType, Status } from "./types";
 
-export const STATUSES: Status[] = ['Interested', 'Submitted', 'Callback', 'Booked', 'Released', 'Passed'];
+export const STATUSES: Status[] = [
+  "Interested",
+  "Submitted",
+  "Callback",
+  "Booked",
+  "Released",
+  "Passed",
+];
 
 export const STATUS_COLOR: Record<Status, string> = {
-  Interested: '#6ea8ff',
-  Submitted:  '#a78bfa',
-  Callback:   '#f59e0b',
-  Booked:     '#34d399',
-  Released:   '#6b7280',
-  Passed:     '#ff6e6e',
+  Interested: "#6ea8ff",
+  Submitted: "#a78bfa",
+  Callback: "#f59e0b",
+  Booked: "#34d399",
+  Released: "#6b7280",
+  Passed: "#ff6e6e",
 };
 
-export const PROJECT_TYPES: ProjectType[] = ['Film', 'TV', 'Commercial', 'Theater', 'Voiceover', 'Student/Indie'];
+export const PROJECT_TYPES: ProjectType[] = [
+  "Film",
+  "TV",
+  "Commercial",
+  "Theater",
+  "Voiceover",
+  "Student/Indie",
+];
 
 export const CASTING_SITES: CastingSite[] = [
-  { id: 'actors-access',    name: 'Actors Access',    url: 'https://actorsaccess.com/' },
-  { id: 'backstage',        name: 'Backstage',        url: 'https://www.backstage.com/casting/' },
-  { id: 'casting-networks', name: 'Casting Networks', url: 'https://www.castingnetworks.com/' },
-  { id: 'casting-frontier', name: 'Casting Frontier', url: 'https://castingfrontier.com/' },
-  { id: 'project-casting',  name: 'Project Casting',  url: 'https://www.projectcasting.com/' },
-  { id: 'nycastings',       name: 'NYCastings',       url: 'https://www.nycastings.com/casting-calls/' },
-  { id: 'playbill',         name: 'Playbill Jobs',    url: 'https://playbill.com/jobs' },
-  { id: 'voice123',         name: 'Voice123',         url: 'https://voice123.com/' },
-  { id: 'voices',           name: 'Voices.com',       url: 'https://www.voices.com/' },
+  {
+    id: "actors-access",
+    name: "Actors Access",
+    url: "https://actorsaccess.com/",
+  },
+  {
+    id: "backstage",
+    name: "Backstage",
+    url: "https://www.backstage.com/casting/",
+  },
+  {
+    id: "casting-networks",
+    name: "Casting Networks",
+    url: "https://www.castingnetworks.com/",
+  },
+  {
+    id: "casting-frontier",
+    name: "Casting Frontier",
+    url: "https://castingfrontier.com/",
+  },
+  {
+    id: "project-casting",
+    name: "Project Casting",
+    url: "https://www.projectcasting.com/",
+  },
+  {
+    id: "nycastings",
+    name: "NYCastings",
+    url: "https://www.nycastings.com/casting-calls/",
+  },
+  { id: "playbill", name: "Playbill Jobs", url: "https://playbill.com/jobs" },
+  { id: "voice123", name: "Voice123", url: "https://voice123.com/" },
+  { id: "voices", name: "Voices.com", url: "https://www.voices.com/" },
 ];
 
 export const CSV_HEADERS = [
-  'project_title', 'role', 'project_type', 'status', 'casting_studio',
-  'location', 'pay_rate', 'submitted_at', 'submission_deadline', 'shoot_date',
-  'link', 'notes',
+  "project_title",
+  "role",
+  "project_type",
+  "status",
+  "casting_studio",
+  "location",
+  "pay_rate",
+  "submitted_at",
+  "submission_deadline",
+  "shoot_date",
+  "link",
+  "notes",
 ] as const;
 
 export const INIT_SQL = `

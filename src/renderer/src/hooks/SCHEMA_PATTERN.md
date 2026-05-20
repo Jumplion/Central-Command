@@ -25,8 +25,11 @@ export const INIT_SQL = `
 
 ```ts
 // constants.ts
-import { createMigration, emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
-import type { SqlMigration } from '@renderer/hooks/useSqlInit';
+import {
+  createMigration,
+  emptyMigrations,
+} from "@renderer/hooks/sqlMigrationHelper";
+import type { SqlMigration } from "@renderer/hooks/useSqlInit";
 
 // Initially empty if you don't have any post-release columns to add yet
 export const MIGRATIONS: SqlMigration[] = emptyMigrations();
@@ -44,8 +47,8 @@ export const MIGRATIONS: SqlMigration[] = emptyMigrations();
 
 ```tsx
 // index.tsx
-import { useSqlInit } from '@renderer/hooks/useSqlInit';
-import { INIT_SQL, MIGRATIONS } from './constants';
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
+import { INIT_SQL, MIGRATIONS } from "./constants";
 
 function MyWidget({ api }: WidgetProps) {
   // useSqlInit returns a boolean that tells you when schema is ready
@@ -71,7 +74,7 @@ function MyWidget({ api }: WidgetProps) {
 ✅ Skips migrations that are already applied  
 ✅ **Validates** that migrations don't duplicate columns from INIT_SQL  
 ✅ Throws an error early if it detects a conflict  
-✅ Returns `ready: boolean` to tell you when it's safe to query  
+✅ Returns `ready: boolean` to tell you when it's safe to query
 
 ## Common mistakes to avoid
 
@@ -81,7 +84,7 @@ function MyWidget({ api }: WidgetProps) {
 // ❌ WRONG — will cause "duplicate column name" error
 export const INIT_SQL = `CREATE TABLE items (id INTEGER, title TEXT, status TEXT);`;
 export const MIGRATIONS = [
-  `ALTER TABLE items ADD COLUMN status TEXT`,  // status is already in INIT_SQL!
+  `ALTER TABLE items ADD COLUMN status TEXT`, // status is already in INIT_SQL!
 ];
 ```
 
@@ -104,7 +107,11 @@ function MyWidget({ api }: WidgetProps) {
     const init = async () => {
       await api.sql.exec(INIT_SQL);
       for (const sql of MIGRATIONS) {
-        try { await api.sql.exec(sql); } catch { /* column exists */ }
+        try {
+          await api.sql.exec(sql);
+        } catch {
+          /* column exists */
+        }
       }
     };
     init();
@@ -118,7 +125,7 @@ function MyWidget({ api }: WidgetProps) {
 // ✅ CORRECT
 function MyWidget({ api }: WidgetProps) {
   const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
-  
+
   useEffect(() => {
     if (ready) void loadData();
   }, [ready]);
@@ -136,13 +143,13 @@ Two helper functions make it harder to get migrations wrong:
 Creates a type-safe migration object with validation:
 
 ```ts
-import { createMigration } from '@renderer/hooks/sqlMigrationHelper';
+import { createMigration } from "@renderer/hooks/sqlMigrationHelper";
 
 export const MIGRATIONS = [
   createMigration(
-    'items',           // table name
-    'priority',        // column name being added
-    'ALTER TABLE items ADD COLUMN priority INTEGER DEFAULT 0'  // full statement
+    "items", // table name
+    "priority", // column name being added
+    "ALTER TABLE items ADD COLUMN priority INTEGER DEFAULT 0", // full statement
   ),
 ];
 ```
@@ -158,7 +165,7 @@ Validates:
 Use this as a placeholder when you don't have any migrations yet:
 
 ```ts
-import { emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
+import { emptyMigrations } from "@renderer/hooks/sqlMigrationHelper";
 
 export const MIGRATIONS = emptyMigrations();
 ```
@@ -171,8 +178,11 @@ Later, you can replace it with actual migrations.
 
 ```ts
 // constants.ts
-import { createMigration, emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
-import type { SqlMigration } from '@renderer/hooks/useSqlInit';
+import {
+  createMigration,
+  emptyMigrations,
+} from "@renderer/hooks/sqlMigrationHelper";
+import type { SqlMigration } from "@renderer/hooks/useSqlInit";
 
 export const INIT_SQL = `
   CREATE TABLE IF NOT EXISTS [your_table_name] (
@@ -192,8 +202,8 @@ export const MIGRATIONS: SqlMigration[] = emptyMigrations();
 
 ```tsx
 // index.tsx
-import { useSqlInit } from '@renderer/hooks/useSqlInit';
-import { INIT_SQL, MIGRATIONS } from './constants';
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
+import { INIT_SQL, MIGRATIONS } from "./constants";
 
 function MyWidget({ api }: WidgetProps) {
   const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);

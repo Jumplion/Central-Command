@@ -1,11 +1,19 @@
-import type { DialogOpenPathOptions, GoogleConnectOptions, InstanceId, NetFetchInit, NetFetchResponse, SqlRunResult, WidgetId } from '@shared/types';
-import type { GoogleServiceDefinition, GoogleServiceId } from '@shared/google';
+import type {
+  DialogOpenPathOptions,
+  GoogleConnectOptions,
+  InstanceId,
+  NetFetchInit,
+  NetFetchResponse,
+  SqlRunResult,
+  WidgetId,
+} from "@shared/types";
+import type { GoogleServiceDefinition, GoogleServiceId } from "@shared/google";
 import {
   getGoogleCredsKey,
   SHARED_GOOGLE_WIDGET_ID,
   getGoogleReconnectOptions,
-} from '@shared/google';
-import { emitApiCall } from './apiEvents';
+} from "@shared/google";
+import { emitApiCall } from "./apiEvents";
 
 export interface WidgetApi {
   widgetId: WidgetId;
@@ -29,7 +37,9 @@ export interface WidgetApi {
     all<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
     get<T = unknown>(sql: string, params?: unknown[]): Promise<T | undefined>;
     exec(sql: string): Promise<void>;
-    runBatch(items: { sql: string; params?: unknown[] }[]): Promise<SqlRunResult[]>;
+    runBatch(
+      items: { sql: string; params?: unknown[] }[],
+    ): Promise<SqlRunResult[]>;
   };
   shell: {
     openExternal(url: string): Promise<void>;
@@ -72,7 +82,11 @@ export interface WidgetApi {
      */
     shared: {
       /** Run PKCE OAuth flow and store credentials + tokens in the shared namespace. */
-      connect(options: { clientId: string; clientSecret: string; service?: GoogleServiceId }): Promise<void>;
+      connect(options: {
+        clientId: string;
+        clientSecret: string;
+        service?: GoogleServiceId;
+      }): Promise<void>;
       /** Return a valid access token, auto-refreshing if expired. Returns null if not authenticated. */
       getToken(service?: GoogleServiceId): Promise<string | null>;
       isConnected(service?: GoogleServiceId): Promise<boolean>;
@@ -88,17 +102,23 @@ export interface WidgetApi {
   };
 }
 
-const SCOPE_SEP = '::';
+const SCOPE_SEP = "::";
 
 function scoped(instanceId: InstanceId, key: string): string {
   return `${instanceId}${SCOPE_SEP}${key}`;
 }
 
-export function createKvApi(widgetId: WidgetId, instanceId: InstanceId): WidgetApi['kv'] {
+export function createKvApi(
+  widgetId: WidgetId,
+  instanceId: InstanceId,
+): WidgetApi["kv"] {
   return {
-    get: <T,>(key: string) =>
-      window.cc.kv.get(widgetId, scoped(instanceId, key)) as Promise<T | undefined>,
-    set: (key, value) => window.cc.kv.set(widgetId, scoped(instanceId, key), value),
+    get: <T>(key: string) =>
+      window.cc.kv.get(widgetId, scoped(instanceId, key)) as Promise<
+        T | undefined
+      >,
+    set: (key, value) =>
+      window.cc.kv.set(widgetId, scoped(instanceId, key), value),
     del: (key) => window.cc.kv.del(widgetId, scoped(instanceId, key)),
     keys: async () => {
       const prefix = instanceId + SCOPE_SEP;
@@ -108,19 +128,19 @@ export function createKvApi(widgetId: WidgetId, instanceId: InstanceId): WidgetA
   };
 }
 
-export function createSqlApi(widgetId: WidgetId): WidgetApi['sql'] {
+export function createSqlApi(widgetId: WidgetId): WidgetApi["sql"] {
   return {
     run: (sql, params = []) => window.cc.sql.run(widgetId, sql, params),
-    all: <T,>(sql: string, params: unknown[] = []) =>
+    all: <T>(sql: string, params: unknown[] = []) =>
       window.cc.sql.all(widgetId, sql, params) as Promise<T[]>,
-    get: <T,>(sql: string, params: unknown[] = []) =>
+    get: <T>(sql: string, params: unknown[] = []) =>
       window.cc.sql.get(widgetId, sql, params) as Promise<T | undefined>,
     exec: (sql) => window.cc.sql.exec(widgetId, sql),
     runBatch: (items) => window.cc.sql.runBatch(widgetId, items),
   };
 }
 
-export function createGoogleApi(widgetId: WidgetId): WidgetApi['google'] {
+export function createGoogleApi(widgetId: WidgetId): WidgetApi["google"] {
   return {
     services: window.cc.google.services,
     connect: (options) => window.cc.google.connect(widgetId, options),
@@ -128,13 +148,24 @@ export function createGoogleApi(widgetId: WidgetId): WidgetApi['google'] {
     disconnect: (service) => window.cc.google.disconnect(widgetId, service),
     isConnected: (service) => window.cc.google.isConnected(widgetId, service),
     shared: {
-      connect: (options) => window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options),
-      getToken: (service) => window.cc.google.getToken(SHARED_GOOGLE_WIDGET_ID, service),
-      isConnected: (service) => window.cc.google.isConnected(SHARED_GOOGLE_WIDGET_ID, service),
-      disconnect: (service) => window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID, service),
-      hasCreds: (service) => window.cc.secrets.has(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service)),
+      connect: (options) =>
+        window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options),
+      getToken: (service) =>
+        window.cc.google.getToken(SHARED_GOOGLE_WIDGET_ID, service),
+      isConnected: (service) =>
+        window.cc.google.isConnected(SHARED_GOOGLE_WIDGET_ID, service),
+      disconnect: (service) =>
+        window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID, service),
+      hasCreds: (service) =>
+        window.cc.secrets.has(
+          SHARED_GOOGLE_WIDGET_ID,
+          getGoogleCredsKey(service),
+        ),
       reconnect: async (service) => {
-        const credsRaw = await window.cc.secrets.get(SHARED_GOOGLE_WIDGET_ID, getGoogleCredsKey(service));
+        const credsRaw = await window.cc.secrets.get(
+          SHARED_GOOGLE_WIDGET_ID,
+          getGoogleCredsKey(service),
+        );
         const options = getGoogleReconnectOptions(credsRaw, service);
         if (!options) return false;
         await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options);
@@ -144,7 +175,10 @@ export function createGoogleApi(widgetId: WidgetId): WidgetApi['google'] {
   };
 }
 
-export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): WidgetApi {
+export function createWidgetApi(
+  widgetId: WidgetId,
+  instanceId: InstanceId,
+): WidgetApi {
   return {
     widgetId,
     instanceId,
@@ -159,7 +193,7 @@ export function createWidgetApi(widgetId: WidgetId, instanceId: InstanceId): Wid
         emitApiCall({
           widgetId,
           url,
-          method: init?.method ?? 'GET',
+          method: init?.method ?? "GET",
           timestamp: t0,
           status: res.status,
           duration: Date.now() - t0,

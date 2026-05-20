@@ -1,4 +1,4 @@
-import type { SqlMigration } from '@renderer/hooks/useSqlInit';
+import type { SqlMigration } from "@renderer/hooks/useSqlInit";
 
 // ─── Initial schema ────────────────────────────────────────────────────────
 //

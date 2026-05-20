@@ -10,16 +10,16 @@ Think of it as the server in a client-server architecture, except everything run
 
 ## Files at a glance
 
-| File | What it does |
-|---|---|
-| `index.ts` | App entry point — creates the window, wires all managers together, starts Drive sync |
-| `ipc.ts` | Registers all IPC handlers so the renderer can call main-process features |
-| `ipc.test.ts` | Unit tests for the IPC layer |
-| `oauth.ts` | Google OAuth 2.0 PKCE flow — opens the browser, receives the callback, stores tokens |
-| `secrets.ts` | Encrypted key/value store backed by the OS keychain |
-| `sync.ts` | Polls Google Drive every 5 minutes to push/pull data backups |
-| `platform.ts` | Detects whether the app is running inside WSL (Windows Subsystem for Linux) |
-| `storage/` | Subfolder containing the two storage backends (JSON and SQLite) |
+| File          | What it does                                                                         |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `index.ts`    | App entry point — creates the window, wires all managers together, starts Drive sync |
+| `ipc.ts`      | Registers all IPC handlers so the renderer can call main-process features            |
+| `ipc.test.ts` | Unit tests for the IPC layer                                                         |
+| `oauth.ts`    | Google OAuth 2.0 PKCE flow — opens the browser, receives the callback, stores tokens |
+| `secrets.ts`  | Encrypted key/value store backed by the OS keychain                                  |
+| `sync.ts`     | Polls Google Drive every 5 minutes to push/pull data backups                         |
+| `platform.ts` | Detects whether the app is running inside WSL (Windows Subsystem for Linux)          |
+| `storage/`    | Subfolder containing the two storage backends (JSON and SQLite)                      |
 
 ## `index.ts` — The entry point
 
@@ -55,6 +55,7 @@ IPC stands for **Inter-Process Communication** — the message-passing system be
 `ipc.ts` is one big function `registerIpc(...)` that registers a handler for every channel defined in `src/shared/ipc.ts`. All input from the renderer is treated as untrusted and validated before use (checking types, validating URL schemes, etc.).
 
 **Example flow — when a widget saves a KV entry:**
+
 ```
 renderer: window.cc.kv.set('myWidget', 'myKey', 'myValue')
   → preload: ipcRenderer.invoke('cc:kv:set', 'myWidget', 'myKey', 'myValue')
@@ -89,6 +90,7 @@ Secrets are stored per-widget in `userData/secrets/{widgetId}.json`, but the val
 ## `sync.ts` — Google Drive sync
 
 `SyncManager` polls Google Drive every 5 minutes (when enabled) to sync these three files:
+
 - `cc-state.json` — the dashboard layout and widget settings
 - `cc-kv-{widgetId}.json` — per-widget JSON KV stores
 - `cc-db-{widgetId}.db` — per-widget SQLite databases

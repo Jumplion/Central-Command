@@ -14,14 +14,14 @@ function Greeting({ name }: { name: string }) {
 
 ## Components overview
 
-| File | What the user sees |
-| --- | --- |
-| `Dashboard.tsx` | The main grid where widgets live and can be dragged/resized |
-| `WidgetHost.tsx` | The chrome (header, settings button, remove button) around each widget |
-| `Sidebar.tsx` | The left panel with dashboard list, "+ Add widget", and Settings |
-| `AddWidgetDialog.tsx` | The modal that appears when you click "+ Add widget" |
-| `AppSettings.tsx` | The modal for app-wide settings (Google Drive sync, etc.) |
-| `WidgetSettingsPanel.tsx` | The overlay that appears when you click the ⚙ button on a widget |
+| File                      | What the user sees                                                     |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `Dashboard.tsx`           | The main grid where widgets live and can be dragged/resized            |
+| `WidgetHost.tsx`          | The chrome (header, settings button, remove button) around each widget |
+| `Sidebar.tsx`             | The left panel with dashboard list, "+ Add widget", and Settings       |
+| `AddWidgetDialog.tsx`     | The modal that appears when you click "+ Add widget"                   |
+| `AppSettings.tsx`         | The modal for app-wide settings (Google Drive sync, etc.)              |
+| `WidgetSettingsPanel.tsx` | The overlay that appears when you click the ⚙ button on a widget       |
 
 ## `Dashboard.tsx`
 
@@ -72,7 +72,7 @@ These are purely UI states — whether a modal is open. They don't need to survi
 
 This panel is rendered inside `WidgetHost` when the user opens a widget's settings. It reads the widget's `manifest.settings` array and **automatically generates a settings form** from it.
 
-Each `SettingsField` has a `kind` property (`'string'`, `'number'`, `'boolean'`, `'select'`) that determines which input element to render. This means widget authors only declare *what* settings they need in their manifest — the UI is built for them automatically.
+Each `SettingsField` has a `kind` property (`'string'`, `'number'`, `'boolean'`, `'select'`) that determines which input element to render. This means widget authors only declare _what_ settings they need in their manifest — the UI is built for them automatically.
 
 When the user saves, it calls `updateSettings(instanceId, newSettings)` on the store.
 

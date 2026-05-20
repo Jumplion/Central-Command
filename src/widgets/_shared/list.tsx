@@ -1,34 +1,34 @@
-import { useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export const rowBaseStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
+  display: "flex",
+  alignItems: "center",
   gap: 10,
-  padding: '10px 12px',
+  padding: "10px 12px",
   borderRadius: 10,
-  border: '1px solid var(--border)',
-  background: 'var(--panel-2)',
-  color: 'var(--text)',
+  border: "1px solid var(--border)",
+  background: "var(--panel-2)",
+  color: "var(--text)",
 };
 
 export const rowHoverStyle: CSSProperties = {
-  background: 'rgba(255,255,255,0.03)',
+  background: "rgba(255,255,255,0.03)",
 };
 
 export const tableRowStyle: CSSProperties = {
   ...rowBaseStyle,
-  padding: '12px 14px',
+  padding: "12px 14px",
   borderRadius: 8,
 };
 
 export const tableHeaderStyle: CSSProperties = {
   ...tableRowStyle,
-  borderBottom: '2px solid var(--border)',
+  borderBottom: "2px solid var(--border)",
   fontSize: 12,
   fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.02em',
+  textTransform: "uppercase",
+  letterSpacing: "0.02em",
 };
 
 export const tableCellStyle: CSSProperties = {
@@ -67,12 +67,12 @@ export function InteractiveListRow({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        all: 'unset',
-        display: 'block',
-        width: '100%',
-        textAlign: 'left',
-        cursor: disabled ? 'default' : 'pointer',
-        transition: 'background 150ms ease',
+        all: "unset",
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        cursor: disabled ? "default" : "pointer",
+        transition: "background 150ms ease",
         ...rowBaseStyle,
         ...(hover && !disabled ? rowHoverStyle : {}),
         opacity: disabled ? 0.6 : 1,

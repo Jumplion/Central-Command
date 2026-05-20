@@ -8,13 +8,13 @@ The folder is named `_shared` (with a leading underscore) instead of `shared` so
 
 ## Files
 
-| File | What it provides |
-| --- | --- |
-| `StackedBarChart.tsx` | A horizontal stacked bar chart rendered with plain HTML/CSS |
-| `autocomplete.ts` | Normalized suggestion helpers and reusable suggestion menu styles |
-| `form.tsx` | Common form layout components and shared field/section styles |
-| `list.tsx` | Reusable table/list row styles and accessible row components |
-| `index.ts` | Convenience exports for shared widget utilities |
+| File                  | What it provides                                                  |
+| --------------------- | ----------------------------------------------------------------- |
+| `StackedBarChart.tsx` | A horizontal stacked bar chart rendered with plain HTML/CSS       |
+| `autocomplete.ts`     | Normalized suggestion helpers and reusable suggestion menu styles |
+| `form.tsx`            | Common form layout components and shared field/section styles     |
+| `list.tsx`            | Reusable table/list row styles and accessible row components      |
+| `index.ts`            | Convenience exports for shared widget utilities                   |
 
 ---
 
@@ -29,16 +29,16 @@ Charting libraries (Chart.js, Recharts, etc.) are large dependencies that add si
 ### Usage
 
 ```tsx
-import { StackedBarChart } from '@widgets/_shared/StackedBarChart';
+import { StackedBarChart } from "@widgets/_shared/StackedBarChart";
 
 <StackedBarChart
   segments={[
-    { label: 'Want',        count: 12, color: '#5b8af0' },
-    { label: 'In Progress', count:  4, color: '#f0a05b' },
-    { label: 'Done',        count: 28, color: '#5bf090' },
+    { label: "Want", count: 12, color: "#5b8af0" },
+    { label: "In Progress", count: 4, color: "#f0a05b" },
+    { label: "Done", count: 28, color: "#5bf090" },
   ]}
   total={44}
-/>
+/>;
 ```
 
 - `segments` — array of `{ label, count, color }` objects, one per bar section
@@ -53,9 +53,19 @@ Segments with a `count` of 0 are hidden automatically.
 Shared autocomplete helpers normalize user input, return prefix matches, and expose menu/item styles for suggestion dropdowns. They are designed to work with string lists or any data model that can be mapped to a label.
 
 ```tsx
-import { filterSuggestions, findSuggestion, suggestionMenuStyle, suggestionItemStyle } from '@widgets/_shared';
+import {
+  filterSuggestions,
+  findSuggestion,
+  suggestionMenuStyle,
+  suggestionItemStyle,
+} from "@widgets/_shared";
 
-const matches = filterSuggestions(companySuggestions, currentValue, undefined, 5);
+const matches = filterSuggestions(
+  companySuggestions,
+  currentValue,
+  undefined,
+  5,
+);
 ```
 
 ---

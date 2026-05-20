@@ -4,16 +4,18 @@ export function today(): string {
 
 export function parseCSVLine(line: string): string[] {
   const fields: string[] = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else inQuotes = !inQuotes;
+    } else if (ch === "," && !inQuotes) {
       fields.push(current);
-      current = '';
+      current = "";
     } else {
       current += ch;
     }
@@ -23,5 +25,5 @@ export function parseCSVLine(line: string): string[] {
 }
 
 export function escapeCSVField(value: unknown): string {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }

@@ -1,7 +1,7 @@
 ---
-name: 'Widget Authoring'
-description: 'Rules for creating and editing widget plugins under src/widgets/'
-applyTo: 'src/widgets/**'
+name: "Widget Authoring"
+description: "Rules for creating and editing widget plugins under src/widgets/"
+applyTo: "src/widgets/**"
 ---
 
 ## Registration
@@ -22,35 +22,43 @@ applyTo: 'src/widgets/**'
 ## Minimal widget skeleton
 
 ```tsx
-import type { Widget } from '@renderer/plugins/registry';
+import type { Widget } from "@renderer/plugins/registry";
 
-function MyWidget({ api, settings, setTitle }: import('@renderer/plugins/registry').WidgetProps) {
+function MyWidget({
+  api,
+  settings,
+  setTitle,
+}: import("@renderer/plugins/registry").WidgetProps) {
   const [data, setData] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     api.sql
-      .exec('CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL)')
-      .then(() => api.sql.all<{ value: string }>('SELECT value FROM items'))
-      .then((rows) => setData(rows.map((r) => r.value).join(', ')))
+      .exec(
+        "CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL)",
+      )
+      .then(() => api.sql.all<{ value: string }>("SELECT value FROM items"))
+      .then((rows) => setData(rows.map((r) => r.value).join(", ")))
       .catch((e) => setError((e as Error).message));
   }, []);
 
-  if (error) return <div style={{ color: 'var(--error)', padding: 8 }}>{error}</div>;
-  if (data === null) return <div style={{ padding: 8, color: 'var(--text-dim)' }}>Loading…</div>;
-  return <div style={{ padding: 8 }}>{data || 'No items yet.'}</div>;
+  if (error)
+    return <div style={{ color: "var(--error)", padding: 8 }}>{error}</div>;
+  if (data === null)
+    return <div style={{ padding: 8, color: "var(--text-dim)" }}>Loading…</div>;
+  return <div style={{ padding: 8 }}>{data || "No items yet."}</div>;
 }
 
 const widget: Widget = {
   manifest: {
-    id: 'my-widget',
-    name: 'My Widget',
-    version: '0.1.0',
-    icon: '🔧',
+    id: "my-widget",
+    name: "My Widget",
+    version: "0.1.0",
+    icon: "🔧",
     defaultSize: { w: 4, h: 4 },
     minSize: { w: 2, h: 2 },
     settings: [
-      { kind: 'string', key: 'label', label: 'Label', default: 'Hello' },
+      { kind: "string", key: "label", label: "Label", default: "Hello" },
     ],
     permissions: { sqlite: true },
   },

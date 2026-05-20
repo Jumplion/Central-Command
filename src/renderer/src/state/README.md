@@ -4,10 +4,10 @@ This folder contains the Zustand store that holds all dashboard state: which das
 
 ## Files
 
-| File | What it does |
-| --- | --- |
-| `dashboard.ts` | The Zustand store — all state and actions for dashboard management |
-| `dashboard.test.ts` | Unit tests for the store's logic |
+| File                | What it does                                                       |
+| ------------------- | ------------------------------------------------------------------ |
+| `dashboard.ts`      | The Zustand store — all state and actions for dashboard management |
+| `dashboard.test.ts` | Unit tests for the store's logic                                   |
 
 ---
 
@@ -63,23 +63,23 @@ The `activeDashboardId` tells the app which dashboard to display. Switching dash
 
 The store exposes these pieces:
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `loaded` | `boolean` | `false` until `load()` completes |
-| `state` | `AppState` | The entire dashboard state |
-| `load()` | action | Fetches state from disk via `window.cc.state.load()` |
-| `persist()` | action | Debounces a save to disk (150 ms delay) |
-| `applyRemoteState()` | action | Replaces state with a version pulled from Google Drive |
-| `activeDashboard()` | selector | Returns the currently active `Dashboard` object |
-| `setActiveDashboard(id)` | action | Switch to a different dashboard |
-| `addDashboard(name)` | action | Create a new empty dashboard |
-| `removeDashboard(id)` | action | Delete a dashboard (with fallback to keep at least one) |
-| `renameDashboard(id, name)` | action | Change a dashboard's display name |
-| `addInstance(widgetId)` | action | Add a widget to the active dashboard |
-| `removeInstance(instanceId)` | action | Remove a widget from the active dashboard |
-| `updateLayout(layouts)` | action | Update positions after drag/resize |
-| `updateSettings(instanceId, settings)` | action | Save new settings for one widget instance |
-| `setTitle(instanceId, title)` | action | Set a widget's display title override |
+| Name                                   | Type       | Description                                             |
+| -------------------------------------- | ---------- | ------------------------------------------------------- |
+| `loaded`                               | `boolean`  | `false` until `load()` completes                        |
+| `state`                                | `AppState` | The entire dashboard state                              |
+| `load()`                               | action     | Fetches state from disk via `window.cc.state.load()`    |
+| `persist()`                            | action     | Debounces a save to disk (150 ms delay)                 |
+| `applyRemoteState()`                   | action     | Replaces state with a version pulled from Google Drive  |
+| `activeDashboard()`                    | selector   | Returns the currently active `Dashboard` object         |
+| `setActiveDashboard(id)`               | action     | Switch to a different dashboard                         |
+| `addDashboard(name)`                   | action     | Create a new empty dashboard                            |
+| `removeDashboard(id)`                  | action     | Delete a dashboard (with fallback to keep at least one) |
+| `renameDashboard(id, name)`            | action     | Change a dashboard's display name                       |
+| `addInstance(widgetId)`                | action     | Add a widget to the active dashboard                    |
+| `removeInstance(instanceId)`           | action     | Remove a widget from the active dashboard               |
+| `updateLayout(layouts)`                | action     | Update positions after drag/resize                      |
+| `updateSettings(instanceId, settings)` | action     | Save new settings for one widget instance               |
+| `setTitle(instanceId, title)`          | action     | Set a widget's display title override                   |
 
 ---
 
@@ -138,7 +138,7 @@ Rather than importing a full library, the store has a tiny inline ID generator:
 ```ts
 function nanoid(length: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(length));
-  return Array.from(bytes, (b) => NANOID_ALPHABET[b & 63]).join('');
+  return Array.from(bytes, (b) => NANOID_ALPHABET[b & 63]).join("");
 }
 ```
 

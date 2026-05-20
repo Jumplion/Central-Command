@@ -4,10 +4,10 @@ This is the source code for the React application that runs inside the Electron 
 
 ## Entry points
 
-| File | Role |
-| --- | --- |
-| `main.tsx` | React entry — calls `ReactDOM.createRoot(...).render(<App />)` |
-| `App.tsx` | Root component — loads state on mount, renders the sidebar and dashboard |
+| File       | Role                                                                     |
+| ---------- | ------------------------------------------------------------------------ |
+| `main.tsx` | React entry — calls `ReactDOM.createRoot(...).render(<App />)`           |
+| `App.tsx`  | Root component — loads state on mount, renders the sidebar and dashboard |
 
 ## Subfolders
 
@@ -33,9 +33,9 @@ src/renderer/src/
 
 ```tsx
 <App>
-  <Sidebar />          ← dashboard list, "Add widget" button, settings
+  <Sidebar /> ← dashboard list, "Add widget" button, settings
   <main>
-    <Dashboard />      ← grid of widget instances
+    <Dashboard /> ← grid of widget instances
   </main>
 </App>
 ```

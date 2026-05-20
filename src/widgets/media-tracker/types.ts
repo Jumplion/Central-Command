@@ -1,8 +1,28 @@
-export type MediaType    = 'book' | 'movie' | 'tv' | 'game' | 'podcast' | 'anime' | 'other';
-export type MediaStatus  = 'current' | 'owned' | 'want' | 'completed' | 'paused' | 'dropped';
-export type StatusFilter = MediaStatus | 'all';
-export type TypeFilter   = MediaType | 'all';
-export type LinkRelation = 'sequel' | 'prequel' | 'spinoff' | 'series' | 'adaptation' | 'remake' | 'related';
+export type MediaType =
+  | "book"
+  | "movie"
+  | "tv"
+  | "game"
+  | "podcast"
+  | "anime"
+  | "other";
+export type MediaStatus =
+  | "current"
+  | "owned"
+  | "want"
+  | "completed"
+  | "paused"
+  | "dropped";
+export type StatusFilter = MediaStatus | "all";
+export type TypeFilter = MediaType | "all";
+export type LinkRelation =
+  | "sequel"
+  | "prequel"
+  | "spinoff"
+  | "series"
+  | "adaptation"
+  | "remake"
+  | "related";
 
 export interface MediaItem {
   id: number;
@@ -47,7 +67,7 @@ export interface FormState {
 
 export interface LookupResult {
   externalId: string;
-  source: 'tmdb' | 'rawg' | 'openlibrary';
+  source: "tmdb" | "rawg" | "openlibrary";
   title: string;
   creator: string;
   year: string;

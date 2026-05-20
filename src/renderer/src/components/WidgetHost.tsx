@@ -1,30 +1,40 @@
-import { Component, ReactNode, memo, useCallback, useMemo, useState } from 'react';
-import type { WidgetInstance } from '@shared/types';
-import type { Widget } from '@renderer/plugins/registry';
-import { createWidgetApi } from '@renderer/plugins/api';
-import { useDashboard } from '@renderer/state/dashboard';
-import { WidgetSettingsPanel } from './WidgetSettingsPanel';
+import {
+  Component,
+  ReactNode,
+  memo,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+import type { WidgetInstance } from "@shared/types";
+import type { Widget } from "@renderer/plugins/registry";
+import { createWidgetApi } from "@renderer/plugins/api";
+import { useDashboard } from "@renderer/state/dashboard";
+import { WidgetSettingsPanel } from "./WidgetSettingsPanel";
 
 interface Props {
   instance: WidgetInstance;
   widget: Widget | undefined;
 }
 
-export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) {
+export const WidgetHost = memo(function WidgetHost({
+  instance,
+  widget,
+}: Props) {
   const removeInstance = useDashboard((s) => s.removeInstance);
   const setTitle = useDashboard((s) => s.setTitle);
   const [showSettings, setShowSettings] = useState(false);
 
   const api = useMemo(
     () => createWidgetApi(instance.widgetId, instance.instanceId),
-    [instance.widgetId, instance.instanceId]
+    [instance.widgetId, instance.instanceId],
   );
 
   const handleSetTitle = useCallback(
     (title: string | undefined) => {
       setTitle(instance.instanceId, title);
     },
-    [instance.instanceId, setTitle]
+    [instance.instanceId, setTitle],
   );
 
   if (!widget) {
@@ -32,15 +42,22 @@ export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) 
       <div className="widget widget-missing">
         <div className="widget-header">
           <span className="widget-icon">⚠</span>
-          <span className="widget-title">Missing widget: {instance.widgetId}</span>
+          <span className="widget-title">
+            Missing widget: {instance.widgetId}
+          </span>
           <div className="widget-actions">
-            <button onClick={() => removeInstance(instance.instanceId)} aria-label="Remove">✕</button>
+            <button
+              onClick={() => removeInstance(instance.instanceId)}
+              aria-label="Remove"
+            >
+              ✕
+            </button>
           </div>
         </div>
         <div className="widget-body">
           <p>
-            The widget plugin <code>{instance.widgetId}</code> is not installed. Add it under{' '}
-            <code>src/widgets/</code> or remove this instance.
+            The widget plugin <code>{instance.widgetId}</code> is not installed.
+            Add it under <code>src/widgets/</code> or remove this instance.
           </p>
         </div>
       </div>
@@ -54,7 +71,7 @@ export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) 
   return (
     <div className="widget">
       <div className="widget-header">
-        <span className="widget-icon">{widget.manifest.icon ?? '◻'}</span>
+        <span className="widget-icon">{widget.manifest.icon ?? "◻"}</span>
         <span className="widget-title">{title}</span>
         <div className="widget-actions">
           {hasSettings && (

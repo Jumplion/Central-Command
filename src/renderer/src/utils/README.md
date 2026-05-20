@@ -4,8 +4,8 @@ This folder holds small, general-purpose functions that are useful in the render
 
 ## Files
 
-| File | What it does |
-| --- | --- |
+| File     | What it does                                                         |
+| -------- | -------------------------------------------------------------------- |
 | `csv.ts` | Re-exports CSV parsing/formatting utilities from `src/shared/csv.ts` |
 
 ---
@@ -26,4 +26,4 @@ If you write a helper function used by more than one component or widget, put it
 - String manipulation (truncation, slugification)
 - Number formatting (percentages, file sizes)
 
-If the utility is needed in both the renderer *and* the main process, put it in `src/shared/` instead.
+If the utility is needed in both the renderer _and_ the main process, put it in `src/shared/` instead.

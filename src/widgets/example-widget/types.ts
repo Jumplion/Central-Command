@@ -6,6 +6,6 @@
 export interface Note {
   id: number;
   body: string;
-  pinned: number;      // 0 | 1
-  created_at: string;  // ISO 8601 datetime string produced by datetime('now')
+  pinned: number; // 0 | 1
+  created_at: string; // ISO 8601 datetime string produced by datetime('now')
 }

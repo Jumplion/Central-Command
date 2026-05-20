@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useDashboard } from '@renderer/state/dashboard';
-import { AddWidgetDialog } from './AddWidgetDialog';
-import { AppSettings } from './AppSettings';
+import { useState } from "react";
+import { useDashboard } from "@renderer/state/dashboard";
+import { AddWidgetDialog } from "./AddWidgetDialog";
+import { AppSettings } from "./AppSettings";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -19,7 +19,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
+  const [editingName, setEditingName] = useState("");
 
   function startRename(id: string, name: string) {
     setEditingId(id);
@@ -35,23 +35,27 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   }
 
   function confirmRemove(id: string, name: string) {
-    if (window.confirm(`Delete dashboard "${name}"? Widgets on it will also be removed.`)) {
+    if (
+      window.confirm(
+        `Delete dashboard "${name}"? Widgets on it will also be removed.`,
+      )
+    ) {
       removeDashboard(id);
     }
   }
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
       <div className="brand">
         <span className="brand-mark">⌘</span>
         {!collapsed && <strong>Central Command</strong>}
         <button
           className="sidebar-toggle ghost"
           onClick={onToggle}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? '▶' : '◀'}
+          {collapsed ? "▶" : "◀"}
         </button>
       </div>
 
@@ -62,7 +66,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
               <span>Dashboards</span>
               <button
                 className="ghost"
-                onClick={() => addDashboard('New dashboard')}
+                onClick={() => addDashboard("New dashboard")}
                 title="New dashboard"
                 aria-label="New dashboard"
               >
@@ -71,7 +75,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             </div>
             <ul>
               {dashboards.map((d) => (
-                <li key={d.id} className={d.id === activeId ? 'active' : ''}>
+                <li key={d.id} className={d.id === activeId ? "active" : ""}>
                   {editingId === d.id ? (
                     <input
                       autoFocus
@@ -79,8 +83,8 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
                       onChange={(e) => setEditingName(e.target.value)}
                       onBlur={commitRename}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitRename();
-                        if (e.key === 'Escape') setEditingId(null);
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setEditingId(null);
                       }}
                     />
                   ) : (
@@ -92,16 +96,18 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
                       {d.name}
                     </button>
                   )}
-                  {dashboards.length > 1 && d.id === activeId && editingId !== d.id && (
-                    <button
-                      className="ghost danger"
-                      onClick={() => confirmRemove(d.id, d.name)}
-                      title="Delete dashboard"
-                      aria-label="Delete dashboard"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  {dashboards.length > 1 &&
+                    d.id === activeId &&
+                    editingId !== d.id && (
+                      <button
+                        className="ghost danger"
+                        onClick={() => confirmRemove(d.id, d.name)}
+                        title="Delete dashboard"
+                        aria-label="Delete dashboard"
+                      >
+                        ✕
+                      </button>
+                    )}
                 </li>
               ))}
             </ul>

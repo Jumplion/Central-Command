@@ -1,7 +1,7 @@
 ---
-name: 'TypeScript & React Standards'
-description: 'Coding conventions for all TypeScript and React files'
-applyTo: '**/*.{ts,tsx}'
+name: "TypeScript & React Standards"
+description: "Coding conventions for all TypeScript and React files"
+applyTo: "**/*.{ts,tsx}"
 ---
 
 ## Imports & aliases

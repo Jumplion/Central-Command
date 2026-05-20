@@ -1,9 +1,9 @@
-import type { ComponentType } from 'react';
-import type { WidgetManifest, WidgetSettings } from '@shared/types';
-import type { WidgetApi } from './api';
-import { getWidgetRegistrationError } from './registry-validator';
+import type { ComponentType } from "react";
+import type { WidgetManifest, WidgetSettings } from "@shared/types";
+import type { WidgetApi } from "./api";
+import { getWidgetRegistrationError } from "./registry-validator";
 
-const CURRENT_PLATFORM: 'desktop' = 'desktop';
+const CURRENT_PLATFORM: "desktop" = "desktop";
 
 export interface WidgetProps {
   api: WidgetApi;
@@ -16,18 +16,25 @@ export interface Widget {
   Component: ComponentType<WidgetProps>;
 }
 
-const modules = import.meta.glob<{ default: Widget }>('../../../widgets/*/index.tsx', {
-  eager: true
-});
+const modules = import.meta.glob<{ default: Widget }>(
+  "../../../widgets/*/index.tsx",
+  {
+    eager: true,
+  },
+);
 
 const registry = new Map<string, Widget>();
 const registeredIds = new Set<string>();
 
 for (const filePath in modules) {
   const mod = modules[filePath];
-  const error = getWidgetRegistrationError(mod, registeredIds, CURRENT_PLATFORM);
+  const error = getWidgetRegistrationError(
+    mod,
+    registeredIds,
+    CURRENT_PLATFORM,
+  );
   if (error) {
-    if (error !== 'unsupported platform') {
+    if (error !== "unsupported platform") {
       console.warn(`[plugins] skipping widget at ${filePath}: ${error}`);
     }
     continue;
@@ -39,7 +46,7 @@ for (const filePath in modules) {
 }
 
 const sortedWidgets: Widget[] = Array.from(registry.values()).sort((a, b) =>
-  a.manifest.name.localeCompare(b.manifest.name)
+  a.manifest.name.localeCompare(b.manifest.name),
 );
 
 export function listWidgets(): Widget[] {
@@ -53,7 +60,7 @@ export function getWidget(id: string): Widget | undefined {
 export function defaultSettingsFor(manifest: WidgetManifest): WidgetSettings {
   const out: WidgetSettings = {};
   for (const f of manifest.settings ?? []) {
-    if ('default' in f && f.default !== undefined) out[f.key] = f.default;
+    if ("default" in f && f.default !== undefined) out[f.key] = f.default;
   }
   return out;
 }

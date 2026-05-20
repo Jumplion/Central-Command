@@ -1,8 +1,10 @@
-import { spawn } from 'node:child_process';
-import { shell } from 'electron';
+import { spawn } from "node:child_process";
+import { shell } from "electron";
 
 /** True when running inside a Windows Subsystem for Linux environment. */
-export const IS_WSL = !!(process.env['WSL_DISTRO_NAME'] ?? process.env['WSL_INTEROP']);
+export const IS_WSL = !!(
+  process.env["WSL_DISTRO_NAME"] ?? process.env["WSL_INTEROP"]
+);
 
 /**
  * Open a URL in the system default browser, handling all runtime environments:
@@ -14,11 +16,15 @@ export const IS_WSL = !!(process.env['WSL_DISTRO_NAME'] ?? process.env['WSL_INTE
 export function openExternal(url: string): Promise<void> {
   if (IS_WSL) {
     const psCmd = `Start-Process -FilePath '${url.replace(/'/g, "''")}'`;
-    const encodedCmd = Buffer.from(psCmd, 'utf16le').toString('base64');
+    const encodedCmd = Buffer.from(psCmd, "utf16le").toString("base64");
     return new Promise<void>((resolve) => {
-      spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCmd], {
-        stdio: 'ignore',
-      }).on('close', () => resolve());
+      spawn(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodedCmd],
+        {
+          stdio: "ignore",
+        },
+      ).on("close", () => resolve());
     });
   }
   return shell.openExternal(url);

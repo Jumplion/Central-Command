@@ -1,32 +1,41 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { WidgetApi } from '@renderer/plugins/api';
-import type { Application, AppFormData, EmailSuggestion, ParsedJobEmail, Status } from './types';
-import { STATUSES, STATUS_COLOR } from './types';
-import { AppForm, StatusBadge } from './components';
-import { fetchJobEmails, buildSuggestion } from './gmail';
-import { INSERT_APPLICATION, UPDATE_APPLICATION_STATUS, DISMISS_EMAIL_JOB } from './queries';
-import { NotConnected } from '../_shared/NotConnected';
-import { buttonDefault, inp } from '../_shared/styles';
+import { useState, useEffect, useCallback } from "react";
+import type { WidgetApi } from "@renderer/plugins/api";
+import type {
+  Application,
+  AppFormData,
+  EmailSuggestion,
+  ParsedJobEmail,
+  Status,
+} from "./types";
+import { STATUSES, STATUS_COLOR } from "./types";
+import { AppForm, StatusBadge } from "./components";
+import { fetchJobEmails, buildSuggestion } from "./gmail";
+import {
+  INSERT_APPLICATION,
+  UPDATE_APPLICATION_STATUS,
+  DISMISS_EMAIL_JOB,
+} from "./queries";
+import { NotConnected } from "../_shared/NotConnected";
+import { buttonDefault, inp } from "../_shared/styles";
 
 // ─── Auth state machine ───────────────────────────────────────────────────
 
 type AuthState =
-  | 'loading'       // initial connection check
-  | 'no-creds'      // not connected — user needs to connect via App Settings
-  | 'connecting'    // OAuth browser flow in progress
-  | 'connected'     // valid token available
-  | 'error';        // unexpected failure (shown with a retry button)
+  | "loading" // initial connection check
+  | "no-creds" // not connected — user needs to connect via App Settings
+  | "connecting" // OAuth browser flow in progress
+  | "connected" // valid token available
+  | "error"; // unexpected failure (shown with a retry button)
 
 // ─── Styles ───────────────────────────────────────────────────────────────
 
 const row: React.CSSProperties = {
-  borderTop: '1px solid var(--border)',
-  cursor: 'pointer',
-  transition: 'background-color 0.15s',
+  borderTop: "1px solid var(--border)",
+  cursor: "pointer",
+  transition: "background-color 0.15s",
 };
 
-
-const dimText: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 12 };
+const dimText: React.CSSProperties = { color: "var(--text-dim)", fontSize: 12 };
 
 // ─── EmailRow ─────────────────────────────────────────────────────────────
 
@@ -54,11 +63,13 @@ function EmailRow({
   const [editedCompany, setEditedCompany] = useState(email.parsed_company);
   const [editedRole, setEditedRole] = useState(email.parsed_role);
   const [editedStatus, setEditedStatus] = useState<Status>(
-    (email.parsed_status as Status) || 'Applied'
+    (email.parsed_status as Status) || "Applied",
   );
-  const [editedReqNumber, setEditedReqNumber] = useState(email.parsed_req_number);
+  const [editedReqNumber, setEditedReqNumber] = useState(
+    email.parsed_req_number,
+  );
   const [linkedApp, setLinkedApp] = useState<Application | null>(
-    suggestion.kind === 'update' ? suggestion.app : null
+    suggestion.kind === "update" ? suggestion.app : null,
   );
   const [saving, setSaving] = useState(false);
 
@@ -73,8 +84,11 @@ function EmailRow({
   })();
 
   const dateDisplay = (() => {
-    try { return new Date(email.received_at).toLocaleDateString(); }
-    catch { return email.received_at.slice(0, 10); }
+    try {
+      return new Date(email.received_at).toLocaleDateString();
+    } catch {
+      return email.received_at.slice(0, 10);
+    }
   })();
 
   const handleAddToTracker = async () => {
@@ -85,10 +99,10 @@ function EmailRow({
         role: editedRole,
         status: editedStatus,
         applied_at: email.received_at.slice(0, 10),
-        location: '',
-        source: 'Gmail',
+        location: "",
+        source: "Gmail",
         link: `https://mail.google.com/mail/u/0/#inbox/${email.thread_id}`,
-        notes: '',
+        notes: "",
         req_number: editedReqNumber,
       };
       await onAdd(data);
@@ -117,48 +131,73 @@ function EmailRow({
       <div
         style={{
           ...row,
-          display: 'grid',
-          gridTemplateColumns: '1fr 2fr auto auto',
-          alignItems: 'center',
+          display: "grid",
+          gridTemplateColumns: "1fr 2fr auto auto",
+          alignItems: "center",
           gap: 8,
-          padding: '6px 8px',
-          backgroundColor: expanded ? 'rgba(110,168,255,0.07)' : undefined,
+          padding: "6px 8px",
+          backgroundColor: expanded ? "rgba(110,168,255,0.07)" : undefined,
         }}
         onClick={() => setExpanded((e) => !e)}
-        onMouseEnter={(e) => { if (!expanded) e.currentTarget.style.backgroundColor = 'rgba(110,168,255,0.05)'; }}
-        onMouseLeave={(e) => { if (!expanded) e.currentTarget.style.backgroundColor = ''; }}
+        onMouseEnter={(e) => {
+          if (!expanded)
+            e.currentTarget.style.backgroundColor = "rgba(110,168,255,0.05)";
+        }}
+        onMouseLeave={(e) => {
+          if (!expanded) e.currentTarget.style.backgroundColor = "";
+        }}
       >
-        <span style={{ ...dimText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span
+          style={{
+            ...dimText,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {fromDisplay}
         </span>
-        <span style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span
+          style={{
+            fontSize: 12,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {email.subject}
         </span>
-        <StatusBadge status={(email.parsed_status as Status) || 'Applied'} />
-        <span style={{ ...dimText, whiteSpace: 'nowrap' }}>{dateDisplay}</span>
+        <StatusBadge status={(email.parsed_status as Status) || "Applied"} />
+        <span style={{ ...dimText, whiteSpace: "nowrap" }}>{dateDisplay}</span>
       </div>
 
       {/* Expanded suggestion panel */}
       {expanded && (
         <div
           style={{
-            background: 'var(--panel-2)',
-            border: '1px solid var(--border)',
-            borderTop: 'none',
-            borderRadius: '0 0 6px 6px',
+            background: "var(--panel-2)",
+            border: "1px solid var(--border)",
+            borderTop: "none",
+            borderRadius: "0 0 6px 6px",
             padding: 10,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             gap: 8,
           }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Parsed fields (editable) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr 1fr",
+              gap: 6,
+            }}
+          >
             <div>
               <div style={{ ...dimText, marginBottom: 2 }}>Company</div>
               <input
-                style={{ ...inp, width: '100%', boxSizing: 'border-box' }}
+                style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                 value={editedCompany}
                 onChange={(e) => setEditedCompany(e.target.value)}
               />
@@ -166,7 +205,7 @@ function EmailRow({
             <div>
               <div style={{ ...dimText, marginBottom: 2 }}>Role</div>
               <input
-                style={{ ...inp, width: '100%', boxSizing: 'border-box' }}
+                style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                 value={editedRole}
                 onChange={(e) => setEditedRole(e.target.value)}
               />
@@ -174,19 +213,21 @@ function EmailRow({
             <div>
               <div style={{ ...dimText, marginBottom: 2 }}>Status</div>
               <select
-                style={{ ...inp, width: '100%', boxSizing: 'border-box' }}
+                style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                 value={editedStatus}
                 onChange={(e) => setEditedStatus(e.target.value as Status)}
               >
                 {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
               <div style={{ ...dimText, marginBottom: 2 }}>Req #</div>
               <input
-                style={{ ...inp, width: '100%', boxSizing: 'border-box' }}
+                style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                 value={editedReqNumber}
                 onChange={(e) => setEditedReqNumber(e.target.value)}
                 placeholder="—"
@@ -196,20 +237,29 @@ function EmailRow({
 
           {/* Snippet */}
           {email.snippet && (
-            <div style={{ ...dimText, fontStyle: 'italic', lineHeight: 1.4 }}>
+            <div style={{ ...dimText, fontStyle: "italic", lineHeight: 1.4 }}>
               &ldquo;{email.snippet}&rdquo;
             </div>
           )}
 
           {/* Update suggestion: link to existing app */}
-          {suggestion.kind === 'update' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {suggestion.kind === "update" && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
               <span style={dimText}>Link to existing entry:</span>
               <select
                 style={{ ...inp, flexShrink: 0 }}
-                value={linkedApp?.id ?? ''}
+                value={linkedApp?.id ?? ""}
                 onChange={(e) => {
-                  const found = apps.find((a) => a.id === Number(e.target.value));
+                  const found = apps.find(
+                    (a) => a.id === Number(e.target.value),
+                  );
                   setLinkedApp(found ?? null);
                 }}
               >
@@ -224,24 +274,29 @@ function EmailRow({
           )}
 
           {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {suggestion.kind === 'add' || !linkedApp ? (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {suggestion.kind === "add" || !linkedApp ? (
               <button
                 className="primary"
                 style={buttonDefault}
                 onClick={handleAddToTracker}
                 disabled={saving || !editedCompany.trim() || !editedRole.trim()}
               >
-                {saving ? 'Adding…' : '+ Add to Tracker'}
+                {saving ? "Adding…" : "+ Add to Tracker"}
               </button>
             ) : (
               <button
                 className="primary"
-                style={{ ...buttonDefault, background: STATUS_COLOR[editedStatus] + '33', borderColor: STATUS_COLOR[editedStatus] + '88', color: STATUS_COLOR[editedStatus] }}
+                style={{
+                  ...buttonDefault,
+                  background: STATUS_COLOR[editedStatus] + "33",
+                  borderColor: STATUS_COLOR[editedStatus] + "88",
+                  color: STATUS_COLOR[editedStatus],
+                }}
                 onClick={handleUpdateStatus}
                 disabled={saving}
               >
-                {saving ? 'Updating…' : `↑ Update to ${editedStatus}`}
+                {saving ? "Updating…" : `↑ Update to ${editedStatus}`}
               </button>
             )}
             <button
@@ -254,7 +309,7 @@ function EmailRow({
             {!dismissed && (
               <button
                 className="ghost danger"
-                style={{ ...buttonDefault, marginLeft: 'auto' }}
+                style={{ ...buttonDefault, marginLeft: "auto" }}
                 onClick={() => void onDismiss(email.id)}
               >
                 Dismiss
@@ -266,7 +321,6 @@ function EmailRow({
     </div>
   );
 }
-
 
 // ─── EmailsTab ────────────────────────────────────────────────────────────
 
@@ -281,11 +335,11 @@ export function EmailsTab({
   onAppAdded: () => void;
   onAppUpdated: () => void;
 }) {
-  const [authState, setAuthState] = useState<AuthState>('loading');
-  const [authError, setAuthError] = useState('');
+  const [authState, setAuthState] = useState<AuthState>("loading");
+  const [authError, setAuthError] = useState("");
   const [emails, setEmails] = useState<ParsedJobEmail[]>([]);
   const [scanning, setScanning] = useState(false);
-  const [scanError, setScanError] = useState('');
+  const [scanError, setScanError] = useState("");
   const [showDismissed, setShowDismissed] = useState(false);
 
   // ── Auth initialization ──────────────────────────────────────────────
@@ -293,29 +347,29 @@ export function EmailsTab({
   useEffect(() => {
     const check = async () => {
       try {
-        const connected = await api.google.shared.isConnected('gmail');
+        const connected = await api.google.shared.isConnected("gmail");
         if (connected) {
-          setAuthState('connected');
+          setAuthState("connected");
           await loadEmails();
           return;
         }
-        const hasCreds = await api.google.shared.hasCreds('gmail');
+        const hasCreds = await api.google.shared.hasCreds("gmail");
         if (hasCreds) {
           // Tokens expired but credentials exist — reconnect automatically
-          setAuthState('connecting');
-          const started = await api.google.shared.reconnect('gmail');
+          setAuthState("connecting");
+          const started = await api.google.shared.reconnect("gmail");
           if (started) {
-            setAuthState('connected');
+            setAuthState("connected");
             await loadEmails();
           } else {
-            setAuthState('no-creds');
+            setAuthState("no-creds");
           }
         } else {
-          setAuthState('no-creds');
+          setAuthState("no-creds");
         }
       } catch (err) {
         setAuthError(String(err));
-        setAuthState('error');
+        setAuthState("error");
       }
     };
     void check();
@@ -324,22 +378,28 @@ export function EmailsTab({
   // ── Load stored emails from DB ────────────────────────────────────────
 
   const loadEmails = useCallback(async () => {
-    const rows = await api.sql.all<ParsedJobEmail>('SELECT * FROM email_jobs ORDER BY received_at DESC');
+    const rows = await api.sql.all<ParsedJobEmail>(
+      "SELECT * FROM email_jobs ORDER BY received_at DESC",
+    );
     setEmails(rows);
   }, [api]);
 
   // ── Connect ───────────────────────────────────────────────────────────
 
   const handleConnect = async (clientId: string, clientSecret: string) => {
-    setAuthState('connecting');
-    setAuthError('');
+    setAuthState("connecting");
+    setAuthError("");
     try {
-      await api.google.shared.connect({ clientId, clientSecret, service: 'gmail' });
-      setAuthState('connected');
+      await api.google.shared.connect({
+        clientId,
+        clientSecret,
+        service: "gmail",
+      });
+      setAuthState("connected");
       await loadEmails();
     } catch (err) {
       setAuthError(String(err));
-      setAuthState('no-creds');
+      setAuthState("no-creds");
     }
   };
 
@@ -347,11 +407,11 @@ export function EmailsTab({
 
   const handleScan = async () => {
     setScanning(true);
-    setScanError('');
+    setScanError("");
     try {
       const token = await api.google.shared.getToken();
       if (!token) {
-        setAuthState('no-creds');
+        setAuthState("no-creds");
         return;
       }
       const fetched = await fetchJobEmails(api, token);
@@ -366,55 +426,92 @@ export function EmailsTab({
   // ── App actions ───────────────────────────────────────────────────────
 
   const handleAdd = async (data: AppFormData) => {
-    await api.sql.run(
-      INSERT_APPLICATION,
-      [data.company, data.role, data.status, data.applied_at, data.source, data.link, data.notes, data.req_number, Date.now()]
-    );
+    await api.sql.run(INSERT_APPLICATION, [
+      data.company,
+      data.role,
+      data.status,
+      data.applied_at,
+      data.source,
+      data.link,
+      data.notes,
+      data.req_number,
+      Date.now(),
+    ]);
     onAppAdded();
   };
 
   const handleUpdate = async (app: Application, newStatus: Status) => {
-    await api.sql.run(UPDATE_APPLICATION_STATUS, [newStatus, Date.now(), app.id]);
+    await api.sql.run(UPDATE_APPLICATION_STATUS, [
+      newStatus,
+      Date.now(),
+      app.id,
+    ]);
     onAppUpdated();
   };
 
   const handleDismiss = async (emailId: number) => {
     await api.sql.run(DISMISS_EMAIL_JOB, [emailId]);
-    setEmails((prev) => prev.map((e) => e.id === emailId ? { ...e, dismissed: 1 } : e));
+    setEmails((prev) =>
+      prev.map((e) => (e.id === emailId ? { ...e, dismissed: 1 } : e)),
+    );
   };
 
   const handleOpenGmail = (threadId: string) => {
-    void api.shell.openExternal(`https://mail.google.com/mail/u/0/#inbox/${threadId}`);
+    void api.shell.openExternal(
+      `https://mail.google.com/mail/u/0/#inbox/${threadId}`,
+    );
   };
 
   const handleDisconnect = async () => {
     await api.google.shared.disconnect();
     setEmails([]);
-    setAuthState('no-creds');
+    setAuthState("no-creds");
   };
 
   // ── Render ────────────────────────────────────────────────────────────
 
-  if (authState === 'loading') {
-    return <div style={{ padding: 16, color: 'var(--text-dim)', fontSize: 12 }}>Checking Google connection…</div>;
+  if (authState === "loading") {
+    return (
+      <div style={{ padding: 16, color: "var(--text-dim)", fontSize: 12 }}>
+        Checking Google connection…
+      </div>
+    );
   }
 
-  if (authState === 'connecting') {
+  if (authState === "connecting") {
     return (
-      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>Connecting to Google…</div>
+      <div
+        style={{
+          padding: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 600 }}>
+          Connecting to Google…
+        </div>
         <div style={{ ...dimText, lineHeight: 1.5 }}>
-          A browser window has opened for authorization. Complete the sign-in there and return here.
+          A browser window has opened for authorization. Complete the sign-in
+          there and return here.
         </div>
       </div>
     );
   }
 
-  if (authState === 'no-creds' || authState === 'error') {
+  if (authState === "no-creds" || authState === "error") {
     return (
       <div>
         {authError && (
-          <div style={{ padding: '8px 12px', background: '#ff6e6e22', borderBottom: '1px solid #ff6e6e44', fontSize: 12, color: '#ff6e6e' }}>
+          <div
+            style={{
+              padding: "8px 12px",
+              background: "#ff6e6e22",
+              borderBottom: "1px solid #ff6e6e44",
+              fontSize: 12,
+              color: "#ff6e6e",
+            }}
+          >
             {authError}
           </div>
         )}
@@ -424,33 +521,62 @@ export function EmailsTab({
   }
 
   // Connected state
-  const visibleEmails = showDismissed ? emails : emails.filter((e) => e.dismissed === 0);
+  const visibleEmails = showDismissed
+    ? emails
+    : emails.filter((e) => e.dismissed === 0);
   const dismissedCount = emails.filter((e) => e.dismissed === 1).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
       {/* Toolbar */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '0 0 8px', flexShrink: 0, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          padding: "0 0 8px",
+          flexShrink: 0,
+          flexWrap: "wrap",
+        }}
+      >
         <button
           className="primary"
           style={buttonDefault}
           onClick={() => void handleScan()}
           disabled={scanning}
         >
-          {scanning ? 'Scanning…' : '⟳ Scan Gmail'}
+          {scanning ? "Scanning…" : "⟳ Scan Gmail"}
         </button>
         {dismissedCount > 0 && (
           <button
             className="ghost"
-            style={{ fontSize: 11, padding: '3px 8px', color: showDismissed ? 'var(--accent)' : 'var(--text-dim)' }}
+            style={{
+              fontSize: 11,
+              padding: "3px 8px",
+              color: showDismissed ? "var(--accent)" : "var(--text-dim)",
+            }}
             onClick={() => setShowDismissed((s) => !s)}
           >
-            {showDismissed ? `Hide dismissed (${dismissedCount})` : `Show dismissed (${dismissedCount})`}
+            {showDismissed
+              ? `Hide dismissed (${dismissedCount})`
+              : `Show dismissed (${dismissedCount})`}
           </button>
         )}
         <button
           className="ghost"
-          style={{ fontSize: 11, padding: '3px 8px', color: 'var(--text-dim)', marginLeft: 'auto' }}
+          style={{
+            fontSize: 11,
+            padding: "3px 8px",
+            color: "var(--text-dim)",
+            marginLeft: "auto",
+          }}
           onClick={() => void handleDisconnect()}
         >
           Disconnect
@@ -458,21 +584,34 @@ export function EmailsTab({
       </div>
 
       {scanError && (
-        <div style={{ fontSize: 12, color: '#ff6e6e', padding: '4px 0', flexShrink: 0 }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: "#ff6e6e",
+            padding: "4px 0",
+            flexShrink: 0,
+          }}
+        >
           {scanError}
         </div>
       )}
 
       {/* Email list */}
-      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
         {emails.length === 0 ? (
-          <div style={{ ...dimText, padding: '16px 0', textAlign: 'center' }}>
-            {scanning ? 'Fetching emails…' : 'No emails found — click Scan Gmail to start.'}
+          <div style={{ ...dimText, padding: "16px 0", textAlign: "center" }}>
+            {scanning
+              ? "Fetching emails…"
+              : "No emails found — click Scan Gmail to start."}
           </div>
         ) : visibleEmails.length === 0 ? (
-          <div style={{ ...dimText, padding: '16px 0', textAlign: 'center' }}>
-            All emails dismissed.{' '}
-            <button className="ghost" style={{ fontSize: 12 }} onClick={() => setShowDismissed(true)}>
+          <div style={{ ...dimText, padding: "16px 0", textAlign: "center" }}>
+            All emails dismissed.{" "}
+            <button
+              className="ghost"
+              style={{ fontSize: 12 }}
+              onClick={() => setShowDismissed(true)}
+            >
               Show dismissed
             </button>
           </div>
@@ -481,13 +620,13 @@ export function EmailsTab({
             {/* Column headers */}
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 2fr auto auto',
+                display: "grid",
+                gridTemplateColumns: "1fr 2fr auto auto",
                 gap: 8,
-                padding: '0 8px 4px',
-                color: 'var(--text-dim)',
+                padding: "0 8px 4px",
+                color: "var(--text-dim)",
                 fontSize: 11,
-                borderBottom: '1px solid var(--border)',
+                borderBottom: "1px solid var(--border)",
                 flexShrink: 0,
               }}
             >

@@ -1,4 +1,4 @@
-import type { SqlMigration } from './useSqlInit';
+import type { SqlMigration } from "./useSqlInit";
 
 /**
  * Helper to create type-safe SQL migrations.
@@ -19,19 +19,26 @@ import type { SqlMigration } from './useSqlInit';
  * @param column - Column name being added
  * @param sql - Full ALTER TABLE statement
  */
-export function createMigration(table: string, column: string, sql: string): SqlMigration {
+export function createMigration(
+  table: string,
+  column: string,
+  sql: string,
+): SqlMigration {
   if (!table || !column || !sql) {
-    throw new Error('createMigration: table, column, and sql are required');
+    throw new Error("createMigration: table, column, and sql are required");
   }
-  if (!sql.toLowerCase().includes('alter table')) {
-    throw new Error(`createMigration: sql must be an ALTER TABLE statement, got: ${sql}`);
+  if (!sql.toLowerCase().includes("alter table")) {
+    throw new Error(
+      `createMigration: sql must be an ALTER TABLE statement, got: ${sql}`,
+    );
   }
-  if (!sql.toLowerCase().includes('add column')) {
+  if (!sql.toLowerCase().includes("add column")) {
     throw new Error(`createMigration: sql must ADD a column, got: ${sql}`);
   }
   if (!sql.includes(column)) {
-    console.warn(`createMigration: column name "${column}" does not appear in sql statement`);
+    console.warn(
+      `createMigration: column name "${column}" does not appear in sql statement`,
+    );
   }
   return { table, column, sql };
 }
-

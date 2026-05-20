@@ -10,12 +10,12 @@ Custom hooks are just functions that call other hooks and return useful values. 
 
 ## Files
 
-| File | What it provides |
-| --- | --- |
-| `useWidgetData.ts` | Load rows from a widget's SQLite database and track loading state |
-| `useSqlInit.ts` | Run a SQL schema setup (CREATE TABLE) once when a widget first mounts |
-| `sqlMigrationHelper.ts` | Helper functions to create type-safe SQL migrations |
-| `SCHEMA_PATTERN.md` | **Read this first:** Complete guide to the schema migration pattern |
+| File                    | What it provides                                                      |
+| ----------------------- | --------------------------------------------------------------------- |
+| `useWidgetData.ts`      | Load rows from a widget's SQLite database and track loading state     |
+| `useSqlInit.ts`         | Run a SQL schema setup (CREATE TABLE) once when a widget first mounts |
+| `sqlMigrationHelper.ts` | Helper functions to create type-safe SQL migrations                   |
+| `SCHEMA_PATTERN.md`     | **Read this first:** Complete guide to the schema migration pattern   |
 
 ---
 
@@ -26,7 +26,11 @@ This hook handles the common pattern of loading rows from a widget's SQLite data
 ### What it does
 
 ```ts
-const [rows, isLoading, reload] = useWidgetData<MyRow>(api, 'SELECT * FROM entries', []);
+const [rows, isLoading, reload] = useWidgetData<MyRow>(
+  api,
+  "SELECT * FROM entries",
+  [],
+);
 ```
 
 - Runs the provided `query` with `params` when the component mounts
@@ -38,19 +42,24 @@ const [rows, isLoading, reload] = useWidgetData<MyRow>(api, 'SELECT * FROM entri
 
 ### The `paramsKey` trick
 
-A common React gotcha: if you write `useWidgetData(api, query, [someId])`, the `[someId]` array is a *new* array object on every render, which would cause an infinite re-render loop (`params` changed → re-run query → re-render → params changed → ...).
+A common React gotcha: if you write `useWidgetData(api, query, [someId])`, the `[someId]` array is a _new_ array object on every render, which would cause an infinite re-render loop (`params` changed → re-run query → re-render → params changed → ...).
 
 The hook avoids this by serializing params to a JSON string (`JSON.stringify(params ?? null)`) and using that as the `useEffect`/`useCallback` dependency instead of the array itself. Two arrays with the same contents produce the same string, so unnecessary re-runs are avoided.
 
 ### Usage example in a widget
 
 ```tsx
-const [entries, loading, reload] = useWidgetData<Entry>(api, 'SELECT * FROM entries ORDER BY ts DESC');
+const [entries, loading, reload] = useWidgetData<Entry>(
+  api,
+  "SELECT * FROM entries ORDER BY ts DESC",
+);
 
 if (loading) return <p>Loading...</p>;
 return (
   <ul>
-    {entries.map(e => <li key={e.id}>{e.note}</li>)}
+    {entries.map((e) => (
+      <li key={e.id}>{e.note}</li>
+    ))}
   </ul>
 );
 ```
@@ -64,8 +73,8 @@ Widgets that use SQLite need to create their tables before they can use them. Th
 ### What It Does
 
 ```ts
-import { useSqlInit } from '@renderer/hooks/useSqlInit';
-import type { SqlMigration } from '@renderer/hooks/useSqlInit';
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
+import type { SqlMigration } from "@renderer/hooks/useSqlInit";
 
 // Schema for initial release
 const INIT_SQL = `
@@ -78,7 +87,11 @@ const INIT_SQL = `
 
 // Migrations for columns added AFTER v1.0 was released
 const MIGRATIONS: SqlMigration[] = [
-  { table: 'entries', column: 'priority', sql: 'ALTER TABLE entries ADD COLUMN priority INTEGER DEFAULT 0' },
+  {
+    table: "entries",
+    column: "priority",
+    sql: "ALTER TABLE entries ADD COLUMN priority INTEGER DEFAULT 0",
+  },
 ];
 
 const initialized = useSqlInit(api, INIT_SQL, MIGRATIONS);
@@ -92,7 +105,7 @@ Returns a boolean — `false` while the schema is being set up, `true` once it's
 ✅ For each migration, checks if the column already exists  
 ✅ Skips migrations that are already applied  
 ✅ **Validates** that migrations don't duplicate columns from INIT_SQL (throws an error if detected)  
-✅ Returns `ready: boolean` to tell you when it's safe to query  
+✅ Returns `ready: boolean` to tell you when it's safe to query
 
 ### Why this is needed
 
@@ -101,12 +114,12 @@ SQLite databases are created empty. If a widget tries to `SELECT * FROM entries`
 ### Usage pattern
 
 ```tsx
-import { useSqlInit } from '@renderer/hooks/useSqlInit';
-import { INIT_SQL, MIGRATIONS } from './constants';
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
+import { INIT_SQL, MIGRATIONS } from "./constants";
 
 function MyWidget({ api }: WidgetProps) {
   const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
-  const [rows, loading] = useWidgetData<Row>(api, 'SELECT * FROM entries');
+  const [rows, loading] = useWidgetData<Row>(api, "SELECT * FROM entries");
 
   useEffect(() => {
     if (ready) void load();
@@ -129,10 +142,14 @@ Helper functions to make it harder to define migrations incorrectly.
 Creates a type-safe migration object with validation:
 
 ```ts
-import { createMigration } from '@renderer/hooks/sqlMigrationHelper';
+import { createMigration } from "@renderer/hooks/sqlMigrationHelper";
 
 export const MIGRATIONS = [
-  createMigration('items', 'priority', 'ALTER TABLE items ADD COLUMN priority INTEGER DEFAULT 0'),
+  createMigration(
+    "items",
+    "priority",
+    "ALTER TABLE items ADD COLUMN priority INTEGER DEFAULT 0",
+  ),
 ];
 ```
 
@@ -147,7 +164,7 @@ Validates:
 Use this as a placeholder when you don't have any migrations yet:
 
 ```ts
-import { emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
+import { emptyMigrations } from "@renderer/hooks/sqlMigrationHelper";
 
 export const MIGRATIONS = emptyMigrations();
 ```
