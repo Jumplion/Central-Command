@@ -2,9 +2,11 @@ import { useState, useMemo } from 'react';
 import { StackedBarChart } from '@widgets/_shared/StackedBarChart';
 import { StatusBar as SharedStatusBar } from '@widgets/_shared/StatusBar';
 import { Chip } from '@widgets/_shared/Chip';
+import { buttonDefault, inp } from '@widgets/_shared/styles';
+import { today } from '@shared/csv';
 import type { Audition, AuditionFormData, CastingSite, ProjectType, Status } from './types';
 import { CASTING_SITES, PROJECT_TYPES, STATUSES, STATUS_COLOR } from './constants';
-import { formatAgo, recencyColor, today } from './helpers';
+import { formatAgo, recencyColor } from './helpers';
 
 export function StatusBar({
   counts, total, filter, onFilter,
@@ -98,8 +100,6 @@ export function TypeBar({
 
 // ─── AuditionForm ──────────────────────────────────────────────────────────────
 
-const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
-
 export function AuditionForm({ initial, onSave, onCancel }: {
   initial?: Audition;
   onSave: (data: AuditionFormData) => Promise<void>;
@@ -179,10 +179,10 @@ export function AuditionForm({ initial, onSave, onCancel }: {
         onChange={set('notes')}
       />
       <div style={{ display: 'flex', gap: 6 }}>
-        <button type="submit" className="primary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={saving}>
+        <button type="submit" className="primary" style={buttonDefault} disabled={saving}>
           {initial ? 'Save' : 'Add'}
         </button>
-        <button type="button" className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={onCancel}>
+        <button type="button" className="ghost" style={buttonDefault} onClick={onCancel}>
           Cancel
         </button>
       </div>

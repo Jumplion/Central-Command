@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import { useSqlInit } from '@renderer/hooks/useSqlInit';
+import { WidgetLoading } from '../_shared';
 
 import type { SavedJob, CompanyFeed, FeedJob } from './types';
 import { DEFAULT_FEEDS, SEED_VERSION, INIT_SQL } from './constants';
@@ -65,7 +66,7 @@ function JobAggregator({ api, settings }: WidgetProps) {
     void init();
   }, [ready]);
 
-  if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
+  if (!ready) return <WidgetLoading />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>

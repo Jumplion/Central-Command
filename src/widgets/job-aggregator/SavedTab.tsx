@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { WidgetApi } from '@renderer/plugins/api';
 import type { SavedJob, SavedStatus } from './types';
-import { STATUSES, STATUS_COLORS, thStyle, tdStyle, inp } from './constants';
+import { STATUSES, STATUS_COLORS, thStyle, tdStyle } from './constants';
+import { inp } from '../_shared/styles';
 import { formatSalary, relativeDate } from './utils';
 import { SourceBadge, SavedStatusFilter } from './components';
 

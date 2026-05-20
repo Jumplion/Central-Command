@@ -5,6 +5,8 @@ import { STATUSES, STATUS_COLOR } from './types';
 import { AppForm, StatusBadge } from './components';
 import { fetchJobEmails, buildSuggestion } from './gmail';
 import { INSERT_APPLICATION, UPDATE_APPLICATION_STATUS, DISMISS_EMAIL_JOB } from './queries';
+import { NotConnected } from '../_shared/NotConnected';
+import { buttonDefault, inp } from '../_shared/styles';
 
 // ─── Auth state machine ───────────────────────────────────────────────────
 
@@ -23,7 +25,6 @@ const row: React.CSSProperties = {
   transition: 'background-color 0.15s',
 };
 
-const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
 
 const dimText: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 12 };
 
@@ -227,7 +228,7 @@ function EmailRow({
             {suggestion.kind === 'add' || !linkedApp ? (
               <button
                 className="primary"
-                style={{ fontSize: 12, padding: '4px 10px' }}
+                style={buttonDefault}
                 onClick={handleAddToTracker}
                 disabled={saving || !editedCompany.trim() || !editedRole.trim()}
               >
@@ -236,7 +237,7 @@ function EmailRow({
             ) : (
               <button
                 className="primary"
-                style={{ fontSize: 12, padding: '4px 10px', background: STATUS_COLOR[editedStatus] + '33', borderColor: STATUS_COLOR[editedStatus] + '88', color: STATUS_COLOR[editedStatus] }}
+                style={{ ...buttonDefault, background: STATUS_COLOR[editedStatus] + '33', borderColor: STATUS_COLOR[editedStatus] + '88', color: STATUS_COLOR[editedStatus] }}
                 onClick={handleUpdateStatus}
                 disabled={saving}
               >
@@ -245,7 +246,7 @@ function EmailRow({
             )}
             <button
               className="ghost"
-              style={{ fontSize: 12, padding: '4px 10px' }}
+              style={buttonDefault}
               onClick={() => onOpenGmail(email.thread_id)}
             >
               Open in Gmail ↗
@@ -253,7 +254,7 @@ function EmailRow({
             {!dismissed && (
               <button
                 className="ghost danger"
-                style={{ fontSize: 12, padding: '4px 10px', marginLeft: 'auto' }}
+                style={{ ...buttonDefault, marginLeft: 'auto' }}
                 onClick={() => void onDismiss(email.id)}
               >
                 Dismiss
@@ -266,19 +267,6 @@ function EmailRow({
   );
 }
 
-// ─── Credential setup form ────────────────────────────────────────────────
-
-function NotConnected() {
-  return (
-    <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 420 }}>
-      <div style={{ fontSize: 13, fontWeight: 600 }}>Google not connected</div>
-      <p style={{ ...dimText, lineHeight: 1.5, margin: 0 }}>
-        Open <strong>App Settings</strong> (gear icon at the top of the dashboard) and connect your
-        Google account to enable Gmail scanning.
-      </p>
-    </div>
-  );
-}
 
 // ─── EmailsTab ────────────────────────────────────────────────────────────
 
@@ -445,7 +433,7 @@ export function EmailsTab({
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '0 0 8px', flexShrink: 0, flexWrap: 'wrap' }}>
         <button
           className="primary"
-          style={{ fontSize: 12, padding: '4px 10px' }}
+          style={buttonDefault}
           onClick={() => void handleScan()}
           disabled={scanning}
         >

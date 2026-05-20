@@ -9,10 +9,6 @@ interface CopyEntry {
   createdAt: number;
 }
 
-function makeId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 async function writeClipboard(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -71,7 +67,7 @@ function QuickCopy({ api }: WidgetProps) {
 
     const title = draftTitle.trim();
     const now = Date.now();
-    const next = [...entries, { id: makeId(), title, value, createdAt: now }];
+    const next = [...entries, { id: crypto.randomUUID(), title, value, createdAt: now }];
 
     try {
       await persist(next);

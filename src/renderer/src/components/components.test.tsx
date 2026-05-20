@@ -199,6 +199,7 @@ beforeEach(() => {
     google: {
       connect: vi.fn(async () => undefined),
       disconnect: vi.fn(async () => undefined),
+      isConnected: vi.fn(async () => false),
     },
     secrets: {
       has: vi.fn(async () => false),
@@ -297,18 +298,18 @@ describe('AppSettings', () => {
   it('connects and enables drive sync with valid credentials', async () => {
     const container = createContainer();
     const root = createRoot(container);
-    const inputSelectors = {
-      clientId: 'input[placeholder="your-client-id.apps.googleusercontent.com"]',
-      clientSecret: 'input[placeholder="Client secret"]',
-    };
 
     await act(async () => {
       root.render(<AppSettings onClose={vi.fn()} />);
     });
 
-    const clientIdInput = container.querySelector<HTMLInputElement>(inputSelectors.clientId);
-    const clientSecretInput = container.querySelector<HTMLInputElement>(inputSelectors.clientSecret);
-    const connectButton = container.querySelector<HTMLButtonElement>('button.primary');
+    // Both Google Account and Drive Sync sections share the same input placeholders;
+    // scope selectors to the Drive Sync section to avoid targeting the wrong form.
+    const sections = Array.from(container.querySelectorAll('section'));
+    const driveSection = sections.find((s) => s.textContent?.includes('Google Drive Sync'))!;
+    const clientIdInput = driveSection.querySelector<HTMLInputElement>('input[placeholder="your-client-id.apps.googleusercontent.com"]');
+    const clientSecretInput = driveSection.querySelector<HTMLInputElement>('input[placeholder="Client secret"]');
+    const connectButton = driveSection.querySelector<HTMLButtonElement>('button.primary');
 
     await dispatchValueEvent(clientIdInput!, 'id.apps.googleusercontent.com');
     await dispatchValueEvent(clientSecretInput!, 'secret');

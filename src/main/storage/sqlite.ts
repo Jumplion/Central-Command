@@ -1,7 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import { assertValidWidgetId } from '@shared/validation';
 import type { SqlRunResult } from '@shared/types';
 import { widgetDir } from './helpers';
 
@@ -15,7 +14,6 @@ export class SqliteStore {
   constructor(private root: string) {}
 
   private async ensureWidgetDir(widgetId: string): Promise<void> {
-    assertValidWidgetId(widgetId);
     const dir = widgetDir(this.root, widgetId);
 
     let pending = this.dirInit.get(widgetId);

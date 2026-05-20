@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { JobListing, CompanyFeed, FeedJob, FeedType, CompanyType, SavedStatus } from './types';
-import { SOURCE_COLORS, STATUS_COLORS, FEED_COLORS, FEED_LABELS, COMPANY_TYPE_LABELS, COMPANY_TYPE_ORDER, STATUSES, inp, thStyle, tdStyle } from './constants';
+import { SOURCE_COLORS, STATUS_COLORS, FEED_COLORS, FEED_LABELS, COMPANY_TYPE_LABELS, COMPANY_TYPE_ORDER, STATUSES, thStyle, tdStyle } from './constants';
+import { inp } from '../_shared/styles';
 import { buttonDefault, buttonSmall, buttonTiny, badgePill, dimText, smallDimText } from '../_shared/styles';
 import { formatSalary, relativeDate, empTypeLabel } from './utils';
 

@@ -2,7 +2,6 @@ import type { CompanyType, FeedType, SavedStatus } from './types';
 
 // ─── Shared style constants ───────────────────────────────────────────────────
 
-export const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
 
 export const thStyle: React.CSSProperties = {
   padding: '4px 6px', fontWeight: 500, fontSize: 11,

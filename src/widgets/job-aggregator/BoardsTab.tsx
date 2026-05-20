@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { WidgetApi } from '@renderer/plugins/api';
 import type { CompanyFeed, CompanyType, FeedJob, FeedType, StampedFeedJob } from './types';
-import { FEED_LABELS, COMPANY_TYPE_LABELS, COMPANY_TYPE_COLORS, COMPANY_TYPE_ORDER, inp } from './constants';
+import { FEED_LABELS, COMPANY_TYPE_LABELS, COMPANY_TYPE_COLORS, COMPANY_TYPE_ORDER } from './constants';
+import { inp, buttonDefault } from '../_shared/styles';
 import { fetchFeed } from './api';
 import { AddFeedForm, BoardSection } from './components';
 
@@ -166,13 +167,13 @@ export function BoardsTab({ api, feeds, feedJobs, savedIds, onFeedsChange, onSav
 
         {/* ── Action bar ── */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button className="primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setShowAddFeed((x) => !x)}>
+          <button className="primary" style={buttonDefault} onClick={() => setShowAddFeed((x) => !x)}>
             {showAddFeed ? 'Cancel' : '+ Add Company'}
           </button>
-          <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleRefreshAll} title="Refresh all feeds">
+          <button className="ghost" style={buttonDefault} onClick={handleRefreshAll} title="Refresh all feeds">
             ↻ Refresh All
           </button>
-          <button className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={toggleAll}>
+          <button className="ghost" style={buttonDefault} onClick={toggleAll}>
             {allCollapsed ? '▶ Expand All' : '▼ Collapse All'}
           </button>
           <button

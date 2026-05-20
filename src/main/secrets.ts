@@ -2,6 +2,7 @@ import { safeStorage } from 'electron';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { assertValidWidgetId } from '@shared/validation';
+import { atomicWrite } from './storage/helpers';
 
 export class SecretsStore {
   private cache = new Map<string, Record<string, string>>();
@@ -67,12 +68,8 @@ export class SecretsStore {
   private async save(namespace: string): Promise<void> {
     const obj = this.cache.get(namespace);
     if (!obj) return;
-    const dir = this.dir();
-    await fs.mkdir(dir, { recursive: true });
-    const file = this.file(namespace);
-    const tmp = file + '.tmp';
-    await fs.writeFile(tmp, JSON.stringify(obj), 'utf-8');
-    await fs.rename(tmp, file);
+    await fs.mkdir(this.dir(), { recursive: true });
+    await atomicWrite(this.file(namespace), JSON.stringify(obj));
   }
 
   private scheduleSave(namespace: string): void {

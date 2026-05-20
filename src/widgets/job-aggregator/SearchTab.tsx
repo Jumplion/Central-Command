@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { WidgetApi } from '@renderer/plugins/api';
 import type { JobListing } from './types';
-import { inp } from './constants';
+import { inp } from '../_shared/styles';
 import { searchArbeitnow } from './api';
 import { JobCard } from './components';
 import { buttonDefault, dimText, smallDimText } from '../_shared/styles';

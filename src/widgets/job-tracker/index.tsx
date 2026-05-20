@@ -5,6 +5,7 @@ import { STATUSES, STATUS_COLOR } from './types';
 import type { Application, AppFormData, Status } from './types';
 import { parseCSVLine } from '@shared/csv';
 import { exportCsv } from '@renderer/utils/csv';
+import { buttonDefault, WidgetLoading } from '../_shared';
 import {
   INIT_SQL, EMAIL_INIT_SQL, SCHEMA_MIGRATIONS, today,
   StatusBar, AppForm, WeeklyChart,
@@ -122,7 +123,7 @@ function JobTracker({ api }: WidgetProps) {
     }
   };
 
-  if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
+  if (!ready) return <WidgetLoading />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>
@@ -131,7 +132,7 @@ function JobTracker({ api }: WidgetProps) {
       <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
         <button
           className="primary"
-          style={{ fontSize: 12, padding: '4px 10px' }}
+          style={buttonDefault}
           onClick={() => { setShowAdd(true); setEditingId(null); setView('list'); }}
         >
           + Add
@@ -163,7 +164,7 @@ function JobTracker({ api }: WidgetProps) {
             onChange={handleImportCSV}
           />
           <button
-            style={{ fontSize: 12, padding: '4px 10px' }}
+            style={buttonDefault}
             onClick={() => importRef.current?.click()}
             disabled={importing}
             title="Import CSV"
@@ -171,7 +172,7 @@ function JobTracker({ api }: WidgetProps) {
             {importing ? 'Importing…' : 'Import CSV'}
           </button>
           <button
-            style={{ fontSize: 12, padding: '4px 10px' }}
+            style={buttonDefault}
             onClick={handleExportCSV}
             title="Export all as CSV"
           >

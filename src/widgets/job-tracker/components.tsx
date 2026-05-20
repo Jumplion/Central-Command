@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { StackedBarChart } from '@widgets/_shared/StackedBarChart';
 import { StatusBar as SharedStatusBar } from '@widgets/_shared/StatusBar';
+import { buttonDefault, inp } from '@widgets/_shared/styles';
 import type { Application, AppFormData, Status } from './types';
 import { STATUSES, STATUS_COLOR } from './types';
 
@@ -34,8 +35,6 @@ export function StatusBar({
 }
 
 // ─── AppForm ──────────────────────────────────────────────────────────────
-
-const inp: React.CSSProperties = { fontSize: 12, padding: '4px 6px' };
 
 const COMMON_SOURCES = [
   'LinkedIn', 'Indeed', 'Glassdoor', 'ZipRecruiter', 'Monster', 'Dice',
@@ -388,10 +387,10 @@ export function AppForm({
         onChange={set('notes')}
       />
       <div style={{ display: 'flex', gap: 6 }}>
-        <button type="submit" className="primary" style={{ fontSize: 12, padding: '4px 10px' }} disabled={saving}>
+        <button type="submit" className="primary" style={buttonDefault} disabled={saving}>
           {initial ? 'Save' : 'Add'}
         </button>
-        <button type="button" className="ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={onCancel}>
+        <button type="button" className="ghost" style={buttonDefault} onClick={onCancel}>
           Cancel
         </button>
       </div>

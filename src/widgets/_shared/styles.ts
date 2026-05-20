@@ -35,6 +35,11 @@ export const smallDimText: CSSProperties = {
   fontSize: 10,
 };
 
+export const inp: CSSProperties = {
+  fontSize: 12,
+  padding: '4px 6px',
+};
+
 export const inputBase: CSSProperties = {
   fontSize: 12,
   padding: '6px 8px',

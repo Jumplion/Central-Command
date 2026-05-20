@@ -3,8 +3,9 @@ import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import { useSqlInit } from '@renderer/hooks/useSqlInit';
 import type { Audition, AuditionFormData, CastingSite, ProjectType, Status } from './types';
 import { INIT_SQL, PROJECT_TYPES, STATUSES, CSV_HEADERS } from './constants';
-import { parseCSVLine, today } from './helpers';
+import { parseCSVLine, today } from '@shared/csv';
 import { exportCsv } from '@renderer/utils/csv';
+import { buttonDefault, WidgetLoading } from '../_shared';
 import {
   AuditionForm, DeadlineCell, SiteRow, StatusBar, StatusBadge,
   Td, Th, TypeBar, WeeklyChart,
@@ -150,7 +151,7 @@ function AuditionAggregator({ api }: WidgetProps) {
     }
   };
 
-  if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
+  if (!ready) return <WidgetLoading />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>
@@ -161,7 +162,7 @@ function AuditionAggregator({ api }: WidgetProps) {
       <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
         <button
           className="primary"
-          style={{ fontSize: 12, padding: '4px 10px' }}
+          style={buttonDefault}
           onClick={() => { setShowAdd(true); setEditingId(null); setView('list'); }}
         >
           + Add
@@ -193,7 +194,7 @@ function AuditionAggregator({ api }: WidgetProps) {
             onChange={handleImportCSV}
           />
           <button
-            style={{ fontSize: 12, padding: '4px 10px' }}
+            style={buttonDefault}
             onClick={() => importRef.current?.click()}
             disabled={importing}
             title="Import CSV"
@@ -201,7 +202,7 @@ function AuditionAggregator({ api }: WidgetProps) {
             {importing ? 'Importing…' : 'Import CSV'}
           </button>
           <button
-            style={{ fontSize: 12, padding: '4px 10px' }}
+            style={buttonDefault}
             onClick={handleExportCSV}
             title="Export all as CSV"
           >

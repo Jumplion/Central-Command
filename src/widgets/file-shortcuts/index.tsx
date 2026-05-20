@@ -21,10 +21,6 @@ function basename(filePath: string): string {
   return filePath.split(/[\\/]/).pop() ?? filePath;
 }
 
-function makeId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
 // ─── Sub-components ────────────────────────────────────────────────────────
 
 function ShortcutRow({ shortcut, onOpen, onReveal, onRemove }: {
@@ -99,7 +95,7 @@ function FileShortcuts({ api }: WidgetProps) {
   };
 
   const makeShortcut = (filePath: string, kind: 'file' | 'dir'): Shortcut => ({
-    id: makeId(),
+    id: crypto.randomUUID(),
     path: filePath,
     label: basename(filePath),
     kind,

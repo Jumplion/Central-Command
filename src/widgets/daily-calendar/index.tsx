@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import { buttonSmall, buttonTiny, dimText, centeredEmptyState } from '../_shared/styles';
+import { NotConnected } from '../_shared/NotConnected';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -48,17 +49,6 @@ function isAllDay(event: CalendarEvent): boolean {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function NotConnected() {
-  return (
-    <div style={{ padding: '12px 4px', lineHeight: 1.6, ...dimText, fontSize: 12 }}>
-      <p style={{ marginBottom: 8, color: 'var(--text)', fontWeight: 500 }}>Google not connected</p>
-      <p style={{ margin: 0 }}>
-        Open <strong>App Settings</strong> (gear icon) and connect your Google account to use this
-        widget.
-      </p>
-    </div>
-  );
-}
 
 function EventRow({
   event,

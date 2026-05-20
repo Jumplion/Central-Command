@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Widget, WidgetProps } from '@renderer/plugins/registry';
 import { subscribeApiCalls } from '@renderer/plugins/apiEvents';
 import type { ApiCallRecord } from '@renderer/plugins/apiEvents';
+import { WidgetLoading } from '../_shared';
 
 const MAX_STORED = 500;
 
@@ -64,7 +65,7 @@ function ApiTracker({ api, settings, setTitle }: WidgetProps) {
     else setTitle(undefined);
   }, [isOver, isWarning, setTitle]);
 
-  if (!ready) return <div style={{ padding: 12, color: 'var(--text-dim)' }}>Loading…</div>;
+  if (!ready) return <WidgetLoading />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 10 }}>

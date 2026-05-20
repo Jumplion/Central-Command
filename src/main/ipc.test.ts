@@ -26,7 +26,7 @@ vi.mock('electron', () => ({
   },
 }));
 
-vi.mock('./platform', () => ({ IS_WSL: false }));
+vi.mock('./platform', () => ({ IS_WSL: false, openExternal: vi.fn().mockResolvedValue(undefined) }));
 
 // ── Minimal mock dependencies ────────────────────────────────────────────────
 
