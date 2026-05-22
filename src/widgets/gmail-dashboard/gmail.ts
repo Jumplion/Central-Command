@@ -175,18 +175,17 @@ export function extractSource(from: string): string {
 }
 
 export function getRecencyBucket(receivedAt: string): string {
-  try {
-    const d = new Date(receivedAt);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    if (diffDays < 1) return "Today";
-    if (diffDays < 7) return "This Week";
-    if (diffDays < 30) return "This Month";
-    return "Older";
-  } catch {
-    return "Unknown";
-  }
+  const d = new Date(receivedAt);
+  const receivedTime = d.getTime();
+  if (Number.isNaN(receivedTime)) return "Unknown";
+
+  const now = new Date();
+  const diffMs = now.getTime() - receivedTime;
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffDays < 1) return "Today";
+  if (diffDays < 7) return "This Week";
+  if (diffDays < 30) return "This Month";
+  return "Older";
 }
 
 export function getGroupValue(
