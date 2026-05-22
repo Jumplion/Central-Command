@@ -156,17 +156,17 @@ function GmailDashboard({ api, settings }: WidgetProps) {
 
     const init = async () => {
       try {
-        const connected = await api.google.shared.isConnected("gmail");
+        const connected = await api.google.shared.isConnected();
         if (connected) {
           await seedDefaults();
           await loadAll();
           setAuthState("connected");
           return;
         }
-        const hasCreds = await api.google.shared.hasCreds("gmail");
+        const hasCreds = await api.google.shared.hasCreds();
         if (hasCreds) {
           setAuthState("connecting");
-          const ok = await api.google.shared.reconnect("gmail");
+          const ok = await api.google.shared.reconnect();
           if (ok) {
             await seedDefaults();
             await loadAll();
