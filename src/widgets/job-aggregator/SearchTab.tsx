@@ -5,6 +5,8 @@ import { inp } from "../_shared/styles";
 import { searchArbeitnow } from "./api";
 import { JobCard } from "./components";
 import { buttonDefault, dimText, smallDimText } from "../_shared/styles";
+import { INSERT_SAVED_JOB } from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 
 interface Props {
   api: WidgetApi;
@@ -45,28 +47,25 @@ export function SearchTab({
 
   const handleSave = async (job: JobListing) => {
     await api.sql.run(
-      `INSERT OR IGNORE INTO saved_jobs
-        (job_id,title,company,location,is_remote,employment_type,
-         salary_min,salary_max,salary_currency,salary_period,
-         date_posted,apply_link,source,description,status,notes,saved_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Interested','',?)`,
-      [
-        job.id,
-        job.title,
-        job.company,
-        job.location,
-        job.isRemote ? 1 : 0,
-        job.employmentType,
-        job.salaryMin ?? null,
-        job.salaryMax ?? null,
-        job.salaryCurrency,
-        job.salaryPeriod,
-        job.datePosted,
-        job.applyLink,
-        job.source,
-        job.description,
-        Date.now(),
-      ],
+      ...namedSql(INSERT_SAVED_JOB, {
+        job_id: job.id,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        is_remote: job.isRemote ? 1 : 0,
+        employment_type: job.employmentType,
+        salary_min: job.salaryMin ?? null,
+        salary_max: job.salaryMax ?? null,
+        salary_currency: job.salaryCurrency,
+        salary_period: job.salaryPeriod,
+        date_posted: job.datePosted,
+        apply_link: job.applyLink,
+        source: job.source,
+        description: job.description,
+        status: "Interested",
+        notes: "",
+        saved_at: Date.now(),
+      }),
     );
     onSaved();
   };

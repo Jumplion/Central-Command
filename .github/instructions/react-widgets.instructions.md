@@ -15,9 +15,46 @@ applyTo: "src/widgets/**"
 
 - Initialize tables with `CREATE TABLE IF NOT EXISTS` inside `useEffect(() => { ... }, [])`
 - Use `api.kv` for small per-instance config; `api.sql` for relational or append-only data
-- Always parameterize SQL: `api.sql.run('INSERT INTO t VALUES (?,?)', [a, b])` — never interpolate
+- Always parameterize SQL — never interpolate values into query strings
 - Store OAuth/sensitive tokens via `api.secrets`, never in `api.kv` or SQL
 - `api.kv` is instance-scoped (prefixed `instanceId::key`); `api.sql` tables are shared across all instances of the same widget type
+
+## SQL file conventions (widgets with sqlite permission)
+
+Every widget that uses `api.sql` must split SQL into two dedicated files:
+
+- **`schema.ts`** — `INIT_SQL` (all `CREATE TABLE IF NOT EXISTS` DDL) and `MIGRATIONS` (`SqlMigration[]`). Imported by the widget component and passed to `useSqlInit`.
+- **`queries.ts`** — Named-param query strings for all multi-field INSERT/UPDATE operations. Exported as constants and used with `namedSql()`.
+
+**`constants.ts` must not contain SQL.** Non-SQL constants (labels, colours, style objects, lookup data) live there.
+
+## Named parameters for INSERT / UPDATE
+
+Use `namedSql` from `@renderer/plugins/sqlParams` for any INSERT or UPDATE that has 3+ bound columns. This prevents silent positional-param bugs (e.g. a missing column silently shifting `last_updated` into the wrong slot).
+
+```ts
+// queries.ts — use :name placeholders
+export const INSERT_ITEM =
+  "INSERT INTO items (title, status, created_at) VALUES (:title, :status, :created_at)";
+
+export const UPDATE_ITEM =
+  "UPDATE items SET title=:title, status=:status WHERE id=:id";
+
+// component — spread namedSql result into api.sql.run
+import { namedSql } from "@renderer/plugins/sqlParams";
+import { INSERT_ITEM, UPDATE_ITEM } from "./queries";
+
+await api.sql.run(
+  ...namedSql(INSERT_ITEM, { title, status, created_at: Date.now() }),
+);
+await api.sql.run(...namedSql(UPDATE_ITEM, { title, status, id: item.id }));
+```
+
+**Keep raw positional `?` for:**
+
+- Simple single/two-param queries: `DELETE FROM items WHERE id=?`, `UPDATE items SET flag=? WHERE id=?`
+- `runBatch` loops where namedSql is called per-item: `const [sql, params] = namedSql(INSERT_X, item); runBatch([{ sql, params }])`
+- Complex special SQL: `ON CONFLICT ... DO UPDATE`, `INSERT ... SELECT ... WHERE NOT EXISTS`, CTEs
 
 ## Minimal widget skeleton
 

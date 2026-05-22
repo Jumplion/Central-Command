@@ -2,6 +2,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "No dedicated lint command is configured in package.json."
-echo "Running the TypeScript typecheck as a project validation step..."
+echo "Running ESLint..."
+npm run lint:fix --if-present
+
+echo "Checking Prettier formatting..."
+npx prettier --write .
+
+echo "Running TypeScript type check..."
 npm run typecheck
+
+echo "✓ All lint checks passed!"

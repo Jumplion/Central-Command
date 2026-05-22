@@ -8,7 +8,10 @@ import type {
   ProjectType,
   Status,
 } from "./types";
-import { INIT_SQL, PROJECT_TYPES, STATUSES, CSV_HEADERS } from "./constants";
+import { PROJECT_TYPES, STATUSES, CSV_HEADERS } from "./constants";
+import { INIT_SQL } from "./schema";
+import { INSERT_AUDITION, UPDATE_AUDITION } from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import { parseCSVLine, today } from "@shared/csv";
 import { exportCsv } from "@renderer/utils/csv";
 import { buttonDefault, WidgetLoading } from "../_shared";
@@ -97,25 +100,7 @@ function AuditionAggregator({ api }: WidgetProps) {
 
   const handleAdd = async (data: AuditionFormData) => {
     await api.sql.run(
-      `INSERT INTO auditions
-       (project_title, role, project_type, status, casting_studio, location, pay_rate,
-        submitted_at, submission_deadline, shoot_date, link, notes, last_updated)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        data.project_title,
-        data.role,
-        data.project_type,
-        data.status,
-        data.casting_studio,
-        data.location,
-        data.pay_rate,
-        data.submitted_at,
-        data.submission_deadline,
-        data.shoot_date,
-        data.link,
-        data.notes,
-        Date.now(),
-      ],
+      ...namedSql(INSERT_AUDITION, { ...data, last_updated: Date.now() }),
     );
     await load();
     setShowAdd(false);
@@ -123,27 +108,11 @@ function AuditionAggregator({ api }: WidgetProps) {
 
   const handleEdit = (aud: Audition) => async (data: AuditionFormData) => {
     await api.sql.run(
-      `UPDATE auditions SET
-         project_title=?, role=?, project_type=?, status=?, casting_studio=?,
-         location=?, pay_rate=?, submitted_at=?, submission_deadline=?, shoot_date=?,
-         link=?, notes=?, last_updated=?
-       WHERE id=?`,
-      [
-        data.project_title,
-        data.role,
-        data.project_type,
-        data.status,
-        data.casting_studio,
-        data.location,
-        data.pay_rate,
-        data.submitted_at,
-        data.submission_deadline,
-        data.shoot_date,
-        data.link,
-        data.notes,
-        Date.now(),
-        aud.id,
-      ],
+      ...namedSql(UPDATE_AUDITION, {
+        ...data,
+        last_updated: Date.now(),
+        id: aud.id,
+      }),
     );
     await load();
     setEditingId(null);
@@ -196,11 +165,7 @@ function AuditionAggregator({ api }: WidgetProps) {
           ? status_raw
           : "Interested";
         await api.sql.run(
-          `INSERT INTO auditions
-           (project_title, role, project_type, status, casting_studio, location, pay_rate,
-            submitted_at, submission_deadline, shoot_date, link, notes, last_updated)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [
+          ...namedSql(INSERT_AUDITION, {
             project_title,
             role,
             project_type,
@@ -208,13 +173,13 @@ function AuditionAggregator({ api }: WidgetProps) {
             casting_studio,
             location,
             pay_rate,
-            submitted_at || today(),
+            submitted_at: submitted_at || today(),
             submission_deadline,
             shoot_date,
             link,
             notes,
-            Date.now(),
-          ],
+            last_updated: Date.now(),
+          }),
         );
       }
       await load();

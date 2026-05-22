@@ -4,7 +4,8 @@ import { useSqlInit } from "@renderer/hooks/useSqlInit";
 import { WidgetLoading } from "../_shared";
 
 import type { SavedJob, CompanyFeed, FeedJob } from "./types";
-import { DEFAULT_FEEDS, SEED_VERSION, INIT_SQL } from "./constants";
+import { DEFAULT_FEEDS, SEED_VERSION } from "./constants";
+import { INIT_SQL } from "./schema";
 import { SearchTab } from "./SearchTab";
 import { SavedTab } from "./SavedTab";
 import { BoardsTab } from "./BoardsTab";

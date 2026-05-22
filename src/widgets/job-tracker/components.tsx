@@ -633,19 +633,22 @@ function buildTimeSeriesData(
       const appDate = new Date(app.applied_at);
       if (appDate < start || appDate > today) continue;
       const k = bucketKey(appDate, grouping);
-      if (k in buckets) buckets[k][app.status] = (buckets[k][app.status] ?? 0) + 1;
+      if (k in buckets)
+        buckets[k][app.status] = (buckets[k][app.status] ?? 0) + 1;
     } else {
       // Event view: "Applied" event at applied_at; status-change event at last_updated
       const appDate = new Date(app.applied_at);
       if (appDate >= start && appDate <= today) {
         const k = bucketKey(appDate, grouping);
-        if (k in buckets) buckets[k]["Applied"] = (buckets[k]["Applied"] ?? 0) + 1;
+        if (k in buckets)
+          buckets[k]["Applied"] = (buckets[k]["Applied"] ?? 0) + 1;
       }
       if (app.status !== "Applied") {
         const eventDate = new Date(app.last_updated); // ms timestamp
         if (eventDate >= start && eventDate <= today) {
           const k = bucketKey(eventDate, grouping);
-          if (k in buckets) buckets[k][app.status] = (buckets[k][app.status] ?? 0) + 1;
+          if (k in buckets)
+            buckets[k][app.status] = (buckets[k][app.status] ?? 0) + 1;
         }
       }
     }
@@ -721,8 +724,16 @@ export function ChartView({ apps }: { apps: Application[] }) {
       counts[src] = (counts[src] ?? 0) + 1;
     }
     const palette = [
-      "#6ea8ff", "#a78bfa", "#34d399", "#f59e0b", "#ff6e6e",
-      "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#6b7280",
+      "#6ea8ff",
+      "#a78bfa",
+      "#34d399",
+      "#f59e0b",
+      "#ff6e6e",
+      "#06b6d4",
+      "#ec4899",
+      "#84cc16",
+      "#f97316",
+      "#6b7280",
     ];
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
@@ -763,19 +774,41 @@ export function ChartView({ apps }: { apps: Application[] }) {
       }}
     >
       {/* Controls row 1: chart type + time range / pie dimension */}
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
         <div style={{ display: "flex", gap: 2 }}>
           {(["bar", "line", "pie"] as ChartType[]).map((t) => (
-            <CtrlBtn key={t} active={chartType === t} onClick={() => setChartType(t)}>
+            <CtrlBtn
+              key={t}
+              active={chartType === t}
+              onClick={() => setChartType(t)}
+            >
               {t === "bar" ? "Bar" : t === "line" ? "Line" : "Pie"}
             </CtrlBtn>
           ))}
         </div>
-        <div style={{ width: 1, height: 14, background: "var(--border)", margin: "0 2px" }} />
+        <div
+          style={{
+            width: 1,
+            height: 14,
+            background: "var(--border)",
+            margin: "0 2px",
+          }}
+        />
         {isTimeSeries ? (
           <div style={{ display: "flex", gap: 2 }}>
             {(["2w", "4w", "8w", "3m", "6m", "all"] as TimeRange[]).map((r) => (
-              <CtrlBtn key={r} active={timeRange === r} onClick={() => setTimeRange(r)}>
+              <CtrlBtn
+                key={r}
+                active={timeRange === r}
+                onClick={() => setTimeRange(r)}
+              >
                 {r}
               </CtrlBtn>
             ))}
@@ -783,7 +816,11 @@ export function ChartView({ apps }: { apps: Application[] }) {
         ) : (
           <div style={{ display: "flex", gap: 2 }}>
             {(["status", "source"] as PieDimension[]).map((d) => (
-              <CtrlBtn key={d} active={pieDim === d} onClick={() => setPieDim(d)}>
+              <CtrlBtn
+                key={d}
+                active={pieDim === d}
+                onClick={() => setPieDim(d)}
+              >
                 {d === "status" ? "By Status" : "By Source"}
               </CtrlBtn>
             ))}
@@ -796,17 +833,34 @@ export function ChartView({ apps }: { apps: Application[] }) {
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
           <div style={{ display: "flex", gap: 2 }}>
             {(["day", "week", "month"] as Grouping[]).map((g) => (
-              <CtrlBtn key={g} active={grouping === g} onClick={() => setGrouping(g)}>
+              <CtrlBtn
+                key={g}
+                active={grouping === g}
+                onClick={() => setGrouping(g)}
+              >
                 {g === "day" ? "Daily" : g === "week" ? "Weekly" : "Monthly"}
               </CtrlBtn>
             ))}
           </div>
-          <div style={{ width: 1, height: 14, background: "var(--border)", margin: "0 2px" }} />
+          <div
+            style={{
+              width: 1,
+              height: 14,
+              background: "var(--border)",
+              margin: "0 2px",
+            }}
+          />
           <div style={{ display: "flex", gap: 2 }}>
-            <CtrlBtn active={dataMode === "event"} onClick={() => setDataMode("event")}>
+            <CtrlBtn
+              active={dataMode === "event"}
+              onClick={() => setDataMode("event")}
+            >
               By Event
             </CtrlBtn>
-            <CtrlBtn active={dataMode === "applied"} onClick={() => setDataMode("applied")}>
+            <CtrlBtn
+              active={dataMode === "applied"}
+              onClick={() => setDataMode("applied")}
+            >
               By Applied
             </CtrlBtn>
           </div>

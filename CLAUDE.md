@@ -50,6 +50,7 @@ This is an Electron desktop app (Central Command) — a personal extensible dash
 - The preload's contextBridge is the **only** way to reach Node/Electron APIs.
 - `api.shell.openExternal` only allows `http`, `https`, and `mailto` URLs.
 - All SQLite queries must use parameterized form — never interpolate untrusted values.
+- For INSERT/UPDATE with 3+ columns use `namedSql` from `src/renderer/src/plugins/sqlParams.ts` to prevent silent positional-param bugs. Every SQL widget keeps DDL in `schema.ts`, named-param query strings in `queries.ts`, and non-SQL constants in `constants.ts`.
 - Secrets use Electron's `safeStorage` (OS keychain on macOS/Windows, libsecret on Linux).
 
 ### IPC flow

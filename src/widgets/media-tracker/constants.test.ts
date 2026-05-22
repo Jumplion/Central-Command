@@ -6,9 +6,8 @@ import {
   CURRENT_VERB,
   LINK_RELATIONS,
   DEFAULT_FORM,
-  INIT_SQL,
-  MIGRATIONS,
 } from "./constants";
+import { INIT_SQL, MIGRATIONS } from "./schema";
 import type { MediaStatus, MediaType, LinkRelation } from "./types";
 
 // ─── MEDIA_TYPES ──────────────────────────────────────────────────────────────

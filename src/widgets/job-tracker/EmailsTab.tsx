@@ -15,6 +15,7 @@ import {
   UPDATE_APPLICATION_STATUS,
   DISMISS_EMAIL_JOB,
 } from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import { NotConnected } from "../_shared/NotConnected";
 import { buttonDefault, inp } from "../_shared/styles";
 
@@ -426,17 +427,9 @@ export function EmailsTab({
   // ── App actions ───────────────────────────────────────────────────────
 
   const handleAdd = async (data: AppFormData) => {
-    await api.sql.run(INSERT_APPLICATION, [
-      data.company,
-      data.role,
-      data.status,
-      data.applied_at,
-      data.source,
-      data.link,
-      data.notes,
-      data.req_number,
-      Date.now(),
-    ]);
+    await api.sql.run(
+      ...namedSql(INSERT_APPLICATION, { ...data, last_updated: Date.now() }),
+    );
     onAppAdded();
   };
 

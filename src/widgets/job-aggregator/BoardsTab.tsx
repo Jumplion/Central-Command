@@ -13,6 +13,12 @@ import {
   COMPANY_TYPE_COLORS,
   COMPANY_TYPE_ORDER,
 } from "./constants";
+import {
+  INSERT_SAVED_JOB,
+  INSERT_COMPANY_FEED,
+  INSERT_FEED_JOB,
+} from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import { inp, buttonDefault } from "../_shared/styles";
 import { fetchFeed } from "./api";
 import { AddFeedForm, BoardSection } from "./components";
@@ -60,8 +66,13 @@ export function BoardsTab({
     companyType: CompanyType,
   ) => {
     await api.sql.run(
-      "INSERT INTO company_feeds (name, url, feed_type, company_type, enabled, added_at) VALUES (?,?,?,?,1,?)",
-      [name, url, feedType, companyType, Date.now()],
+      ...namedSql(INSERT_COMPANY_FEED, {
+        name,
+        url,
+        feed_type: feedType,
+        company_type: companyType,
+        added_at: Date.now(),
+      }),
     );
     onFeedsChange();
     setShowAddFeed(false);
@@ -82,22 +93,20 @@ export function BoardsTab({
         await api.sql.run("DELETE FROM feed_jobs WHERE feed_id=?", [feed.id]);
         if (jobs.length > 0) {
           await api.sql.runBatch(
-            jobs.map((job) => ({
-              sql: `INSERT OR IGNORE INTO feed_jobs
-              (feed_id,ext_id,title,company,location,date_posted,apply_link,description,fetched_at)
-             VALUES (?,?,?,?,?,?,?,?,?)`,
-              params: [
-                feed.id,
-                job.ext_id,
-                job.title,
-                job.company,
-                job.location,
-                job.date_posted,
-                job.apply_link,
-                job.description,
-                job.fetched_at,
-              ],
-            })),
+            jobs.map((job) => {
+              const [sql, params] = namedSql(INSERT_FEED_JOB, {
+                feed_id: feed.id,
+                ext_id: job.ext_id,
+                title: job.title,
+                company: job.company,
+                location: job.location,
+                date_posted: job.date_posted,
+                apply_link: job.apply_link,
+                description: job.description,
+                fetched_at: job.fetched_at,
+              });
+              return { sql, params };
+            }),
           );
         }
         onFeedsChange();
@@ -119,22 +128,25 @@ export function BoardsTab({
   const handleSaveFeedJob = async (job: FeedJob, feed: CompanyFeed) => {
     const jobId = `feed-${feed.id}-${job.ext_id}`;
     await api.sql.run(
-      `INSERT OR IGNORE INTO saved_jobs
-        (job_id,title,company,location,is_remote,employment_type,
-         salary_min,salary_max,salary_currency,salary_period,
-         date_posted,apply_link,source,description,status,notes,saved_at)
-       VALUES (?,?,?,?,0,'',NULL,NULL,'','',?,?,?,?,'Interested','',?)`,
-      [
-        jobId,
-        job.title,
-        job.company,
-        job.location,
-        job.date_posted,
-        job.apply_link,
-        feed.name,
-        job.description,
-        Date.now(),
-      ],
+      ...namedSql(INSERT_SAVED_JOB, {
+        job_id: jobId,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        is_remote: 0,
+        employment_type: "",
+        salary_min: null,
+        salary_max: null,
+        salary_currency: "",
+        salary_period: "",
+        date_posted: job.date_posted,
+        apply_link: job.apply_link,
+        source: feed.name,
+        description: job.description,
+        status: "Interested",
+        notes: "",
+        saved_at: Date.now(),
+      }),
     );
     onSaved();
   };

@@ -10,13 +10,15 @@ import type {
   StatusFilter,
   TypeFilter,
 } from "./types";
+import { DEFAULT_FORM, MEDIA_TYPES, STATUS_FILTERS } from "./constants";
+import { INIT_SQL, MIGRATIONS } from "./schema";
 import {
-  DEFAULT_FORM,
-  INIT_SQL,
-  MEDIA_TYPES,
-  MIGRATIONS,
-  STATUS_FILTERS,
-} from "./constants";
+  INSERT_MEDIA_ITEM,
+  UPDATE_MEDIA_ITEM,
+  INSERT_STATUS_HISTORY,
+  INSERT_MEDIA_LINK,
+} from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import { lookupMetadata } from "./helpers";
 import { ImportModal, LinkModal, MediaCard, StarRating } from "./components";
 import { s } from "./styles";
@@ -115,41 +117,45 @@ function MediaTracker({ api, settings, setTitle }: WidgetProps) {
 
     if (editItem) {
       await api.sql.run(
-        "UPDATE media_items SET title=?, type=?, status=?, author_creator=?, rating=?, notes=?, updated_at=? WHERE id=?",
-        [
-          form.title.trim(),
-          form.type,
-          form.status,
-          form.author_creator || null,
-          form.rating || null,
-          form.notes || null,
-          now,
-          editItem.id,
-        ],
+        ...namedSql(UPDATE_MEDIA_ITEM, {
+          title: form.title.trim(),
+          type: form.type,
+          status: form.status,
+          author_creator: form.author_creator || null,
+          rating: form.rating || null,
+          notes: form.notes || null,
+          updated_at: now,
+          id: editItem.id,
+        }),
       );
       if (form.status !== editItem.status) {
         await api.sql.run(
-          "INSERT INTO media_status_history (item_id, status, changed_at) VALUES (?,?,?)",
-          [editItem.id, form.status, now],
+          ...namedSql(INSERT_STATUS_HISTORY, {
+            item_id: editItem.id,
+            status: form.status,
+            changed_at: now,
+          }),
         );
       }
     } else {
       const result = await api.sql.run(
-        "INSERT INTO media_items (title, type, status, author_creator, rating, notes, external_id, external_source) VALUES (?,?,?,?,?,?,?,?)",
-        [
-          form.title.trim(),
-          form.type,
-          form.status,
-          form.author_creator || null,
-          form.rating || null,
-          form.notes || null,
-          form.external_id || null,
-          form.external_source || null,
-        ],
+        ...namedSql(INSERT_MEDIA_ITEM, {
+          title: form.title.trim(),
+          type: form.type,
+          status: form.status,
+          author_creator: form.author_creator || null,
+          rating: form.rating || null,
+          notes: form.notes || null,
+          external_id: form.external_id || null,
+          external_source: form.external_source || null,
+        }),
       );
       await api.sql.run(
-        "INSERT INTO media_status_history (item_id, status, changed_at) VALUES (?,?,?)",
-        [result.lastInsertRowid, form.status, now],
+        ...namedSql(INSERT_STATUS_HISTORY, {
+          item_id: result.lastInsertRowid,
+          status: form.status,
+          changed_at: now,
+        }),
       );
     }
 
@@ -181,8 +187,11 @@ function MediaTracker({ api, settings, setTitle }: WidgetProps) {
     relation: LinkRelation,
   ) => {
     await api.sql.run(
-      "INSERT OR IGNORE INTO media_links (item_id, linked_item_id, relation) VALUES (?,?,?)",
-      [sourceItem.id, targetId, relation],
+      ...namedSql(INSERT_MEDIA_LINK, {
+        item_id: sourceItem.id,
+        linked_item_id: targetId,
+        relation,
+      }),
     );
     setLinkTarget(null);
     loadItems();

@@ -24,6 +24,7 @@ import {
   UPDATE_APPLICATION,
   DELETE_APPLICATION,
 } from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 function JobTracker({ api }: WidgetProps) {
   const [apps, setApps] = useState<Application[]>([]);
   const [filter, setFilter] = useState<Status | "All">("All");
@@ -79,36 +80,21 @@ function JobTracker({ api }: WidgetProps) {
   );
 
   const handleAdd = async (data: AppFormData) => {
-    await api.sql.run(INSERT_APPLICATION, [
-      data.company,
-      data.role,
-      data.status,
-      data.applied_at,
-      data.location,
-      data.source,
-      data.link,
-      data.notes,
-      data.req_number,
-      Date.now(),
-    ]);
+    await api.sql.run(
+      ...namedSql(INSERT_APPLICATION, { ...data, last_updated: Date.now() }),
+    );
     await load();
     setShowAdd(false);
   };
 
   const handleEdit = (app: Application) => async (data: AppFormData) => {
-    await api.sql.run(UPDATE_APPLICATION, [
-      data.company,
-      data.role,
-      data.status,
-      data.applied_at,
-      data.location,
-      data.source,
-      data.link,
-      data.notes,
-      data.req_number,
-      Date.now(),
-      app.id,
-    ]);
+    await api.sql.run(
+      ...namedSql(UPDATE_APPLICATION, {
+        ...data,
+        last_updated: Date.now(),
+        id: app.id,
+      }),
+    );
     await load();
     setEditingId(null);
   };
@@ -173,18 +159,20 @@ function JobTracker({ api }: WidgetProps) {
         const safeStatus = (STATUSES as string[]).includes(status)
           ? status
           : "Applied";
-        await api.sql.run(INSERT_APPLICATION, [
-          company,
-          role,
-          safeStatus,
-          applied_at || today(),
-          location,
-          source,
-          link,
-          notes,
-          req_number,
-          Date.now(),
-        ]);
+        await api.sql.run(
+          ...namedSql(INSERT_APPLICATION, {
+            company,
+            role,
+            status: safeStatus,
+            applied_at: applied_at || today(),
+            location,
+            source,
+            link,
+            notes,
+            req_number,
+            last_updated: Date.now(),
+          }),
+        );
       }
       await load();
     } finally {
