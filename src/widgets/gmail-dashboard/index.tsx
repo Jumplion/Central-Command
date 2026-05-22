@@ -212,7 +212,20 @@ function GmailDashboard({ api, settings }: WidgetProps) {
     setAuthState("connecting");
     setAuthError("");
     try {
-      await api.google.shared.connect({ clientId: "", clientSecret: "", service: "gmail" });
+      const hasCreds = await api.google.shared.hasCreds("gmail");
+      if (!hasCreds) {
+        setAuthError("Configure shared Gmail credentials in App Settings before connecting.");
+        setAuthState("no-creds");
+        return;
+      }
+
+      const ok = await api.google.shared.reconnect("gmail");
+      if (!ok) {
+        setAuthError("Unable to connect to Gmail with the configured shared credentials.");
+        setAuthState("no-creds");
+        return;
+      }
+
       await seedDefaults();
       await loadAll();
       setAuthState("connected");
