@@ -29,8 +29,8 @@ export const INIT_SQL = `
     labels             TEXT    NOT NULL DEFAULT '[]',
     received_at        TEXT    NOT NULL,
     snippet            TEXT    NOT NULL DEFAULT '',
-    folder_id          INTEGER REFERENCES gd_folders(id),
-    override_folder_id INTEGER REFERENCES gd_folders(id),
+    folder_id          INTEGER REFERENCES gd_folders(id) ON DELETE SET NULL,
+    override_folder_id INTEGER REFERENCES gd_folders(id) ON DELETE SET NULL,
     is_read            INTEGER NOT NULL DEFAULT 0,
     fetched_at         INTEGER NOT NULL
   );
