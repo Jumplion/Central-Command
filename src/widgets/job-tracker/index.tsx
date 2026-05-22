@@ -13,7 +13,7 @@ import {
   today,
   StatusBar,
   AppForm,
-  WeeklyChart,
+  ChartView,
   Th,
   Td,
   StatusBadge,
@@ -294,7 +294,7 @@ function JobTracker({ api }: WidgetProps) {
           onAppUpdated={load}
         />
       ) : view === "chart" ? (
-        <WeeklyChart apps={apps} />
+        <ChartView apps={apps} />
       ) : (
         <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
           {filtered.length === 0 ? (
