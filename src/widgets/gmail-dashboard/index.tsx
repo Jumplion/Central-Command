@@ -46,14 +46,25 @@ function buildTree(
       const parent = nodeMap.get(f.parent_id);
       if (parent) {
         parent.children.push(node);
-        // Bubble counts up to parent
-        parent.emailCount += node.emailCount;
-        parent.unreadCount += node.unreadCount;
       } else {
         roots.push(node);
       }
     }
   }
+
+  const aggregateCounts = (node: FolderTreeNode): FolderTreeNode => {
+    for (const child of node.children) {
+      aggregateCounts(child);
+      node.emailCount += child.emailCount;
+      node.unreadCount += child.unreadCount;
+    }
+    return node;
+  };
+
+  for (const root of roots) {
+    aggregateCounts(root);
+  }
+
   return roots;
 }
 
