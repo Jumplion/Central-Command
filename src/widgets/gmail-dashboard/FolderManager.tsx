@@ -1,11 +1,30 @@
 import { useState } from "react";
 import type { GmailFolder } from "./types";
-import { buttonDefault, buttonSmall, buttonTiny, dimText, inp } from "../_shared/styles";
+import {
+  buttonDefault,
+  buttonSmall,
+  buttonTiny,
+  dimText,
+  inp,
+} from "../_shared/styles";
 import { INSERT_FOLDER, UPDATE_FOLDER, DELETE_FOLDER } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import type { WidgetApi } from "@renderer/plugins/api";
 
-const ICONS = ["📁", "💼", "📩", "🎤", "❌", "🎉", "🔔", "📋", "⭐", "🏢", "📧", "🔍"];
+const ICONS = [
+  "📁",
+  "💼",
+  "📩",
+  "🎤",
+  "❌",
+  "🎉",
+  "🔔",
+  "📋",
+  "⭐",
+  "🏢",
+  "📧",
+  "🔍",
+];
 
 interface FolderRowProps {
   folder: GmailFolder;
@@ -28,7 +47,13 @@ function FolderRow({ folder, folders, api, onChanged }: FolderRowProps) {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await api.sql.run(...namedSql(UPDATE_FOLDER, { name: name.trim(), icon: icon || null, id: folder.id }));
+      await api.sql.run(
+        ...namedSql(UPDATE_FOLDER, {
+          name: name.trim(),
+          icon: icon || null,
+          id: folder.id,
+        }),
+      );
       setEditing(false);
       onChanged();
     } finally {
@@ -37,7 +62,11 @@ function FolderRow({ folder, folders, api, onChanged }: FolderRowProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete folder "${folder.name}"? Emails in it will lose their assignment.`))
+    if (
+      !confirm(
+        `Delete folder "${folder.name}"? Emails in it will lose their assignment.`,
+      )
+    )
       return;
     await api.sql.run(DELETE_FOLDER, [folder.id]);
     onChanged();
@@ -64,7 +93,11 @@ function FolderRow({ folder, folders, api, onChanged }: FolderRowProps) {
           )}
           {folder.name}
         </span>
-        <button className="ghost" style={buttonTiny} onClick={() => setEditing(true)}>
+        <button
+          className="ghost"
+          style={buttonTiny}
+          onClick={() => setEditing(true)}
+        >
           Edit
         </button>
         <button
@@ -103,8 +136,7 @@ function FolderRow({ folder, folders, api, onChanged }: FolderRowProps) {
                 style={{
                   padding: "2px 4px",
                   fontSize: 14,
-                  background:
-                    icon === ic ? "var(--accent)" : "transparent",
+                  background: icon === ic ? "var(--accent)" : "transparent",
                   borderRadius: 3,
                 }}
                 onClick={() => setIcon(ic === icon ? "" : ic)}
@@ -132,7 +164,11 @@ function FolderRow({ folder, folders, api, onChanged }: FolderRowProps) {
         >
           {saving ? "…" : "Save"}
         </button>
-        <button className="ghost" style={buttonSmall} onClick={() => setEditing(false)}>
+        <button
+          className="ghost"
+          style={buttonSmall}
+          onClick={() => setEditing(false)}
+        >
           Cancel
         </button>
       </div>
@@ -156,8 +192,17 @@ function AddFolderForm({ folders, api, onAdded }: AddFolderFormProps) {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      const maxOrder = folders.filter((f) => f.parent_id === (parentId || null)).length;
-      await api.sql.run(...namedSql(INSERT_FOLDER, { name: name.trim(), parent_id: parentId || null, sort_order: maxOrder, icon }));
+      const maxOrder = folders.filter(
+        (f) => f.parent_id === (parentId || null),
+      ).length;
+      await api.sql.run(
+        ...namedSql(INSERT_FOLDER, {
+          name: name.trim(),
+          parent_id: parentId || null,
+          sort_order: maxOrder,
+          icon,
+        }),
+      );
       setName("");
       onAdded();
     } finally {

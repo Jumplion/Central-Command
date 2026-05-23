@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Widget, WidgetProps } from "@renderer/plugins/registry";
 import { useSqlInit } from "@renderer/hooks/useSqlInit";
-import type { GmailEmail, GmailFolder, GmailRule, FolderTreeNode, GroupBy } from "./types";
+import type {
+  GmailEmail,
+  GmailFolder,
+  GmailRule,
+  FolderTreeNode,
+  GroupBy,
+} from "./types";
 import { INIT_SQL, MIGRATIONS } from "./schema";
 import { DEFAULT_FOLDERS, DEFAULT_RULES } from "./constants";
 import {
@@ -36,7 +42,12 @@ function buildTree(
   const nodeMap = new Map<number, FolderTreeNode>();
   for (const f of folders) {
     const c = counts.get(f.id) ?? { total: 0, unread: 0 };
-    nodeMap.set(f.id, { ...f, children: [], emailCount: c.total, unreadCount: c.unread });
+    nodeMap.set(f.id, {
+      ...f,
+      children: [],
+      emailCount: c.total,
+      unreadCount: c.unread,
+    });
   }
 
   const roots: FolderTreeNode[] = [];
@@ -82,7 +93,9 @@ function GmailDashboard({ api, settings }: WidgetProps) {
 
   const [folders, setFolders] = useState<GmailFolder[]>([]);
   const [rules, setRules] = useState<GmailRule[]>([]);
-  const [counts, setCounts] = useState<Map<number, { total: number; unread: number }>>(new Map());
+  const [counts, setCounts] = useState<
+    Map<number, { total: number; unread: number }>
+  >(new Map());
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
   const [emails, setEmails] = useState<GmailEmail[]>([]);
 
@@ -99,12 +112,19 @@ function GmailDashboard({ api, settings }: WidgetProps) {
   // ── Seed default folders & rules on first load ────────────────────────
 
   const seedDefaults = useCallback(async () => {
-    const existing = await api.sql.all<{ id: number }>("SELECT id FROM gd_folders LIMIT 1");
+    const existing = await api.sql.all<{ id: number }>(
+      "SELECT id FROM gd_folders LIMIT 1",
+    );
     if (existing.length > 0) return;
 
     // Insert root folder first
     const rootResult = await api.sql.run(
-      ...namedSql(INSERT_FOLDER, { name: DEFAULT_FOLDERS[0].name, parent_id: null, sort_order: 0, icon: DEFAULT_FOLDERS[0].icon }),
+      ...namedSql(INSERT_FOLDER, {
+        name: DEFAULT_FOLDERS[0].name,
+        parent_id: null,
+        sort_order: 0,
+        icon: DEFAULT_FOLDERS[0].icon,
+      }),
     );
     const rootId = rootResult.lastInsertRowid;
 
@@ -112,15 +132,36 @@ function GmailDashboard({ api, settings }: WidgetProps) {
     const childIds: Record<string, number> = {};
     for (let i = 1; i < DEFAULT_FOLDERS.length; i++) {
       const f = DEFAULT_FOLDERS[i];
-      const res = await api.sql.run(...namedSql(INSERT_FOLDER, { name: f.name, parent_id: rootId, sort_order: f.sort_order, icon: f.icon }));
+      const res = await api.sql.run(
+        ...namedSql(INSERT_FOLDER, {
+          name: f.name,
+          parent_id: rootId,
+          sort_order: f.sort_order,
+          icon: f.icon,
+        }),
+      );
       childIds[f.name] = res.lastInsertRowid;
     }
 
     // Insert default rules
-    for (const [folderName, field, operator, value, priority] of DEFAULT_RULES) {
+    for (const [
+      folderName,
+      field,
+      operator,
+      value,
+      priority,
+    ] of DEFAULT_RULES) {
       const fid = childIds[folderName];
       if (!fid) continue;
-      await api.sql.run(...namedSql(INSERT_RULE, { folder_id: fid, field, operator, value, priority }));
+      await api.sql.run(
+        ...namedSql(INSERT_RULE, {
+          folder_id: fid,
+          field,
+          operator,
+          value,
+          priority,
+        }),
+      );
     }
   }, [api]);
 
@@ -139,9 +180,11 @@ function GmailDashboard({ api, settings }: WidgetProps) {
   }, [api]);
 
   const loadCounts = useCallback(async () => {
-    const rows = await api.sql.all<{ fid: number; total: number; unread: number }>(
-      SELECT_FOLDER_COUNTS,
-    );
+    const rows = await api.sql.all<{
+      fid: number;
+      total: number;
+      unread: number;
+    }>(SELECT_FOLDER_COUNTS);
     const m = new Map<number, { total: number; unread: number }>();
     for (const r of rows) m.set(r.fid, { total: r.total, unread: r.unread });
     setCounts(m);
@@ -149,7 +192,9 @@ function GmailDashboard({ api, settings }: WidgetProps) {
 
   const loadEmails = useCallback(
     async (folderId: number) => {
-      const rows = await api.sql.all<GmailEmail>(SELECT_EMAILS_FOR_FOLDER, [folderId]);
+      const rows = await api.sql.all<GmailEmail>(SELECT_EMAILS_FOR_FOLDER, [
+        folderId,
+      ]);
       setEmails(rows);
     },
     [api],
@@ -213,14 +258,18 @@ function GmailDashboard({ api, settings }: WidgetProps) {
     try {
       const hasCreds = await api.google.shared.hasCreds();
       if (!hasCreds) {
-        setAuthError("Configure shared Gmail credentials in App Settings before connecting.");
+        setAuthError(
+          "Configure shared Gmail credentials in App Settings before connecting.",
+        );
         setAuthState("no-creds");
         return;
       }
 
       const ok = await api.google.shared.reconnect();
       if (!ok) {
-        setAuthError("Unable to connect to Gmail with the configured shared credentials.");
+        setAuthError(
+          "Unable to connect to Gmail with the configured shared credentials.",
+        );
         setAuthState("no-creds");
         return;
       }
@@ -257,7 +306,8 @@ function GmailDashboard({ api, settings }: WidgetProps) {
         return;
       }
 
-      const effectiveQuery = gmailQuery ||
+      const effectiveQuery =
+        gmailQuery ||
         "(job OR application OR interview OR offer OR rejection OR alert) newer_than:90d";
 
       const n = await fetchAndStoreEmails(
@@ -305,7 +355,10 @@ function GmailDashboard({ api, settings }: WidgetProps) {
 
   // ── Tree ──────────────────────────────────────────────────────────────
 
-  const treeRoots = useMemo(() => buildTree(folders, counts), [folders, counts]);
+  const treeRoots = useMemo(
+    () => buildTree(folders, counts),
+    [folders, counts],
+  );
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -319,10 +372,20 @@ function GmailDashboard({ api, settings }: WidgetProps) {
 
   if (authState === "connecting") {
     return (
-      <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>Connecting to Google…</div>
+      <div
+        style={{
+          padding: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 600 }}>
+          Connecting to Google…
+        </div>
         <div style={{ ...dimText, fontSize: 12, lineHeight: 1.5 }}>
-          A browser window opened for authorization. Complete sign-in there and return here.
+          A browser window opened for authorization. Complete sign-in there and
+          return here.
         </div>
       </div>
     );
@@ -362,7 +425,14 @@ function GmailDashboard({ api, settings }: WidgetProps) {
   const selectedFolder = folders.find((f) => f.id === selectedFolderId);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
       {/* Top toolbar */}
       <div
         style={{
@@ -444,7 +514,14 @@ function GmailDashboard({ api, settings }: WidgetProps) {
       </div>
 
       {scanError && (
-        <div style={{ fontSize: 11, color: "#ff6e6e", padding: "2px 0", flexShrink: 0 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#ff6e6e",
+            padding: "2px 0",
+            flexShrink: 0,
+          }}
+        >
           {scanError}
         </div>
       )}
@@ -452,11 +529,20 @@ function GmailDashboard({ api, settings }: WidgetProps) {
       {/* Body */}
       {view === "rules" ? (
         <div style={{ flex: 1, overflow: "auto", minHeight: 0, paddingTop: 8 }}>
-          <RulesEditor rules={rules} folders={folders} api={api} onChanged={() => void handleRulesChanged()} />
+          <RulesEditor
+            rules={rules}
+            folders={folders}
+            api={api}
+            onChanged={() => void handleRulesChanged()}
+          />
         </div>
       ) : view === "folders" ? (
         <div style={{ flex: 1, overflow: "auto", minHeight: 0, paddingTop: 8 }}>
-          <FolderManager folders={folders} api={api} onChanged={() => void handleFoldersChanged()} />
+          <FolderManager
+            folders={folders}
+            api={api}
+            onChanged={() => void handleFoldersChanged()}
+          />
         </div>
       ) : (
         <div style={{ display: "flex", flex: 1, minHeight: 0, gap: 0 }}>
@@ -474,12 +560,23 @@ function GmailDashboard({ api, settings }: WidgetProps) {
             <FolderTree
               roots={treeRoots}
               selectedId={selectedFolderId}
-              onSelect={(id) => setSelectedFolderId(id === selectedFolderId ? null : id)}
+              onSelect={(id) =>
+                setSelectedFolderId(id === selectedFolderId ? null : id)
+              }
             />
           </div>
 
           {/* Email pane */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, paddingLeft: 6, paddingTop: 4 }}>
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+              paddingLeft: 6,
+              paddingTop: 4,
+            }}
+          >
             {selectedFolderId == null ? (
               <div
                 style={{
@@ -520,7 +617,9 @@ function GmailDashboard({ api, settings }: WidgetProps) {
                       `https://mail.google.com/mail/u/0/#inbox/${threadId}`,
                     )
                   }
-                  onMove={(emailId, folderId) => void handleMove(emailId, folderId)}
+                  onMove={(emailId, folderId) =>
+                    void handleMove(emailId, folderId)
+                  }
                 />
               </>
             )}
@@ -537,7 +636,8 @@ const widget: Widget = {
   manifest: {
     id: "gmail-dashboard",
     name: "Gmail Dashboard",
-    description: "Organizes Gmail messages into folders using customizable filter rules. Tailored for job search.",
+    description:
+      "Organizes Gmail messages into folders using customizable filter rules. Tailored for job search.",
     version: "0.1.0",
     icon: "📬",
     defaultSize: { w: 8, h: 8 },

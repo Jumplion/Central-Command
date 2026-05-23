@@ -66,7 +66,12 @@ function FolderNode({ node, depth, selectedId, onSelect }: FolderNodeProps) {
           </span>
         )}
         {node.unreadCount === 0 && node.emailCount > 0 && (
-          <span style={{ fontSize: 10, color: isSelected ? "rgba(255,255,255,0.7)" : "var(--text-dim)" }}>
+          <span
+            style={{
+              fontSize: 10,
+              color: isSelected ? "rgba(255,255,255,0.7)" : "var(--text-dim)",
+            }}
+          >
             {node.emailCount}
           </span>
         )}
@@ -93,7 +98,9 @@ interface FolderTreeProps {
 export function FolderTree({ roots, selectedId, onSelect }: FolderTreeProps) {
   if (roots.length === 0) {
     return (
-      <div style={{ fontSize: 11, color: "var(--text-dim)", padding: "8px 6px" }}>
+      <div
+        style={{ fontSize: 11, color: "var(--text-dim)", padding: "8px 6px" }}
+      >
         No folders yet
       </div>
     );

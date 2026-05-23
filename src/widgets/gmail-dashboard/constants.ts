@@ -2,7 +2,12 @@
 // Inserted once when the widget is first used (checked via folder count)
 export const DEFAULT_FOLDERS = [
   { name: "Job Search", parent_id: null, sort_order: 0, icon: "💼" },
-  { name: "Applied", parent_id: -1 /* resolved below */, sort_order: 0, icon: "📩" },
+  {
+    name: "Applied",
+    parent_id: -1 /* resolved below */,
+    sort_order: 0,
+    icon: "📩",
+  },
   { name: "Interviews", parent_id: -1, sort_order: 1, icon: "🎤" },
   { name: "Rejections", parent_id: -1, sort_order: 2, icon: "❌" },
   { name: "Offers", parent_id: -1, sort_order: 3, icon: "🎉" },

@@ -1,6 +1,12 @@
 import { useState } from "react";
 import type { GmailFolder, GmailRule } from "./types";
-import { buttonDefault, buttonSmall, buttonTiny, dimText, inp } from "../_shared/styles";
+import {
+  buttonDefault,
+  buttonSmall,
+  buttonTiny,
+  dimText,
+  inp,
+} from "../_shared/styles";
 import { INSERT_RULE, UPDATE_RULE, DELETE_RULE } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import type { WidgetApi } from "@renderer/plugins/api";
@@ -46,7 +52,16 @@ function RuleRow({ rule, folders, api, onChanged }: RuleRowProps) {
     if (!value.trim()) return;
     setSaving(true);
     try {
-      await api.sql.run(...namedSql(UPDATE_RULE, { folder_id: folderId, field, operator, value: value.trim(), priority, id: rule.id }));
+      await api.sql.run(
+        ...namedSql(UPDATE_RULE, {
+          folder_id: folderId,
+          field,
+          operator,
+          value: value.trim(),
+          priority,
+          id: rule.id,
+        }),
+      );
       setEditing(false);
       onChanged();
     } finally {
@@ -72,7 +87,9 @@ function RuleRow({ rule, folders, api, onChanged }: RuleRowProps) {
           fontSize: 12,
         }}
       >
-        <span style={{ ...dimText, fontSize: 10, minWidth: 20, textAlign: "right" }}>
+        <span
+          style={{ ...dimText, fontSize: 10, minWidth: 20, textAlign: "right" }}
+        >
           {rule.priority}
         </span>
         <span>
@@ -115,7 +132,13 @@ function RuleRow({ rule, folders, api, onChanged }: RuleRowProps) {
         margin: "4px 0",
       }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 60px", gap: 6 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr 60px",
+          gap: 6,
+        }}
+      >
         <div>
           <div style={{ ...dimText, fontSize: 10, marginBottom: 2 }}>Field</div>
           <select
@@ -131,7 +154,9 @@ function RuleRow({ rule, folders, api, onChanged }: RuleRowProps) {
           </select>
         </div>
         <div>
-          <div style={{ ...dimText, fontSize: 10, marginBottom: 2 }}>Operator</div>
+          <div style={{ ...dimText, fontSize: 10, marginBottom: 2 }}>
+            Operator
+          </div>
           <select
             style={{ ...inp, width: "100%", boxSizing: "border-box" }}
             value={operator}
@@ -154,7 +179,9 @@ function RuleRow({ rule, folders, api, onChanged }: RuleRowProps) {
           />
         </div>
         <div>
-          <div style={{ ...dimText, fontSize: 10, marginBottom: 2 }}>Priority</div>
+          <div style={{ ...dimText, fontSize: 10, marginBottom: 2 }}>
+            Priority
+          </div>
           <input
             type="number"
             style={{ ...inp, width: "100%", boxSizing: "border-box" }}
@@ -217,7 +244,15 @@ function AddRuleForm({ folders, api, onAdded }: AddRuleFormProps) {
     if (!value.trim() || !folderId) return;
     setSaving(true);
     try {
-      await api.sql.run(...namedSql(INSERT_RULE, { folder_id: folderId, field, operator, value: value.trim(), priority }));
+      await api.sql.run(
+        ...namedSql(INSERT_RULE, {
+          folder_id: folderId,
+          field,
+          operator,
+          value: value.trim(),
+          priority,
+        }),
+      );
       setValue("");
       onAdded();
     } finally {
@@ -242,7 +277,13 @@ function AddRuleForm({ folders, api, onAdded }: AddRuleFormProps) {
       <div style={{ fontWeight: 600, fontSize: 11, color: "var(--text-dim)" }}>
         Add rule
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 60px", gap: 6 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr 60px",
+          gap: 6,
+        }}
+      >
         <select
           style={{ ...inp, width: "100%", boxSizing: "border-box" }}
           value={field}
@@ -318,7 +359,12 @@ interface RulesEditorProps {
   onChanged: () => void;
 }
 
-export function RulesEditor({ rules, folders, api, onChanged }: RulesEditorProps) {
+export function RulesEditor({
+  rules,
+  folders,
+  api,
+  onChanged,
+}: RulesEditorProps) {
   return (
     <div
       style={{
@@ -329,8 +375,16 @@ export function RulesEditor({ rules, folders, api, onChanged }: RulesEditorProps
         padding: "0 2px",
       }}
     >
-      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 8, lineHeight: 1.5 }}>
-        Rules match emails to folders. Higher priority = evaluated first. First match wins.
+      <div
+        style={{
+          fontSize: 11,
+          color: "var(--text-dim)",
+          marginBottom: 8,
+          lineHeight: 1.5,
+        }}
+      >
+        Rules match emails to folders. Higher priority = evaluated first. First
+        match wins.
       </div>
 
       <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>

@@ -193,7 +193,9 @@ function EmailGroup({
         }}
         onClick={() => setCollapsed((c) => !c)}
       >
-        <span style={{ fontSize: 9, opacity: 0.6 }}>{collapsed ? "▶" : "▼"}</span>
+        <span style={{ fontSize: 9, opacity: 0.6 }}>
+          {collapsed ? "▶" : "▼"}
+        </span>
         <span style={{ flex: 1 }}>{label}</span>
         {unread > 0 && (
           <span
@@ -258,12 +260,17 @@ export function EmailList({
     }
 
     // Sort groups: recency has a fixed order, others alphabetical
-    const recencyOrder = ["Today", "This Week", "This Month", "Older", "Unknown"];
+    const recencyOrder = [
+      "Today",
+      "This Week",
+      "This Month",
+      "Older",
+      "Unknown",
+    ];
     const entries = [...map.entries()];
     if (groupBy === "recency") {
       entries.sort(
-        ([a], [b]) =>
-          recencyOrder.indexOf(a) - recencyOrder.indexOf(b),
+        ([a], [b]) => recencyOrder.indexOf(a) - recencyOrder.indexOf(b),
       );
     } else {
       entries.sort(([a], [b]) => a.localeCompare(b));
