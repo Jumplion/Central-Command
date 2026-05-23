@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { GmailFolder } from "./types";
 import { buttonDefault, buttonSmall, buttonTiny, dimText, inp } from "../_shared/styles";
 import { INSERT_FOLDER, UPDATE_FOLDER, DELETE_FOLDER } from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import type { WidgetApi } from "@renderer/plugins/api";
 
 const ICONS = ["📁", "💼", "📩", "🎤", "❌", "🎉", "🔔", "📋", "⭐", "🏢", "📧", "🔍"];
@@ -27,7 +28,7 @@ function FolderRow({ folder, folders, api, onChanged }: FolderRowProps) {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await api.sql.run(UPDATE_FOLDER, [name.trim(), icon || null, folder.id]);
+      await api.sql.run(...namedSql(UPDATE_FOLDER, { name: name.trim(), icon: icon || null, id: folder.id }));
       setEditing(false);
       onChanged();
     } finally {
@@ -156,7 +157,7 @@ function AddFolderForm({ folders, api, onAdded }: AddFolderFormProps) {
     setSaving(true);
     try {
       const maxOrder = folders.filter((f) => f.parent_id === (parentId || null)).length;
-      await api.sql.run(INSERT_FOLDER, [name.trim(), parentId || null, maxOrder, icon]);
+      await api.sql.run(...namedSql(INSERT_FOLDER, { name: name.trim(), parent_id: parentId || null, sort_order: maxOrder, icon }));
       setName("");
       onAdded();
     } finally {

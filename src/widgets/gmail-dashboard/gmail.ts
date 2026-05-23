@@ -7,7 +7,8 @@ import type {
   GmailRule,
 } from "./types";
 import { GMAIL_BASE } from "./constants";
-import { UPSERT_EMAIL } from "./queries";
+import { UPSERT_EMAIL, UPDATE_EMAIL_READ_AND_SNIPPET } from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 
 // ─── Decoding helpers ─────────────────────────────────────────────────────
 
@@ -291,8 +292,12 @@ export async function fetchAndStoreEmails(
     } else {
       // Update read status and snippet for existing emails
       await api.sql.run(
-        `UPDATE gd_emails SET is_read = ?, snippet = ?, fetched_at = ? WHERE gmail_id = ?`,
-        [isRead, snippet, now, ref.id],
+        ...namedSql(UPDATE_EMAIL_READ_AND_SNIPPET, {
+          is_read: isRead,
+          snippet,
+          fetched_at: now,
+          gmail_id: ref.id,
+        }),
       );
     }
   }

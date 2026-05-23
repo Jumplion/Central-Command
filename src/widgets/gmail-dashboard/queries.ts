@@ -48,11 +48,11 @@ export const CLEAR_OVERRIDE_FOLDER = `
 `;
 
 export const INSERT_FOLDER = `
-  INSERT INTO gd_folders (name, parent_id, sort_order, icon) VALUES (?,?,?,?)
+  INSERT INTO gd_folders (name, parent_id, sort_order, icon) VALUES (:name, :parent_id, :sort_order, :icon)
 `;
 
 export const UPDATE_FOLDER = `
-  UPDATE gd_folders SET name = ?, icon = ? WHERE id = ?
+  UPDATE gd_folders SET name = :name, icon = :icon WHERE id = :id
 `;
 
 export const DELETE_FOLDER = `
@@ -60,13 +60,17 @@ export const DELETE_FOLDER = `
 `;
 
 export const INSERT_RULE = `
-  INSERT INTO gd_rules (folder_id, field, operator, value, priority) VALUES (?,?,?,?,?)
+  INSERT INTO gd_rules (folder_id, field, operator, value, priority) VALUES (:folder_id, :field, :operator, :value, :priority)
 `;
 
 export const UPDATE_RULE = `
-  UPDATE gd_rules SET folder_id = ?, field = ?, operator = ?, value = ?, priority = ? WHERE id = ?
+  UPDATE gd_rules SET folder_id = :folder_id, field = :field, operator = :operator, value = :value, priority = :priority WHERE id = :id
 `;
 
 export const DELETE_RULE = `
   DELETE FROM gd_rules WHERE id = ?
+`;
+
+export const UPDATE_EMAIL_READ_AND_SNIPPET = `
+  UPDATE gd_emails SET is_read = :is_read, snippet = :snippet, fetched_at = :fetched_at WHERE gmail_id = :gmail_id
 `;

@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Widget, WidgetProps } from "@renderer/plugins/registry";
 import { useSqlInit } from "@renderer/hooks/useSqlInit";
 import type { GmailEmail, GmailFolder, GmailRule, FolderTreeNode, GroupBy } from "./types";
-import { INIT_SQL, MIGRATIONS, DEFAULT_FOLDERS, DEFAULT_RULES } from "./constants";
+import { INIT_SQL, MIGRATIONS } from "./schema";
+import { DEFAULT_FOLDERS, DEFAULT_RULES } from "./constants";
 import {
   SELECT_ALL_FOLDERS,
   SELECT_ALL_RULES,
@@ -14,6 +15,7 @@ import {
   INSERT_RULE,
 } from "./queries";
 import { fetchAndStoreEmails, reapplyAllRules } from "./gmail";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import { FolderTree } from "./FolderTree";
 import { EmailList } from "./EmailList";
 import { RulesEditor } from "./RulesEditor";
@@ -101,19 +103,16 @@ function GmailDashboard({ api, settings }: WidgetProps) {
     if (existing.length > 0) return;
 
     // Insert root folder first
-    const rootResult = await api.sql.run(INSERT_FOLDER, [
-      DEFAULT_FOLDERS[0].name,
-      null,
-      0,
-      DEFAULT_FOLDERS[0].icon,
-    ]);
+    const rootResult = await api.sql.run(
+      ...namedSql(INSERT_FOLDER, { name: DEFAULT_FOLDERS[0].name, parent_id: null, sort_order: 0, icon: DEFAULT_FOLDERS[0].icon }),
+    );
     const rootId = rootResult.lastInsertRowid;
 
     // Insert child folders
     const childIds: Record<string, number> = {};
     for (let i = 1; i < DEFAULT_FOLDERS.length; i++) {
       const f = DEFAULT_FOLDERS[i];
-      const res = await api.sql.run(INSERT_FOLDER, [f.name, rootId, f.sort_order, f.icon]);
+      const res = await api.sql.run(...namedSql(INSERT_FOLDER, { name: f.name, parent_id: rootId, sort_order: f.sort_order, icon: f.icon }));
       childIds[f.name] = res.lastInsertRowid;
     }
 
@@ -121,7 +120,7 @@ function GmailDashboard({ api, settings }: WidgetProps) {
     for (const [folderName, field, operator, value, priority] of DEFAULT_RULES) {
       const fid = childIds[folderName];
       if (!fid) continue;
-      await api.sql.run(INSERT_RULE, [fid, field, operator, value, priority]);
+      await api.sql.run(...namedSql(INSERT_RULE, { folder_id: fid, field, operator, value, priority }));
     }
   }, [api]);
 
@@ -212,14 +211,14 @@ function GmailDashboard({ api, settings }: WidgetProps) {
     setAuthState("connecting");
     setAuthError("");
     try {
-      const hasCreds = await api.google.shared.hasCreds("gmail");
+      const hasCreds = await api.google.shared.hasCreds();
       if (!hasCreds) {
         setAuthError("Configure shared Gmail credentials in App Settings before connecting.");
         setAuthState("no-creds");
         return;
       }
 
-      const ok = await api.google.shared.reconnect("gmail");
+      const ok = await api.google.shared.reconnect();
       if (!ok) {
         setAuthError("Unable to connect to Gmail with the configured shared credentials.");
         setAuthState("no-creds");
@@ -236,7 +235,7 @@ function GmailDashboard({ api, settings }: WidgetProps) {
   };
 
   const handleDisconnect = async () => {
-    await api.google.shared.disconnect("gmail");
+    await api.google.shared.disconnect();
     setFolders([]);
     setRules([]);
     setCounts(new Map());
@@ -252,7 +251,7 @@ function GmailDashboard({ api, settings }: WidgetProps) {
     setScanError("");
     setNewCount(0);
     try {
-      const token = await api.google.shared.getToken("gmail");
+      const token = await api.google.shared.getToken();
       if (!token) {
         setAuthState("no-creds");
         return;

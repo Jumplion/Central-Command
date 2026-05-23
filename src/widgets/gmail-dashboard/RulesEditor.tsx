@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { GmailFolder, GmailRule } from "./types";
 import { buttonDefault, buttonSmall, buttonTiny, dimText, inp } from "../_shared/styles";
 import { INSERT_RULE, UPDATE_RULE, DELETE_RULE } from "./queries";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import type { WidgetApi } from "@renderer/plugins/api";
 
 type RuleField = GmailRule["field"];
@@ -45,7 +46,7 @@ function RuleRow({ rule, folders, api, onChanged }: RuleRowProps) {
     if (!value.trim()) return;
     setSaving(true);
     try {
-      await api.sql.run(UPDATE_RULE, [folderId, field, operator, value.trim(), priority, rule.id]);
+      await api.sql.run(...namedSql(UPDATE_RULE, { folder_id: folderId, field, operator, value: value.trim(), priority, id: rule.id }));
       setEditing(false);
       onChanged();
     } finally {
@@ -216,7 +217,7 @@ function AddRuleForm({ folders, api, onAdded }: AddRuleFormProps) {
     if (!value.trim() || !folderId) return;
     setSaving(true);
     try {
-      await api.sql.run(INSERT_RULE, [folderId, field, operator, value.trim(), priority]);
+      await api.sql.run(...namedSql(INSERT_RULE, { folder_id: folderId, field, operator, value: value.trim(), priority }));
       setValue("");
       onAdded();
     } finally {
