@@ -27,8 +27,6 @@ export function AppSettings({ onClose }: Props) {
   );
 
   // Drive Sync
-  const [driveClientId, setDriveClientId] = useState("");
-  const [driveClientSecret, setDriveClientSecret] = useState("");
   const [driveConnecting, setDriveConnecting] = useState(false);
   const [driveConnectError, setDriveConnectError] = useState<string | null>(
     null,
@@ -60,8 +58,7 @@ export function AppSettings({ onClose }: Props) {
         ],
       });
       setGoogleConnected(true);
-      setGoogleClientId("");
-      setGoogleClientSecret("");
+      // Keep credentials for Drive Sync reuse
     } catch (err) {
       setGoogleConnectError((err as Error).message ?? "Connection failed");
     } finally {
@@ -75,18 +72,15 @@ export function AppSettings({ onClose }: Props) {
   }
 
   async function handleDriveConnect() {
-    if (!driveClientId.trim() || !driveClientSecret.trim()) return;
     setDriveConnecting(true);
     setDriveConnectError(null);
     try {
       await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, {
-        clientId: driveClientId.trim(),
-        clientSecret: driveClientSecret.trim(),
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
         service: "drive-sync",
       });
       await window.cc.driveSync.enable();
-      setDriveClientId("");
-      setDriveClientSecret("");
     } catch (err) {
       setDriveConnectError((err as Error).message ?? "Connection failed");
     } finally {
@@ -190,41 +184,26 @@ export function AppSettings({ onClose }: Props) {
               consent screen.
             </p>
 
-            {!driveConnected ? (
+            {googleConnected === null ? (
+              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                Checking…
+              </div>
+            ) : !googleConnected ? (
+              <div style={{ fontSize: 13, color: "var(--text-dim)", padding: 12, backgroundColor: "var(--surface-secondary)", borderRadius: 4 }}>
+                <strong>Connect Google Account first</strong>
+                <p>Enable Google Account above to set up Drive Sync.</p>
+              </div>
+            ) : !driveConnected ? (
               <div className="settings-form">
-                <label>
-                  Client ID
-                  <input
-                    type="text"
-                    value={driveClientId}
-                    onChange={(e) => setDriveClientId(e.target.value)}
-                    placeholder="your-client-id.apps.googleusercontent.com"
-                    disabled={driveConnecting}
-                  />
-                </label>
-                <label>
-                  Client Secret
-                  <input
-                    type="password"
-                    value={driveClientSecret}
-                    onChange={(e) => setDriveClientSecret(e.target.value)}
-                    placeholder="Client secret"
-                    disabled={driveConnecting}
-                  />
-                </label>
                 {driveConnectError && (
                   <p className="error-text">{driveConnectError}</p>
                 )}
                 <button
                   className="primary"
                   onClick={() => void handleDriveConnect()}
-                  disabled={
-                    driveConnecting ||
-                    !driveClientId.trim() ||
-                    !driveClientSecret.trim()
-                  }
+                  disabled={driveConnecting}
                 >
-                  {driveConnecting ? "Connecting…" : "Connect to Google Drive"}
+                  {driveConnecting ? "Connecting…" : "Enable Drive Sync"}
                 </button>
               </div>
             ) : (

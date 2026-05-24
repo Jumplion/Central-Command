@@ -333,7 +333,14 @@ describe("AppSettings", () => {
     });
 
     expect(container.textContent).toContain("Google Drive Sync");
-    const button = container.querySelector<HTMLButtonElement>("button.primary");
+    // The connect button in the Google Account section should be disabled
+    const sections = Array.from(container.querySelectorAll("section"));
+    const googleSection = sections.find((s) =>
+      s.textContent?.includes("Google Account"),
+    )!;
+    const button = googleSection.querySelector<HTMLButtonElement>(
+      "button.primary",
+    );
     expect(button?.disabled).toBe(true);
     cleanupContainer(container);
   });
@@ -346,31 +353,59 @@ describe("AppSettings", () => {
       root.render(<AppSettings onClose={vi.fn()} />);
     });
 
-    // Both Google Account and Drive Sync sections share the same input placeholders;
-    // scope selectors to the Drive Sync section to avoid targeting the wrong form.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Find the Google Account section and enter credentials
     const sections = Array.from(container.querySelectorAll("section"));
-    const driveSection = sections.find((s) =>
-      s.textContent?.includes("Google Drive Sync"),
+    const googleSection = sections.find((s) =>
+      s.textContent?.includes("Google Account"),
     )!;
-    const clientIdInput = driveSection.querySelector<HTMLInputElement>(
+    const clientIdInput = googleSection.querySelector<HTMLInputElement>(
       'input[placeholder="your-client-id.apps.googleusercontent.com"]',
     );
-    const clientSecretInput = driveSection.querySelector<HTMLInputElement>(
+    const clientSecretInput = googleSection.querySelector<HTMLInputElement>(
       'input[placeholder="Client secret"]',
     );
     const connectButton =
-      driveSection.querySelector<HTMLButtonElement>("button.primary");
+      googleSection.querySelector<HTMLButtonElement>("button.primary");
 
     await dispatchValueEvent(clientIdInput!, "id.apps.googleusercontent.com");
     await dispatchValueEvent(clientSecretInput!, "secret");
 
+    // Connect Google Account
     await act(async () => {
       connectButton!.click();
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(window.cc.google.connect).toHaveBeenCalled();
+    // Mock google.isConnected to return true for next render
+    (window as any).cc.google.isConnected = vi.fn(async () => true);
+
+    // Re-render to see the Drive Sync enable button
+    await act(async () => {
+      root.render(<AppSettings onClose={vi.fn()} />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Find and click the Drive Sync enable button
+    const driveSection = sections[1];
+    const enableButton = driveSection.querySelector<HTMLButtonElement>(
+      "button.primary",
+    );
+    expect(enableButton?.textContent).toContain("Enable Drive Sync");
+
+    await act(async () => {
+      enableButton!.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
     expect(window.cc.driveSync.enable).toHaveBeenCalled();
     cleanupContainer(container);
   });
@@ -382,6 +417,7 @@ describe("AppSettings", () => {
       lastSyncedAt: Date.now(),
       lastError: null,
     }));
+    (window as any).cc.google.isConnected = vi.fn(async () => true);
 
     const container = createContainer();
     const root = createRoot(container);
@@ -396,7 +432,12 @@ describe("AppSettings", () => {
 
     expect(container.textContent).toContain("Connected");
 
-    const disconnect = Array.from(container.querySelectorAll("button")).find(
+    // Find the Drive Sync section and get the disconnect button from it
+    const sections = Array.from(container.querySelectorAll("section"));
+    const driveSection = sections.find((s) =>
+      s.textContent?.includes("Google Drive Sync"),
+    )!;
+    const disconnect = Array.from(driveSection.querySelectorAll("button")).find(
       (button) => button.textContent?.includes("Disconnect"),
     );
 
