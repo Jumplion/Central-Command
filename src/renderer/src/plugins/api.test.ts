@@ -58,7 +58,7 @@ vi.mock("./apiEvents", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (global as any).window = { cc: mockWindowCc };
+  (window as any).cc = mockWindowCc;
 });
 
 describe("KV API", () => {
@@ -71,10 +71,7 @@ describe("KV API", () => {
 
     await kv.get("myKey");
 
-    expect(mockWindowCc.kv.get).toHaveBeenCalledWith(
-      widgetId,
-      "inst-1::myKey"
-    );
+    expect(mockWindowCc.kv.get).toHaveBeenCalledWith(widgetId, "inst-1::myKey");
   });
 
   it("should set scoped values", async () => {
@@ -85,7 +82,7 @@ describe("KV API", () => {
     expect(mockWindowCc.kv.set).toHaveBeenCalledWith(
       widgetId,
       "inst-1::myKey",
-      "myValue"
+      "myValue",
     );
   });
 
@@ -94,10 +91,7 @@ describe("KV API", () => {
 
     await kv.del("myKey");
 
-    expect(mockWindowCc.kv.del).toHaveBeenCalledWith(
-      widgetId,
-      "inst-1::myKey"
-    );
+    expect(mockWindowCc.kv.del).toHaveBeenCalledWith(widgetId, "inst-1::myKey");
   });
 
   it("should list keys with scoped prefix", async () => {
@@ -112,7 +106,7 @@ describe("KV API", () => {
 
     expect(mockWindowCc.kv.keysWithPrefix).toHaveBeenCalledWith(
       widgetId,
-      "inst-1::"
+      "inst-1::",
     );
     expect(keys).toEqual(["key1", "key2"]);
   });
@@ -136,12 +130,12 @@ describe("KV API", () => {
     expect(mockWindowCc.kv.set).toHaveBeenCalledWith(
       widgetId,
       "inst-1::key",
-      "value1"
+      "value1",
     );
     expect(mockWindowCc.kv.set).toHaveBeenCalledWith(
       widgetId,
       "inst-2::key",
-      "value2"
+      "value2",
     );
   });
 
@@ -154,7 +148,7 @@ describe("KV API", () => {
     expect(mockWindowCc.kv.set).toHaveBeenCalledWith(
       widgetId,
       "inst-1::complex",
-      complexValue
+      complexValue,
     );
   });
 });
@@ -174,7 +168,7 @@ describe("SQL API", () => {
     expect(mockWindowCc.sql.run).toHaveBeenCalledWith(
       widgetId,
       "INSERT INTO table VALUES (?)",
-      [1]
+      [1],
     );
     expect(result).toEqual({ changes: 1, lastInsertRowid: 42 });
   });
@@ -189,7 +183,7 @@ describe("SQL API", () => {
     expect(mockWindowCc.sql.all).toHaveBeenCalledWith(
       widgetId,
       "SELECT * FROM table",
-      []
+      [],
     );
     expect(result).toEqual(rows);
   });
@@ -204,7 +198,7 @@ describe("SQL API", () => {
     expect(mockWindowCc.sql.get).toHaveBeenCalledWith(
       widgetId,
       "SELECT * FROM table WHERE id = ?",
-      [1]
+      [1],
     );
     expect(result).toEqual(row);
   });
@@ -216,7 +210,7 @@ describe("SQL API", () => {
 
     expect(mockWindowCc.sql.exec).toHaveBeenCalledWith(
       widgetId,
-      "PRAGMA journal_mode = WAL"
+      "PRAGMA journal_mode = WAL",
     );
   });
 
@@ -246,7 +240,7 @@ describe("SQL API", () => {
     expect(mockWindowCc.sql.all).toHaveBeenCalledWith(
       widgetId,
       "SELECT * FROM table",
-      []
+      [],
     );
   });
 });
@@ -275,7 +269,7 @@ describe("Google API", () => {
         clientId: "id",
         clientSecret: "secret",
         service: "gmail",
-      })
+      }),
     );
   });
 
@@ -287,7 +281,7 @@ describe("Google API", () => {
 
     expect(mockWindowCc.google.getToken).toHaveBeenCalledWith(
       widgetId,
-      "gmail"
+      "gmail",
     );
     expect(token).toBe("access-token");
   });
@@ -299,7 +293,7 @@ describe("Google API", () => {
 
     expect(mockWindowCc.google.disconnect).toHaveBeenCalledWith(
       widgetId,
-      "gmail"
+      "gmail",
     );
   });
 
@@ -311,7 +305,7 @@ describe("Google API", () => {
 
     expect(mockWindowCc.google.isConnected).toHaveBeenCalledWith(
       widgetId,
-      "gmail"
+      "gmail",
     );
     expect(connected).toBe(true);
   });
@@ -332,7 +326,7 @@ describe("Google Shared API", () => {
     // Should call connect with shared widget ID, not the widget's ID
     expect(mockWindowCc.google.connect).toHaveBeenCalledWith(
       expect.not.stringContaining(widgetId),
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 
@@ -378,7 +372,7 @@ describe("Google Shared API", () => {
       JSON.stringify({
         clientId: "stored-id",
         clientSecret: "stored-secret",
-      })
+      }),
     );
 
     const success = await google.shared.reconnect("gmail");
@@ -420,7 +414,7 @@ describe("Secrets API", () => {
     expect(mockWindowCc.secrets.set).toHaveBeenCalledWith(
       widgetId,
       "key",
-      "value"
+      "value",
     );
   });
 
@@ -453,7 +447,7 @@ describe("Shell API", () => {
     await api.shell.openExternal("https://example.com");
 
     expect(mockWindowCc.shell.openExternal).toHaveBeenCalledWith(
-      "https://example.com"
+      "https://example.com",
     );
   });
 
@@ -472,7 +466,7 @@ describe("Shell API", () => {
     await api.shell.showItemInFolder("/some/file");
 
     expect(mockWindowCc.shell.showItemInFolder).toHaveBeenCalledWith(
-      "/some/file"
+      "/some/file",
     );
   });
 });
@@ -521,7 +515,7 @@ describe("Network API", () => {
 
     expect(mockWindowCc.net.fetch).toHaveBeenCalledWith(
       "https://api.example.com/data",
-      undefined
+      undefined,
     );
     expect(response.ok).toBe(true);
   });
@@ -545,7 +539,7 @@ describe("Network API", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ key: "value" }),
-      })
+      }),
     );
   });
 });
@@ -574,10 +568,7 @@ describe("createWidgetApi", () => {
 
     await api.kv.get("key");
 
-    expect(mockWindowCc.kv.get).toHaveBeenCalledWith(
-      widgetId,
-      "inst-1::key"
-    );
+    expect(mockWindowCc.kv.get).toHaveBeenCalledWith(widgetId, "inst-1::key");
   });
 
   it("should pass widget ID to SQL operations", async () => {
@@ -589,7 +580,7 @@ describe("createWidgetApi", () => {
     expect(mockWindowCc.sql.all).toHaveBeenCalledWith(
       widgetId,
       expect.any(String),
-      expect.any(Array)
+      expect.any(Array),
     );
   });
 });
