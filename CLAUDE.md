@@ -15,10 +15,9 @@ npm run package      # Build + package with electron-builder
 
 ## Setup & Requirements
 
-**Node.js:** The project requires Node.js 20.19.0 or higher (see `package.json#engines.node`). Specifically:
+**Node.js:** The project requires Node.js 22.13.0 or 24.0.0+ (see `package.json#engines.node`). Specifically:
 
-- ✅ Node 20.19.0+
-- ✅ Node 22.12.0+
+- ✅ Node 22.13.0+
 - ✅ Node 24.0.0+
 
 Use `node --version` to check your version. Install a compatible version via [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://fnm.io/) if needed.
@@ -105,7 +104,7 @@ Two backends, both owned by `src/main/storage/`:
 
 `src/main/oauth.ts` implements a PKCE loopback OAuth flow. A local HTTP server on a random port receives the redirect from Google after the user completes the browser flow. Tokens auto-refresh before expiry. Credentials and tokens are stored in the widget's secrets vault. Widgets can use `api.google.shared` to share OAuth credentials under a common `'google'` widget namespace (useful for widgets that all need the same Google account).
 
-Available built-in service presets: `gmail`, `calendar`, `drive`, `contacts`, `notes`.
+Available built-in service presets: `gmail`, `calendar`, `drive`, `contacts`, `notes`, `drive-sync` (internal app-data sync service).
 
 ### Drive sync
 
@@ -139,6 +138,7 @@ The grid uses a 12-column layout with 60 px row height (`react-grid-layout`). Si
 | `name`        | `string`                | Display name                         |
 | `description` | `string?`               | Shown in the Add dialog              |
 | `version`     | `string`                | Semver-ish, e.g. `0.1.0`             |
+| `author`      | `string?`               | Widget author name                   |
 | `icon`        | `string?`               | Emoji or short string used in header |
 | `defaultSize` | `{ w, h }`              | Grid cells (12-col, 60 px rows)      |
 | `minSize`     | `{ w, h }?`             | Minimum drag/resize size             |
@@ -208,8 +208,8 @@ api.google.shared; // shared OAuth namespace ('google' widgetId)
 Unit tests live alongside source files under `src/` with the pattern `*.test.ts`. Run with:
 
 ```bash
-npm run test           # watch mode
+npm run test           # single-run with Vitest
 npm run test:coverage  # single-run with v8 coverage
 ```
 
-Covered areas: `src/shared/google.test.ts`, `src/shared/validation.test.ts`, `src/main/ipc.test.ts`, `src/main/storage/sqlite.test.ts`, `src/main/storage/json.test.ts`. There are no integration or end-to-end tests.
+Test files cover: core shared utilities (`validation`, `google`, `csv`, `sync-base`), main process IPC and storage, renderer components and state management, widget APIs and utilities. There are no integration or end-to-end tests.
