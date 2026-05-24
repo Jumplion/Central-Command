@@ -56,6 +56,7 @@ export function AppSettings({ onClose }: Props) {
         scopes: [
           ...GOOGLE_SERVICES.gmail.defaultScopes,
           ...GOOGLE_SERVICES.calendar.defaultScopes,
+          ...GOOGLE_SERVICES.contacts.defaultScopes,
         ],
       });
       setGoogleConnected(true);
@@ -116,9 +117,9 @@ export function AppSettings({ onClose }: Props) {
             <h3>Google Account</h3>
             <p className="help-text">
               Connect your Google account once and all widgets (Gmail, Calendar,
-              etc.) will use it automatically. Requires a Google Cloud project
-              with OAuth 2.0 credentials (Desktop app type) and the Gmail and
-              Calendar APIs enabled.
+              Contacts, etc.) will use it automatically. Requires a Google Cloud
+              project with OAuth 2.0 credentials (Desktop app type) and the
+              Gmail, Calendar, and People APIs enabled.
             </p>
 
             {googleConnected === null ? (

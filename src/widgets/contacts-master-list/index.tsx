@@ -27,7 +27,7 @@ function ContactsMasterList({ api, setTitle }: WidgetProps) {
     setLoading(true);
     setError(null);
     try {
-      const token = await api.google.shared.getToken("contacts");
+      const token = await api.google.shared.getToken();
       if (!token) {
         setConnected(false);
         return;
@@ -82,7 +82,7 @@ function ContactsMasterList({ api, setTitle }: WidgetProps) {
 
   useEffect(() => {
     api.google.shared
-      .isConnected("contacts")
+      .isConnected()
       .then((c) => setConnected(c))
       .catch(() => setConnected(false));
   }, [api]);
