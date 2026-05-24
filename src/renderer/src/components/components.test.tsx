@@ -338,9 +338,8 @@ describe("AppSettings", () => {
     const googleSection = sections.find((s) =>
       s.textContent?.includes("Google Account"),
     )!;
-    const button = googleSection.querySelector<HTMLButtonElement>(
-      "button.primary",
-    );
+    const button =
+      googleSection.querySelector<HTMLButtonElement>("button.primary");
     expect(button?.disabled).toBe(true);
     cleanupContainer(container);
   });
@@ -395,9 +394,8 @@ describe("AppSettings", () => {
 
     // Find and click the Drive Sync enable button
     const driveSection = sections[1];
-    const enableButton = driveSection.querySelector<HTMLButtonElement>(
-      "button.primary",
-    );
+    const enableButton =
+      driveSection.querySelector<HTMLButtonElement>("button.primary");
     expect(enableButton?.textContent).toContain("Enable Drive Sync");
 
     await act(async () => {

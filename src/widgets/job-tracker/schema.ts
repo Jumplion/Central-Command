@@ -71,6 +71,14 @@ export const EMAIL_INIT_SQL = `
     priority   INTEGER NOT NULL DEFAULT 0,
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS jt_query_rules (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    label      TEXT    NOT NULL DEFAULT '',
+    value      TEXT    NOT NULL,
+    enabled    INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
 `;
 
 // Default ATS domains seeded on first run: [domain, company_hint]
@@ -92,6 +100,24 @@ export const DEFAULT_ATS_DOMAINS: [string, string][] = [
   ["talent.com", ""],
   ["indeed.com", ""],
   ["roberthalf.com", ""],
+];
+
+// Default Gmail query fragments: [label, value]
+export const DEFAULT_QUERY_RULES: [string, string][] = [
+  ["Thank you for applying", 'subject:"thank you for applying"'],
+  ["Your application", 'subject:"your application"'],
+  ["Application received", 'subject:"we received your application"'],
+  ["Interview invitation", 'subject:"interview invitation"'],
+  ["Interview request", 'subject:"interview request"'],
+  ["Phone screen", 'subject:"phone screen"'],
+  ["Technical screen", 'subject:"technical screen"'],
+  ["Next steps", 'subject:"next steps"'],
+  ["Offer letter", 'subject:"offer letter"'],
+  ["Job offer", 'subject:"job offer"'],
+  ["Regret to inform", 'subject:"regret to inform"'],
+  ["Not moving forward", 'subject:"not moving forward"'],
+  ["Other candidates", 'subject:"other candidates"'],
+  ["Moving forward", 'subject:"moving forward"'],
 ];
 
 // Default status-detection rules: [status, field, operator, value, priority]

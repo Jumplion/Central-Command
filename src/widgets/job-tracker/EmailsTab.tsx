@@ -7,6 +7,7 @@ import type {
   JtAtsDomain,
   JtEmailConfig,
   JtEmailRule,
+  JtQueryRule,
   ParsedJobEmail,
   Status,
 } from "./types";
@@ -23,6 +24,8 @@ import {
   UPSERT_EMAIL_CONFIG,
   INSERT_EMAIL_RULE,
   INSERT_ATS_DOMAIN,
+  SELECT_ALL_QUERY_RULES,
+  INSERT_QUERY_RULE,
 } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import { NotConnected } from "../_shared/NotConnected";
@@ -32,6 +35,7 @@ import {
   DEFAULT_EMAIL_RULES,
   DEFAULT_ATS_DOMAINS,
   DEFAULT_GMAIL_QUERY,
+  DEFAULT_QUERY_RULES,
 } from "./schema";
 
 // ─── Auth state machine ───────────────────────────────────────────────────
@@ -148,7 +152,7 @@ function EmailRow({
         style={{
           ...row,
           display: "grid",
-          gridTemplateColumns: "1fr 2fr auto auto",
+          gridTemplateColumns: "1fr 2fr auto auto auto",
           alignItems: "center",
           gap: 8,
           padding: "6px 8px",
@@ -185,6 +189,19 @@ function EmailRow({
         </span>
         <StatusBadge status={(email.parsed_status as Status) || "Applied"} />
         <span style={{ ...dimText, whiteSpace: "nowrap" }}>{dateDisplay}</span>
+        {!dismissed && (
+          <button
+            className="ghost danger"
+            style={{ ...buttonTiny, padding: "2px 6px" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              void onDismiss(email.id);
+            }}
+            title="Dismiss this email"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Expanded suggestion panel */}
@@ -322,15 +339,6 @@ function EmailRow({
             >
               Open in Gmail ↗
             </button>
-            {!dismissed && (
-              <button
-                className="ghost danger"
-                style={{ ...buttonDefault, marginLeft: "auto" }}
-                onClick={() => void onDismiss(email.id)}
-              >
-                Dismiss
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -362,6 +370,7 @@ export function EmailsTab({
   // ── Dynamic email config ───────────────────────────────────────────────
   const [emailRules, setEmailRules] = useState<JtEmailRule[]>([]);
   const [atsDomains, setAtsDomains] = useState<JtAtsDomain[]>([]);
+  const [queryRules, setQueryRules] = useState<JtQueryRule[]>([]);
   const [emailConfig, setEmailConfig] = useState<JtEmailConfig>({
     id: 1,
     query: DEFAULT_GMAIL_QUERY,
@@ -370,21 +379,24 @@ export function EmailsTab({
   });
 
   const loadConfig = useCallback(async () => {
-    const [rules, domains, config] = await Promise.all([
+    const [rules, domains, config, qrules] = await Promise.all([
       api.sql.all<JtEmailRule>(SELECT_ALL_EMAIL_RULES),
       api.sql.all<JtAtsDomain>(SELECT_ALL_ATS_DOMAINS),
       api.sql.get<JtEmailConfig>(SELECT_EMAIL_CONFIG),
+      api.sql.all<JtQueryRule>(SELECT_ALL_QUERY_RULES),
     ]);
     setEmailRules(rules);
     setAtsDomains(domains);
+    setQueryRules(qrules);
     if (config) setEmailConfig(config);
   }, [api]);
 
   const seedDefaultsIfEmpty = useCallback(async () => {
-    const [ruleCount, domainCount, config] = await Promise.all([
+    const [ruleCount, domainCount, config, qruleCount] = await Promise.all([
       api.sql.get<{ n: number }>("SELECT COUNT(*) AS n FROM jt_email_rules"),
       api.sql.get<{ n: number }>("SELECT COUNT(*) AS n FROM jt_ats_domains"),
       api.sql.get<JtEmailConfig>(SELECT_EMAIL_CONFIG),
+      api.sql.get<{ n: number }>("SELECT COUNT(*) AS n FROM jt_query_rules"),
     ]);
     if ((ruleCount?.n ?? 0) === 0) {
       for (const [s, field, op, val, prio] of DEFAULT_EMAIL_RULES) {
@@ -407,11 +419,17 @@ export function EmailsTab({
     if (!config) {
       await api.sql.run(
         ...namedSql(UPSERT_EMAIL_CONFIG, {
-          query: DEFAULT_GMAIL_QUERY,
           days_back: 180,
           max_results: 50,
         }),
       );
+    }
+    if ((qruleCount?.n ?? 0) === 0) {
+      for (const [label, value] of DEFAULT_QUERY_RULES) {
+        await api.sql.run(
+          ...namedSql(INSERT_QUERY_RULE, { label, value, enabled: 1 }),
+        );
+      }
     }
     await loadConfig();
   }, [api, loadConfig]);
@@ -489,8 +507,12 @@ export function EmailsTab({
         setAuthState("no-creds");
         return;
       }
+      const enabledRules = queryRules.filter((r) => r.enabled === 1);
       const fetched = await fetchJobEmails(api, token, {
-        query: emailConfig.query,
+        query:
+          enabledRules.length > 0
+            ? enabledRules.map((r) => r.value).join(" OR ")
+            : DEFAULT_GMAIL_QUERY,
         daysBack: emailConfig.days_back,
         maxResults: emailConfig.max_results,
         rules: emailRules,
@@ -599,31 +621,26 @@ export function EmailsTab({
       <EmailConfigEditor
         rules={emailRules}
         atsDomains={atsDomains}
-        query={emailConfig.query}
+        queryRules={queryRules}
         daysBack={emailConfig.days_back}
         maxResults={emailConfig.max_results}
         api={api}
         onRulesChanged={() => void loadConfig()}
         onAtsChanged={() => void loadConfig()}
-        onQueryChanged={(q, d, m) => {
-          setEmailConfig((prev) => ({
-            ...prev,
-            query: q,
-            days_back: d,
-            max_results: m,
-          }));
-          void loadConfig();
-        }}
+        onQueryRulesChanged={() => void loadConfig()}
         onClose={() => setShowConfig(false)}
       />
     );
   }
 
   // Connected state
+  const validEmails = emails.filter(
+    (e) => String(e.parsed_company).trim() && String(e.parsed_role).trim(),
+  );
   const visibleEmails = showDismissed
-    ? emails
-    : emails.filter((e) => e.dismissed === 0);
-  const dismissedCount = emails.filter((e) => e.dismissed === 1).length;
+    ? validEmails
+    : validEmails.filter((e) => e.dismissed === 0);
+  const dismissedCount = validEmails.filter((e) => e.dismissed === 1).length;
 
   return (
     <div
@@ -712,6 +729,10 @@ export function EmailsTab({
               ? "Fetching emails…"
               : "No emails found — click Scan Gmail to start."}
           </div>
+        ) : validEmails.length === 0 ? (
+          <div style={{ ...dimText, padding: "16px 0", textAlign: "center" }}>
+            No valid emails found (all are missing company or role details).
+          </div>
         ) : visibleEmails.length === 0 ? (
           <div style={{ ...dimText, padding: "16px 0", textAlign: "center" }}>
             All emails dismissed.{" "}
@@ -729,7 +750,7 @@ export function EmailsTab({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 2fr auto auto",
+                gridTemplateColumns: "1fr 2fr auto auto auto",
                 gap: 8,
                 padding: "0 8px 4px",
                 color: "var(--text-dim)",
@@ -742,6 +763,7 @@ export function EmailsTab({
               <span>Subject</span>
               <span>Status</span>
               <span>Date</span>
+              <span></span>
             </div>
             {visibleEmails.map((email) => (
               <EmailRow

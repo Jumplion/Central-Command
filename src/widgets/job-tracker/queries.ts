@@ -42,4 +42,20 @@ export const DELETE_ATS_DOMAIN = "DELETE FROM jt_ats_domains WHERE id=?";
 export const SELECT_EMAIL_CONFIG = "SELECT * FROM jt_email_config WHERE id=1";
 
 export const UPSERT_EMAIL_CONFIG =
-  "INSERT INTO jt_email_config (id, query, days_back, max_results) VALUES (1, :query, :days_back, :max_results) ON CONFLICT(id) DO UPDATE SET query=excluded.query, days_back=excluded.days_back, max_results=excluded.max_results";
+  "INSERT INTO jt_email_config (id, query, days_back, max_results) VALUES (1, '', :days_back, :max_results) ON CONFLICT(id) DO UPDATE SET days_back=excluded.days_back, max_results=excluded.max_results";
+
+// ─── Query rules ──────────────────────────────────────────────────────────
+
+export const SELECT_ALL_QUERY_RULES =
+  "SELECT * FROM jt_query_rules ORDER BY id";
+
+export const INSERT_QUERY_RULE =
+  "INSERT INTO jt_query_rules (label, value, enabled) VALUES (:label, :value, :enabled)";
+
+export const UPDATE_QUERY_RULE =
+  "UPDATE jt_query_rules SET label=:label, value=:value WHERE id=:id";
+
+export const TOGGLE_QUERY_RULE =
+  "UPDATE jt_query_rules SET enabled=? WHERE id=?";
+
+export const DELETE_QUERY_RULE = "DELETE FROM jt_query_rules WHERE id=?";

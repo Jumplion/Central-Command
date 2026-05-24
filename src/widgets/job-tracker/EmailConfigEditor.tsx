@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { WidgetApi } from "@renderer/plugins/api";
-import type { JtAtsDomain, JtEmailRule, Status } from "./types";
+import type { JtAtsDomain, JtEmailRule, JtQueryRule, Status } from "./types";
 import { STATUSES } from "./types";
 import {
   buttonDefault,
@@ -17,12 +17,16 @@ import {
   UPDATE_ATS_DOMAIN,
   DELETE_ATS_DOMAIN,
   UPSERT_EMAIL_CONFIG,
+  INSERT_QUERY_RULE,
+  UPDATE_QUERY_RULE,
+  DELETE_QUERY_RULE,
+  TOGGLE_QUERY_RULE,
 } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import {
   DEFAULT_EMAIL_RULES,
   DEFAULT_ATS_DOMAINS,
-  DEFAULT_GMAIL_QUERY,
+  DEFAULT_QUERY_RULES,
 } from "./schema";
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -741,126 +745,434 @@ function AtsDomainsPanel({
   );
 }
 
-// ─── Query panel ──────────────────────────────────────────────────────────
+// ─── Query rules panel ────────────────────────────────────────────────────
 
-function QueryPanel({
-  query,
-  daysBack,
-  maxResults,
+function QueryRuleRow({
+  rule,
   api,
   onChanged,
 }: {
-  query: string;
-  daysBack: number;
-  maxResults: number;
+  rule: JtQueryRule;
   api: WidgetApi;
-  onChanged: (q: string, d: number, m: number) => void;
+  onChanged: () => void;
 }) {
-  const [queryVal, setQueryVal] = useState(query);
-  const [days, setDays] = useState(daysBack);
-  const [max, setMax] = useState(maxResults);
+  const [editing, setEditing] = useState(false);
+  const [label, setLabel] = useState(rule.label);
+  const [value, setValue] = useState(rule.value);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleToggle = async () => {
+    setError(null);
+    try {
+      await api.sql.run(TOGGLE_QUERY_RULE, [rule.enabled ? 0 : 1, rule.id]);
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   const handleSave = async () => {
-    if (!queryVal.trim()) return;
+    if (!value.trim()) return;
+    setError(null);
     setSaving(true);
     try {
       await api.sql.run(
-        ...namedSql(UPSERT_EMAIL_CONFIG, {
-          query: queryVal.trim(),
-          days_back: days,
-          max_results: max,
+        ...namedSql(UPDATE_QUERY_RULE, {
+          label: label.trim(),
+          value: value.trim(),
+          id: rule.id,
         }),
       );
-      onChanged(queryVal.trim(), days, max);
+      setEditing(false);
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReset = () => {
-    setQueryVal(DEFAULT_GMAIL_QUERY);
-    setDays(180);
-    setMax(50);
+  const handleDelete = async () => {
+    setError(null);
+    try {
+      await api.sql.run(DELETE_QUERY_RULE, [rule.id]);
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr auto",
+            gap: 8,
+            alignItems: "center",
+            padding: "4px 0",
+            borderBottom: "1px solid var(--border)",
+            fontSize: 12,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={rule.enabled === 1}
+            onChange={() => void handleToggle()}
+            style={{ cursor: "pointer", margin: 0 }}
+            disabled={error !== null}
+            title={error || ""}
+          />
+          <span style={{ opacity: rule.enabled ? 1 : 0.45 }}>
+            {rule.label ? (
+              <>
+                <span style={{ color: "var(--text-dim)" }}>
+                  {rule.label} —{" "}
+                </span>
+                <code style={{ fontSize: 11 }}>{rule.value}</code>
+              </>
+            ) : (
+              <code style={{ fontSize: 11 }}>{rule.value}</code>
+            )}
+          </span>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              className="ghost"
+              style={buttonTiny}
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </button>
+            <button
+              className="ghost danger"
+              style={buttonTiny}
+              onClick={() => void handleDelete()}
+              disabled={error !== null}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        {error && (
+          <div
+            style={{
+              fontSize: 11,
+              color: "var(--error)",
+              padding: "2px 0",
+              marginLeft: 24,
+            }}
+          >
+            {error}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        background: "var(--panel-2)",
+        border: "1px solid var(--border)",
+        borderRadius: 6,
+        padding: 8,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        fontSize: 12,
+        margin: "4px 0",
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 6 }}>
+        <div>
+          <div style={{ ...dimText, fontSize: 10, marginBottom: 2 }}>
+            Label (optional)
+          </div>
+          <input
+            style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Thank you for applying"
+            disabled={error !== null}
+          />
+        </div>
+        <div>
+          <div style={{ ...dimText, fontSize: 10, marginBottom: 2 }}>
+            Gmail query fragment
+          </div>
+          <input
+            style={{
+              ...inp,
+              width: "100%",
+              boxSizing: "border-box",
+              fontFamily: "monospace",
+            }}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder='e.g. subject:"interview"'
+            disabled={error !== null}
+          />
+        </div>
+      </div>
+      {error && (
+        <div style={{ fontSize: 11, color: "var(--error)" }}>{error}</div>
+      )}
+      <div style={{ display: "flex", gap: 6 }}>
+        <button
+          className="primary"
+          style={buttonSmall}
+          onClick={() => void handleSave()}
+          disabled={saving || !value.trim() || error !== null}
+        >
+          {saving ? "…" : "Save"}
+        </button>
+        <button
+          className="ghost"
+          style={buttonSmall}
+          onClick={() => {
+            setEditing(false);
+            setError(null);
+          }}
+          disabled={saving}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AddQueryRuleForm({
+  api,
+  onAdded,
+}: {
+  api: WidgetApi;
+  onAdded: () => void;
+}) {
+  const [label, setLabel] = useState("");
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleAdd = async () => {
+    if (!value.trim()) return;
+    setSaving(true);
+    try {
+      await api.sql.run(
+        ...namedSql(INSERT_QUERY_RULE, {
+          label: label.trim(),
+          value: value.trim(),
+          enabled: 1,
+        }),
+      );
+      setLabel("");
+      setValue("");
+      onAdded();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span style={{ ...dimText, fontSize: 11 }}>
-          Gmail search query used to find job-related emails. The widget appends{" "}
-          <code>newer_than:{days}d</code> automatically.
-        </span>
-        <button
-          className="ghost"
-          style={{ ...buttonTiny, flexShrink: 0, marginLeft: 8 }}
-          onClick={handleReset}
-          title="Restore default query"
-        >
-          Reset defaults
-        </button>
+    <div
+      style={{
+        background: "var(--panel-2)",
+        border: "1px solid var(--border)",
+        borderRadius: 6,
+        padding: 8,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        fontSize: 12,
+        marginTop: 8,
+      }}
+    >
+      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--text-dim)" }}>
+        Add query rule
       </div>
-      <div>
-        <div style={{ ...dimText, fontSize: 10, marginBottom: 4 }}>
-          Search query (Gmail search syntax)
-        </div>
-        <textarea
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 6 }}>
+        <input
+          style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Label (optional)"
+        />
+        <input
           style={{
             ...inp,
             width: "100%",
             boxSizing: "border-box",
-            minHeight: 100,
             fontFamily: "monospace",
-            resize: "vertical",
           }}
-          value={queryVal}
-          onChange={(e) => setQueryVal(e.target.value)}
-          spellCheck={false}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder='Gmail query, e.g. subject:"interview"'
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void handleAdd();
+          }}
         />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div>
-          <div style={{ ...dimText, fontSize: 10, marginBottom: 4 }}>
-            Look back (days)
-          </div>
-          <input
-            type="number"
-            style={{ ...inp, width: "100%", boxSizing: "border-box" }}
-            value={days}
-            min={1}
-            max={3650}
-            onChange={(e) => setDays(Number(e.target.value))}
-          />
-        </div>
-        <div>
-          <div style={{ ...dimText, fontSize: 10, marginBottom: 4 }}>
-            Max emails per scan
-          </div>
-          <input
-            type="number"
-            style={{ ...inp, width: "100%", boxSizing: "border-box" }}
-            value={max}
-            min={1}
-            max={500}
-            onChange={(e) => setMax(Number(e.target.value))}
-          />
-        </div>
       </div>
       <div>
         <button
           className="primary"
           style={buttonDefault}
-          onClick={() => void handleSave()}
-          disabled={saving || !queryVal.trim()}
+          onClick={() => void handleAdd()}
+          disabled={saving || !value.trim()}
         >
-          {saving ? "Saving…" : "Save Query Settings"}
+          {saving ? "…" : "+ Add Rule"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function QueryRulesPanel({
+  queryRules,
+  daysBack,
+  maxResults,
+  api,
+  onChanged,
+}: {
+  queryRules: JtQueryRule[];
+  daysBack: number;
+  maxResults: number;
+  api: WidgetApi;
+  onChanged: () => void;
+}) {
+  const [resetting, setResetting] = useState(false);
+  const [days, setDays] = useState(daysBack);
+  const [max, setMax] = useState(maxResults);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  const handleReset = async () => {
+    setResetting(true);
+    try {
+      await api.sql.exec("DELETE FROM jt_query_rules");
+      for (const [lbl, val] of DEFAULT_QUERY_RULES) {
+        await api.sql.run(
+          ...namedSql(INSERT_QUERY_RULE, {
+            label: lbl,
+            value: val,
+            enabled: 1,
+          }),
+        );
+      }
+      onChanged();
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    setSavingConfig(true);
+    try {
+      await api.sql.run(
+        ...namedSql(UPSERT_EMAIL_CONFIG, { days_back: days, max_results: max }),
+      );
+      onChanged();
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const enabledCount = queryRules.filter((r) => r.enabled === 1).length;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 6,
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ ...dimText, fontSize: 11, lineHeight: 1.5 }}>
+          Each enabled rule is a Gmail query fragment. They are combined with{" "}
+          <code>OR</code> to build the final search query ({enabledCount}{" "}
+          enabled).
+        </span>
+        <button
+          className="ghost"
+          style={{ ...buttonTiny, flexShrink: 0, marginLeft: 8 }}
+          onClick={() => void handleReset()}
+          disabled={resetting}
+          title="Restore default query rules"
+        >
+          {resetting ? "…" : "Reset defaults"}
+        </button>
+      </div>
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+        {queryRules.length === 0 ? (
+          <div style={{ ...dimText, fontSize: 12, padding: "8px 0" }}>
+            No rules yet. Add one below.
+          </div>
+        ) : (
+          queryRules.map((rule) => (
+            <QueryRuleRow
+              key={rule.id}
+              rule={rule}
+              api={api}
+              onChanged={onChanged}
+            />
+          ))
+        )}
+        <AddQueryRuleForm api={api} onAdded={onChanged} />
+        <div
+          style={{
+            marginTop: 16,
+            paddingTop: 12,
+            borderTop: "1px solid var(--border)",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr auto",
+            gap: 8,
+            alignItems: "flex-end",
+          }}
+        >
+          <div>
+            <div style={{ ...dimText, fontSize: 10, marginBottom: 4 }}>
+              Look back (days)
+            </div>
+            <input
+              type="number"
+              style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+              value={days}
+              min={1}
+              max={3650}
+              onChange={(e) => setDays(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <div style={{ ...dimText, fontSize: 10, marginBottom: 4 }}>
+              Max emails per scan
+            </div>
+            <input
+              type="number"
+              style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+              value={max}
+              min={1}
+              max={500}
+              onChange={(e) => setMax(Number(e.target.value))}
+            />
+          </div>
+          <button
+            className="primary"
+            style={buttonDefault}
+            onClick={() => void handleSaveConfig()}
+            disabled={savingConfig}
+          >
+            {savingConfig ? "…" : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -871,26 +1183,26 @@ function QueryPanel({
 export interface EmailConfigEditorProps {
   rules: JtEmailRule[];
   atsDomains: JtAtsDomain[];
-  query: string;
+  queryRules: JtQueryRule[];
   daysBack: number;
   maxResults: number;
   api: WidgetApi;
   onRulesChanged: () => void;
   onAtsChanged: () => void;
-  onQueryChanged: (q: string, d: number, m: number) => void;
+  onQueryRulesChanged: () => void;
   onClose: () => void;
 }
 
 export function EmailConfigEditor({
   rules,
   atsDomains,
-  query,
+  queryRules,
   daysBack,
   maxResults,
   api,
   onRulesChanged,
   onAtsChanged,
-  onQueryChanged,
+  onQueryRulesChanged,
   onClose,
 }: EmailConfigEditorProps) {
   const [tab, setTab] = useState<Tab>("rules");
@@ -956,12 +1268,12 @@ export function EmailConfigEditor({
           <RulesPanel rules={rules} api={api} onChanged={onRulesChanged} />
         )}
         {tab === "query" && (
-          <QueryPanel
-            query={query}
+          <QueryRulesPanel
+            queryRules={queryRules}
             daysBack={daysBack}
             maxResults={maxResults}
             api={api}
-            onChanged={onQueryChanged}
+            onChanged={onQueryRulesChanged}
           />
         )}
         {tab === "ats" && (

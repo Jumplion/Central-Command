@@ -189,7 +189,15 @@ export function AppSettings({ onClose }: Props) {
                 Checking…
               </div>
             ) : !googleConnected ? (
-              <div style={{ fontSize: 13, color: "var(--text-dim)", padding: 12, backgroundColor: "var(--surface-secondary)", borderRadius: 4 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--text-dim)",
+                  padding: 12,
+                  backgroundColor: "var(--surface-secondary)",
+                  borderRadius: 4,
+                }}
+              >
                 <strong>Connect Google Account first</strong>
                 <p>Enable Google Account above to set up Drive Sync.</p>
               </div>

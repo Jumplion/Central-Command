@@ -78,6 +78,14 @@ export interface JtAtsDomain {
   created_at: string;
 }
 
+export interface JtQueryRule {
+  id: number;
+  label: string;
+  value: string;
+  enabled: number;
+  created_at: string;
+}
+
 export interface JtEmailConfig {
   id: 1;
   query: string;
