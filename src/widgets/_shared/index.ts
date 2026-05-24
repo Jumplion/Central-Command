@@ -1,6 +1,8 @@
 export * from "./autocomplete";
 export * from "./form";
+export * from "./gmail";
 export * from "./list";
+export * from "./table";
 export { Chip } from "./Chip";
 export { NotConnected } from "./NotConnected";
 export { LineChart } from "./LineChart";
@@ -9,4 +11,7 @@ export type { PieSlice } from "./PieChart";
 export { StackedBarChart } from "./StackedBarChart";
 export { StatusBar } from "./StatusBar";
 export * from "./styles";
+export { TabBar } from "./TabBar";
+export type { TabDef } from "./TabBar";
+export { useGoogleConnection } from "./useGoogleConnection";
 export { WidgetLoading } from "./WidgetLoading";

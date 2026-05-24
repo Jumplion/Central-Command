@@ -7,6 +7,7 @@ import {
   centeredEmptyState,
 } from "../_shared/styles";
 import { NotConnected } from "../_shared/NotConnected";
+import { useGoogleConnection } from "../_shared/useGoogleConnection";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -166,7 +167,7 @@ function EventRow({
 // ─── Main widget ───────────────────────────────────────────────────────────
 
 function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
-  const [connected, setConnected] = useState<boolean | null>(null);
+  const [connected, setConnected] = useGoogleConnection(api);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -215,13 +216,6 @@ function DailyCalendarWidget({ api, setTitle }: WidgetProps) {
       setLoading(false);
     }
   }, [api, setTitle]);
-
-  useEffect(() => {
-    api.google.shared
-      .isConnected()
-      .then((c) => setConnected(c))
-      .catch(() => setConnected(false));
-  }, [api]);
 
   useEffect(() => {
     if (connected) void loadEvents();

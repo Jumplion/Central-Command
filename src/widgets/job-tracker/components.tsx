@@ -3,42 +3,14 @@ import { StackedBarChart } from "@widgets/_shared/StackedBarChart";
 import { LineChart } from "@widgets/_shared/LineChart";
 import { PieChart } from "@widgets/_shared/PieChart";
 import type { PieSlice } from "@widgets/_shared/PieChart";
-import { StatusBar as SharedStatusBar } from "@widgets/_shared/StatusBar";
 import { buttonDefault, inp } from "@widgets/_shared/styles";
+import { StatusBadge as _StatusBadge, Td as _Td } from "@widgets/_shared/table";
 import type { Application, AppFormData, Status } from "./types";
 import { STATUSES, STATUS_COLOR } from "./types";
 
 export { INIT_SQL, EMAIL_INIT_SQL, SCHEMA_MIGRATIONS } from "./schema";
 
 import { today } from "@shared/csv";
-export { today };
-
-export function StatusBar({
-  counts,
-  total,
-  filter,
-  onFilter,
-}: {
-  counts: Record<Status, number>;
-  total: number;
-  filter: Status | "All";
-  onFilter: (f: Status | "All") => void;
-}) {
-  return (
-    <SharedStatusBar
-      allLabel="All"
-      allCount={total}
-      selected={filter}
-      onSelect={onFilter}
-      items={STATUSES.map((s) => ({
-        value: s,
-        label: s,
-        count: counts[s],
-        color: STATUS_COLOR[s],
-      }))}
-    />
-  );
-}
 
 // ─── AppForm ──────────────────────────────────────────────────────────────
 
@@ -934,24 +906,9 @@ export function Th({
 }
 
 export function Td({ children }: { children?: React.ReactNode }) {
-  return (
-    <td style={{ padding: "5px 6px", verticalAlign: "middle" }}>{children}</td>
-  );
+  return <_Td>{children}</_Td>;
 }
 
 export function StatusBadge({ status }: { status: Status }) {
-  return (
-    <span
-      style={{
-        background: STATUS_COLOR[status] + "22",
-        color: STATUS_COLOR[status],
-        borderRadius: 4,
-        padding: "1px 6px",
-        fontSize: 11,
-        fontWeight: 600,
-      }}
-    >
-      {status}
-    </span>
-  );
+  return <_StatusBadge label={status} color={STATUS_COLOR[status]} />;
 }

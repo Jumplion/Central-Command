@@ -9,63 +9,10 @@ import type {
 import { GMAIL_BASE } from "./constants";
 import { UPSERT_EMAIL, UPDATE_EMAIL_READ_AND_SNIPPET } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
-
-// ─── Decoding helpers ─────────────────────────────────────────────────────
-
-function decodeBase64Url(encoded: string): string {
-  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
-  try {
-    return decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
-        .join(""),
-    );
-  } catch {
-    return atob(base64);
-  }
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function extractSnippetText(payload: GmailPayload): string {
-  if (payload.mimeType === "text/plain" && payload.body?.data) {
-    return decodeBase64Url(payload.body.data).slice(0, 500);
-  }
-  if (payload.mimeType === "text/html" && payload.body?.data) {
-    return stripHtml(decodeBase64Url(payload.body.data)).slice(0, 500);
-  }
-  if (payload.parts) {
-    for (const part of payload.parts) {
-      if (part.mimeType === "text/plain" && part.body?.data) {
-        return decodeBase64Url(part.body.data).slice(0, 500);
-      }
-    }
-    for (const part of payload.parts) {
-      const text = extractSnippetText(part);
-      if (text) return text;
-    }
-  }
-  return "";
-}
+import { getHeader as _getHeader } from "../_shared/gmail";
 
 export function getHeader(headers: GmailHeader[], name: string): string {
-  return (
-    headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ??
-    ""
-  );
+  return _getHeader(headers, name);
 }
 
 // ─── Rule evaluation ──────────────────────────────────────────────────────

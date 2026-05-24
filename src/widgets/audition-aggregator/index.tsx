@@ -8,18 +8,22 @@ import type {
   ProjectType,
   Status,
 } from "./types";
-import { PROJECT_TYPES, STATUSES, CSV_HEADERS } from "./constants";
+import {
+  PROJECT_TYPES,
+  STATUSES,
+  STATUS_COLOR,
+  CSV_HEADERS,
+} from "./constants";
 import { INIT_SQL } from "./schema";
 import { INSERT_AUDITION, UPDATE_AUDITION } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import { parseCSVLine, today } from "@shared/csv";
 import { exportCsv } from "@renderer/utils/csv";
-import { buttonDefault, WidgetLoading } from "../_shared";
+import { buttonDefault, WidgetLoading, TabBar, StatusBar } from "../_shared";
 import {
   AuditionForm,
   DeadlineCell,
   SiteRow,
-  StatusBar,
   StatusBadge,
   Td,
   Th,
@@ -202,10 +206,16 @@ function AuditionAggregator({ api }: WidgetProps) {
     >
       <SiteRow checks={siteChecks} onVisit={handleVisitSite} />
       <StatusBar
-        counts={statusCounts}
-        total={auds.length}
-        filter={statusFilter}
-        onFilter={setStatusFilter}
+        allLabel="All"
+        allCount={auds.length}
+        selected={statusFilter}
+        onSelect={setStatusFilter}
+        items={STATUSES.map((s) => ({
+          value: s,
+          label: s,
+          count: statusCounts[s],
+          color: STATUS_COLOR[s],
+        }))}
       />
       <TypeBar
         counts={typeCounts}
@@ -227,31 +237,14 @@ function AuditionAggregator({ api }: WidgetProps) {
         >
           + Add
         </button>
-        <div
-          style={{
-            display: "flex",
-            border: "1px solid var(--border)",
-            borderRadius: 4,
-            overflow: "hidden",
-          }}
-        >
-          {(["list", "chart"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              style={{
-                fontSize: 11,
-                padding: "3px 10px",
-                background: view === v ? "var(--accent)22" : "transparent",
-                color: view === v ? "var(--accent)" : "var(--text-dim)",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              {v === "list" ? "List" : "Chart"}
-            </button>
-          ))}
-        </div>
+        <TabBar
+          tabs={[
+            { value: "list", label: "List" },
+            { value: "chart", label: "Chart" },
+          ]}
+          active={view}
+          onChange={setView}
+        />
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
           <input
             ref={importRef}

@@ -14,6 +14,7 @@ import {
 } from "@shared/sync-base";
 import { DriveSync, DriveError } from "./storage/drive";
 import type { Storage } from "./storage";
+import { atomicWrite } from "./storage/helpers";
 
 export class SyncManager extends SyncManagerBase {
   constructor(
@@ -135,10 +136,7 @@ export class SyncManager extends SyncManagerBase {
           const localPath = path.join(this.storage.root, "state.json");
           if (await this._isRemoteNewer(localPath, remoteMs)) {
             const content = await this.drive.downloadFile(driveFile.id);
-            const tmp = localPath + ".tmp";
-            await fs.mkdir(path.dirname(localPath), { recursive: true });
-            await fs.writeFile(tmp, content, "utf-8");
-            await fs.rename(tmp, localPath);
+            await atomicWrite(localPath, content);
             stateChangedByRemote = true;
           }
           continue;
@@ -154,10 +152,7 @@ export class SyncManager extends SyncManagerBase {
           );
           if (await this._isRemoteNewer(localPath, remoteMs)) {
             const content = await this.drive.downloadFile(driveFile.id);
-            const tmp = localPath + ".tmp";
-            await fs.mkdir(path.dirname(localPath), { recursive: true });
-            await fs.writeFile(tmp, content, "utf-8");
-            await fs.rename(tmp, localPath);
+            await atomicWrite(localPath, content);
             this.storage.json.invalidateCache(kvWidgetId);
           }
           continue;
@@ -173,11 +168,7 @@ export class SyncManager extends SyncManagerBase {
           );
           if (await this._isRemoteNewer(localPath, remoteMs)) {
             const base64 = await this.drive.downloadFile(driveFile.id);
-            const content = Buffer.from(base64, "base64");
-            const tmp = localPath + ".tmp";
-            await fs.mkdir(path.dirname(localPath), { recursive: true });
-            await fs.writeFile(tmp, content);
-            await fs.rename(tmp, localPath);
+            await atomicWrite(localPath, Buffer.from(base64, "base64"));
             this.storage.sqlite.closeDb(dbWidgetId);
           }
         }

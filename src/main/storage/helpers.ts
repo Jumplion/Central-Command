@@ -15,18 +15,34 @@ export function widgetFile(
   return path.join(widgetDir(root, widgetId), fileName);
 }
 
+/** Module-level dedup map so concurrent callers for the same dir share one mkdir. */
+const _dirInitPending = new Map<string, Promise<void>>();
+
 export async function ensureWidgetDir(
   root: string,
   widgetId: string,
 ): Promise<void> {
-  await fs.mkdir(widgetDir(root, widgetId), { recursive: true });
+  const dir = widgetDir(root, widgetId);
+  const key = dir;
+  let pending = _dirInitPending.get(key);
+  if (!pending) {
+    pending = fs
+      .mkdir(dir, { recursive: true })
+      .then(() => undefined)
+      .finally(() => {
+        _dirInitPending.delete(key);
+      });
+    _dirInitPending.set(key, pending);
+  }
+  await pending;
 }
 
 export async function atomicWrite(
   filePath: string,
-  contents: string,
+  contents: string | Buffer,
 ): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, contents, "utf-8");
+  await fs.writeFile(tmp, contents);
   await fs.rename(tmp, filePath);
 }

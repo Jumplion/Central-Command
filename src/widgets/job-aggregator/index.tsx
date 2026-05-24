@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Widget, WidgetProps } from "@renderer/plugins/registry";
 import { useSqlInit } from "@renderer/hooks/useSqlInit";
-import { WidgetLoading } from "../_shared";
+import { WidgetLoading, TabBar } from "../_shared";
 
 import type { SavedJob, CompanyFeed, FeedJob } from "./types";
 import { DEFAULT_FEEDS, SEED_VERSION } from "./constants";
@@ -86,37 +86,19 @@ function JobAggregator({ api, settings }: WidgetProps) {
       }}
     >
       {/* Tab bar */}
-      <div
-        style={{
-          display: "flex",
-          flexShrink: 0,
-          border: "1px solid var(--border)",
-          borderRadius: 4,
-          overflow: "hidden",
-        }}
-      >
-        {(["search", "saved", "boards"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              flex: 1,
-              fontSize: 12,
-              padding: "5px 0",
-              border: "none",
-              cursor: "pointer",
-              background: tab === t ? "var(--accent)22" : "transparent",
-              color: tab === t ? "var(--accent)" : "var(--text-dim)",
-            }}
-          >
-            {t === "search"
-              ? "Search"
-              : t === "saved"
-                ? `Saved (${savedJobs.length})`
-                : `Boards (${feeds.length})`}
-          </button>
-        ))}
-      </div>
+      <TabBar
+        tabs={[
+          { value: "search", label: "Search" },
+          { value: "saved", label: `Saved (${savedJobs.length})` },
+          { value: "boards", label: `Boards (${feeds.length})` },
+        ]}
+        active={tab}
+        onChange={setTab}
+        containerStyle={{ flexShrink: 0 }}
+        fontSize={12}
+        padding="5px 0"
+        equalWidth
+      />
 
       {tab === "search" && (
         <SearchTab

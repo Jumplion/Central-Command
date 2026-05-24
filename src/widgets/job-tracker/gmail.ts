@@ -17,83 +17,14 @@ import type {
   Status,
 } from "./types";
 import { STATUSES } from "./types";
+import {
+  type GmailHeader,
+  type GmailPayload,
+  getHeader,
+  extractBodyText,
+} from "../_shared/gmail";
 
 const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────
-
-function decodeBase64Url(encoded: string): string {
-  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
-  try {
-    return decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
-        .join(""),
-    );
-  } catch {
-    return atob(base64);
-  }
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-// Extract text/plain body from a Gmail message payload, recursively handling multipart.
-function extractPlainText(payload: GmailPayload): string {
-  if (payload.mimeType === "text/plain" && payload.body?.data) {
-    return decodeBase64Url(payload.body.data);
-  }
-  if (payload.mimeType === "text/html" && payload.body?.data) {
-    return stripHtml(decodeBase64Url(payload.body.data));
-  }
-  if (payload.parts) {
-    // Prefer text/plain parts first
-    for (const part of payload.parts) {
-      if (part.mimeType === "text/plain" && part.body?.data) {
-        return decodeBase64Url(part.body.data);
-      }
-    }
-    // Fall back to html
-    for (const part of payload.parts) {
-      const text = extractPlainText(part);
-      if (text) return text;
-    }
-  }
-  return "";
-}
-
-function getHeader(headers: GmailHeader[], name: string): string {
-  return (
-    headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ??
-    ""
-  );
-}
-
-// ─── Types for raw Gmail API responses ───────────────────────────────────
-
-interface GmailHeader {
-  name: string;
-  value: string;
-}
-
-interface GmailPayload {
-  mimeType: string;
-  headers: GmailHeader[];
-  body?: { data?: string };
-  parts?: GmailPayload[];
-}
 
 interface GmailMessage {
   id: string;
@@ -322,7 +253,7 @@ export async function fetchJobEmails(
       /* keep raw */
     }
 
-    const bodyText = extractPlainText(msg.payload).slice(0, 3000);
+    const bodyText = extractBodyText(msg.payload, 3000);
     const parsed_company = parseCompany(subject, from, bodyText, atsDomains);
     const parsed_role = parseRole(subject, bodyText);
     const parsed_status = parseJobStatus(subject, bodyText, rules);

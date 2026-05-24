@@ -8,6 +8,7 @@ import {
   smallDimText,
 } from "../_shared/styles";
 import { NotConnected } from "../_shared/NotConnected";
+import { useGoogleConnection } from "../_shared/useGoogleConnection";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -127,10 +128,11 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
     Math.min(50, (settings.maxMessages as number) || 10),
   );
 
-  const [connected, setConnected] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<GmailMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [connected, setConnected] = useGoogleConnection(api);
 
   const loadMessages = useCallback(async () => {
     setLoading(true);
@@ -209,13 +211,6 @@ function GmailWidget({ api, settings, setTitle }: WidgetProps) {
       setLoading(false);
     }
   }, [api, maxMessages, setTitle]);
-
-  useEffect(() => {
-    api.google.shared
-      .isConnected()
-      .then((c) => setConnected(c))
-      .catch(() => setConnected(false));
-  }, [api]);
 
   useEffect(() => {
     if (connected) void loadMessages();

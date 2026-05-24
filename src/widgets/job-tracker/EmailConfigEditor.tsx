@@ -9,6 +9,7 @@ import {
   dimText,
   inp,
 } from "../_shared/styles";
+import { TabBar } from "../_shared/TabBar";
 import {
   INSERT_EMAIL_RULE,
   UPDATE_EMAIL_RULE,
@@ -1230,35 +1231,16 @@ export function EmailConfigEditor({
           ← Back
         </button>
         <span style={{ fontWeight: 600, fontSize: 13 }}>Email Settings</span>
-        <div
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            border: "1px solid var(--border)",
-            borderRadius: 4,
-            overflow: "hidden",
-          }}
-        >
-          {(["rules", "query", "ats"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              style={{
-                fontSize: 11,
-                padding: "3px 10px",
-                background: tab === t ? "var(--accent)22" : "transparent",
-                color: tab === t ? "var(--accent)" : "var(--text-dim)",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              {t === "rules"
-                ? "Rules"
-                : t === "query"
-                  ? "Query"
-                  : "ATS Domains"}
-            </button>
-          ))}
+        <div style={{ marginLeft: "auto" }}>
+          <TabBar
+            tabs={[
+              { value: "rules", label: "Rules" },
+              { value: "query", label: "Query" },
+              { value: "ats", label: "ATS Domains" },
+            ]}
+            active={tab}
+            onChange={setTab}
+          />
         </div>
       </div>
 

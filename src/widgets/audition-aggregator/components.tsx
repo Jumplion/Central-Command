@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { StackedBarChart } from "@widgets/_shared/StackedBarChart";
-import { StatusBar as SharedStatusBar } from "@widgets/_shared/StatusBar";
 import { Chip } from "@widgets/_shared/Chip";
 import { buttonDefault, inp } from "@widgets/_shared/styles";
+import { StatusBadge as _StatusBadge, Td as _Td } from "@widgets/_shared/table";
 import { today } from "@shared/csv";
 import type {
   Audition,
@@ -18,33 +18,6 @@ import {
   STATUS_COLOR,
 } from "./constants";
 import { formatAgo, recencyColor } from "./helpers";
-
-export function StatusBar({
-  counts,
-  total,
-  filter,
-  onFilter,
-}: {
-  counts: Record<Status, number>;
-  total: number;
-  filter: Status | "All";
-  onFilter: (f: Status | "All") => void;
-}) {
-  return (
-    <SharedStatusBar
-      allLabel="All"
-      allCount={total}
-      selected={filter}
-      onSelect={onFilter}
-      items={STATUSES.map((s) => ({
-        value: s,
-        label: s,
-        count: counts[s],
-        color: STATUS_COLOR[s],
-      }))}
-    />
-  );
-}
 
 // ─── SiteRow ───────────────────────────────────────────────────────────────────
 
@@ -435,34 +408,11 @@ export function Td({
   children?: React.ReactNode;
   dim?: boolean;
 }) {
-  return (
-    <td
-      style={{
-        padding: "5px 6px",
-        verticalAlign: "middle",
-        color: dim ? "var(--text-dim)" : undefined,
-      }}
-    >
-      {children}
-    </td>
-  );
+  return <_Td dim={dim}>{children}</_Td>;
 }
 
 export function StatusBadge({ status }: { status: Status }) {
-  return (
-    <span
-      style={{
-        background: STATUS_COLOR[status] + "22",
-        color: STATUS_COLOR[status],
-        borderRadius: 4,
-        padding: "1px 6px",
-        fontSize: 11,
-        fontWeight: 600,
-      }}
-    >
-      {status}
-    </span>
-  );
+  return <_StatusBadge label={status} color={STATUS_COLOR[status]} />;
 }
 
 export function DeadlineCell({ date }: { date: string }) {

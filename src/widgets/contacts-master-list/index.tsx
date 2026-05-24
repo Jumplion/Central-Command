@@ -8,6 +8,7 @@ import {
   smallDimText,
 } from "../_shared/styles";
 import { NotConnected } from "../_shared/NotConnected";
+import { useGoogleConnection } from "../_shared/useGoogleConnection";
 import {
   PEOPLE_API_BASE,
   PEOPLE_API_UPDATE_BASE,
@@ -22,7 +23,7 @@ import type { Contact, ContactEdit, RawPerson } from "./types";
 // ─── Main widget ───────────────────────────────────────────────────────────
 
 function ContactsMasterList({ api, setTitle }: WidgetProps) {
-  const [connected, setConnected] = useState<boolean | null>(null);
+  const [connected, setConnected] = useGoogleConnection(api);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -156,13 +157,6 @@ function ContactsMasterList({ api, setTitle }: WidgetProps) {
     },
     [api],
   );
-
-  useEffect(() => {
-    api.google.shared
-      .isConnected()
-      .then((c) => setConnected(c))
-      .catch(() => setConnected(false));
-  }, [api]);
 
   useEffect(() => {
     if (connected) void loadContacts();

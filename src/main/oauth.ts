@@ -9,7 +9,7 @@ import {
   getGoogleConnectionId,
   resolveGoogleScopes,
 } from "@shared/google";
-import type { GoogleServiceId } from "@shared/google";
+import type { GoogleServiceId, StoredGoogleCreds } from "@shared/google";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -26,11 +26,6 @@ const HTML_ESCAPE: Record<string, string> = {
 };
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (c) => HTML_ESCAPE[c]);
-}
-
-interface StoredCreds {
-  clientId: string;
-  clientSecret: string;
 }
 
 interface StoredTokens {
@@ -118,7 +113,7 @@ export class OAuthManager {
         expires_in: number;
       };
 
-      const creds: StoredCreds = { clientId, clientSecret };
+      const creds: StoredGoogleCreds = { clientId, clientSecret };
       const tokens: StoredTokens = {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
@@ -180,9 +175,9 @@ export class OAuthManager {
       return null;
     }
 
-    let creds: StoredCreds;
+    let creds: StoredGoogleCreds;
     try {
-      creds = JSON.parse(credsRaw) as StoredCreds;
+      creds = JSON.parse(credsRaw) as StoredGoogleCreds;
     } catch {
       await this.secrets.del(widgetId, tokenKey);
       return null;

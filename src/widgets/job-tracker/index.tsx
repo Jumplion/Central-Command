@@ -3,15 +3,13 @@ import type { Widget, WidgetProps } from "@renderer/plugins/registry";
 import { useSqlInit } from "@renderer/hooks/useSqlInit";
 import { STATUSES, STATUS_COLOR } from "./types";
 import type { Application, AppFormData, Status } from "./types";
-import { parseCSVLine } from "@shared/csv";
+import { parseCSVLine, today } from "@shared/csv";
 import { exportCsv } from "@renderer/utils/csv";
-import { buttonDefault, WidgetLoading } from "../_shared";
+import { buttonDefault, WidgetLoading, TabBar, StatusBar } from "../_shared";
 import {
   INIT_SQL,
   EMAIL_INIT_SQL,
   SCHEMA_MIGRATIONS,
-  today,
-  StatusBar,
   AppForm,
   ChartView,
   Th,
@@ -233,10 +231,16 @@ function JobTracker({ api }: WidgetProps) {
       }}
     >
       <StatusBar
-        counts={counts}
-        total={apps.length}
-        filter={filter}
-        onFilter={setFilter}
+        allLabel="All"
+        allCount={apps.length}
+        selected={filter}
+        onSelect={setFilter}
+        items={STATUSES.map((s) => ({
+          value: s,
+          label: s,
+          count: counts[s],
+          color: STATUS_COLOR[s],
+        }))}
       />
 
       <div
@@ -253,31 +257,15 @@ function JobTracker({ api }: WidgetProps) {
         >
           + Add
         </button>
-        <div
-          style={{
-            display: "flex",
-            border: "1px solid var(--border)",
-            borderRadius: 4,
-            overflow: "hidden",
-          }}
-        >
-          {(["list", "chart", "emails"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              style={{
-                fontSize: 11,
-                padding: "3px 10px",
-                background: view === v ? "var(--accent)22" : "transparent",
-                color: view === v ? "var(--accent)" : "var(--text-dim)",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              {v === "list" ? "List" : v === "chart" ? "Chart" : "Emails"}
-            </button>
-          ))}
-        </div>
+        <TabBar
+          tabs={[
+            { value: "list", label: "List" },
+            { value: "chart", label: "Chart" },
+            { value: "emails", label: "Emails" },
+          ]}
+          active={view}
+          onChange={setView}
+        />
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
           <input
             ref={importRef}

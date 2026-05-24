@@ -1,34 +1,15 @@
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import path from "node:path";
-import { promises as fs } from "node:fs";
 import type { SqlRunResult } from "@shared/types";
-import { widgetDir } from "./helpers";
+import { widgetDir, ensureWidgetDir } from "./helpers";
 
 export class SqliteStore {
   private dbs = new Map<string, DatabaseSync>();
-  private dirInit = new Map<string, Promise<void>>();
 
   /** Called after each write operation with the affected widgetId. */
   onWritten: (widgetId: string) => void = () => {};
 
   constructor(private root: string) {}
-
-  private async ensureWidgetDir(widgetId: string): Promise<void> {
-    const dir = widgetDir(this.root, widgetId);
-
-    let pending = this.dirInit.get(widgetId);
-    if (!pending) {
-      pending = fs
-        .mkdir(dir, { recursive: true })
-        .then(() => undefined)
-        .finally(() => {
-          this.dirInit.delete(widgetId);
-        });
-      this.dirInit.set(widgetId, pending);
-    }
-
-    await pending;
-  }
 
   private dbFor(widgetId: string): DatabaseSync {
     let db = this.dbs.get(widgetId);
@@ -46,7 +27,7 @@ export class SqliteStore {
     sql: string,
     params: unknown[] = [],
   ): Promise<SqlRunResult> {
-    await this.ensureWidgetDir(widgetId);
+    await ensureWidgetDir(this.root, widgetId);
     const result = this.dbFor(widgetId)
       .prepare(sql)
       .run(...(params as SQLInputValue[]));
@@ -62,7 +43,7 @@ export class SqliteStore {
     sql: string,
     params: unknown[] = [],
   ): Promise<unknown[]> {
-    await this.ensureWidgetDir(widgetId);
+    await ensureWidgetDir(this.root, widgetId);
     return this.dbFor(widgetId)
       .prepare(sql)
       .all(...(params as SQLInputValue[])) as unknown[];
@@ -73,14 +54,14 @@ export class SqliteStore {
     sql: string,
     params: unknown[] = [],
   ): Promise<unknown> {
-    await this.ensureWidgetDir(widgetId);
+    await ensureWidgetDir(this.root, widgetId);
     return this.dbFor(widgetId)
       .prepare(sql)
       .get(...(params as SQLInputValue[]));
   }
 
   async exec(widgetId: string, sql: string): Promise<void> {
-    await this.ensureWidgetDir(widgetId);
+    await ensureWidgetDir(this.root, widgetId);
     this.dbFor(widgetId).exec(sql);
     this.onWritten(widgetId);
   }
@@ -89,7 +70,7 @@ export class SqliteStore {
     widgetId: string,
     items: { sql: string; params?: unknown[] }[],
   ): Promise<SqlRunResult[]> {
-    await this.ensureWidgetDir(widgetId);
+    await ensureWidgetDir(this.root, widgetId);
     const db = this.dbFor(widgetId);
     const results: SqlRunResult[] = [];
     db.exec("BEGIN");
@@ -118,7 +99,7 @@ export class SqliteStore {
 
   /** Creates a consistent copy of the database at the destination path. */
   async backup(widgetId: string, destPath: string): Promise<void> {
-    await this.ensureWidgetDir(widgetId);
+    await ensureWidgetDir(this.root, widgetId);
     this.dbFor(widgetId).exec(`VACUUM INTO '${destPath}'`);
   }
 
