@@ -4,6 +4,9 @@ import type {
   Application,
   AppFormData,
   EmailSuggestion,
+  JtAtsDomain,
+  JtEmailConfig,
+  JtEmailRule,
   ParsedJobEmail,
   Status,
 } from "./types";
@@ -14,10 +17,22 @@ import {
   INSERT_APPLICATION,
   UPDATE_APPLICATION_STATUS,
   DISMISS_EMAIL_JOB,
+  SELECT_ALL_EMAIL_RULES,
+  SELECT_ALL_ATS_DOMAINS,
+  SELECT_EMAIL_CONFIG,
+  UPSERT_EMAIL_CONFIG,
+  INSERT_EMAIL_RULE,
+  INSERT_ATS_DOMAIN,
 } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import { NotConnected } from "../_shared/NotConnected";
-import { buttonDefault, inp } from "../_shared/styles";
+import { buttonDefault, buttonTiny, inp } from "../_shared/styles";
+import { EmailConfigEditor } from "./EmailConfigEditor";
+import {
+  DEFAULT_EMAIL_RULES,
+  DEFAULT_ATS_DOMAINS,
+  DEFAULT_GMAIL_QUERY,
+} from "./schema";
 
 // ─── Auth state machine ───────────────────────────────────────────────────
 
@@ -342,6 +357,64 @@ export function EmailsTab({
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
   const [showDismissed, setShowDismissed] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+
+  // ── Dynamic email config ───────────────────────────────────────────────
+  const [emailRules, setEmailRules] = useState<JtEmailRule[]>([]);
+  const [atsDomains, setAtsDomains] = useState<JtAtsDomain[]>([]);
+  const [emailConfig, setEmailConfig] = useState<JtEmailConfig>({
+    id: 1,
+    query: DEFAULT_GMAIL_QUERY,
+    days_back: 180,
+    max_results: 50,
+  });
+
+  const loadConfig = useCallback(async () => {
+    const [rules, domains, config] = await Promise.all([
+      api.sql.all<JtEmailRule>(SELECT_ALL_EMAIL_RULES),
+      api.sql.all<JtAtsDomain>(SELECT_ALL_ATS_DOMAINS),
+      api.sql.get<JtEmailConfig>(SELECT_EMAIL_CONFIG),
+    ]);
+    setEmailRules(rules);
+    setAtsDomains(domains);
+    if (config) setEmailConfig(config);
+  }, [api]);
+
+  const seedDefaultsIfEmpty = useCallback(async () => {
+    const [ruleCount, domainCount, config] = await Promise.all([
+      api.sql.get<{ n: number }>("SELECT COUNT(*) AS n FROM jt_email_rules"),
+      api.sql.get<{ n: number }>("SELECT COUNT(*) AS n FROM jt_ats_domains"),
+      api.sql.get<JtEmailConfig>(SELECT_EMAIL_CONFIG),
+    ]);
+    if ((ruleCount?.n ?? 0) === 0) {
+      for (const [s, field, op, val, prio] of DEFAULT_EMAIL_RULES) {
+        await api.sql.run(
+          ...namedSql(INSERT_EMAIL_RULE, {
+            status: s,
+            field,
+            operator: op,
+            value: val,
+            priority: prio,
+          }),
+        );
+      }
+    }
+    if ((domainCount?.n ?? 0) === 0) {
+      for (const [domain, company] of DEFAULT_ATS_DOMAINS) {
+        await api.sql.run(...namedSql(INSERT_ATS_DOMAIN, { domain, company }));
+      }
+    }
+    if (!config) {
+      await api.sql.run(
+        ...namedSql(UPSERT_EMAIL_CONFIG, {
+          query: DEFAULT_GMAIL_QUERY,
+          days_back: 180,
+          max_results: 50,
+        }),
+      );
+    }
+    await loadConfig();
+  }, [api, loadConfig]);
 
   // ── Auth initialization ──────────────────────────────────────────────
 
@@ -349,6 +422,7 @@ export function EmailsTab({
     const check = async () => {
       try {
         const connected = await api.google.shared.isConnected("gmail");
+        await seedDefaultsIfEmpty();
         if (connected) {
           setAuthState("connected");
           await loadEmails();
@@ -415,7 +489,13 @@ export function EmailsTab({
         setAuthState("no-creds");
         return;
       }
-      const fetched = await fetchJobEmails(api, token);
+      const fetched = await fetchJobEmails(api, token, {
+        query: emailConfig.query,
+        daysBack: emailConfig.days_back,
+        maxResults: emailConfig.max_results,
+        rules: emailRules,
+        atsDomains,
+      });
       setEmails(fetched);
     } catch (err) {
       setScanError(String(err));
@@ -513,6 +593,32 @@ export function EmailsTab({
     );
   }
 
+  // Config view
+  if (showConfig) {
+    return (
+      <EmailConfigEditor
+        rules={emailRules}
+        atsDomains={atsDomains}
+        query={emailConfig.query}
+        daysBack={emailConfig.days_back}
+        maxResults={emailConfig.max_results}
+        api={api}
+        onRulesChanged={() => void loadConfig()}
+        onAtsChanged={() => void loadConfig()}
+        onQueryChanged={(q, d, m) => {
+          setEmailConfig((prev) => ({
+            ...prev,
+            query: q,
+            days_back: d,
+            max_results: m,
+          }));
+          void loadConfig();
+        }}
+        onClose={() => setShowConfig(false)}
+      />
+    );
+  }
+
   // Connected state
   const visibleEmails = showDismissed
     ? emails
@@ -562,18 +668,27 @@ export function EmailsTab({
               : `Show dismissed (${dismissedCount})`}
           </button>
         )}
-        <button
-          className="ghost"
-          style={{
-            fontSize: 11,
-            padding: "3px 8px",
-            color: "var(--text-dim)",
-            marginLeft: "auto",
-          }}
-          onClick={() => void handleDisconnect()}
-        >
-          Disconnect
-        </button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+          <button
+            className="ghost"
+            style={buttonTiny}
+            onClick={() => setShowConfig(true)}
+            title="Configure email rules, query, and ATS domains"
+          >
+            ⚙ Configure
+          </button>
+          <button
+            className="ghost"
+            style={{
+              fontSize: 11,
+              padding: "3px 8px",
+              color: "var(--text-dim)",
+            }}
+            onClick={() => void handleDisconnect()}
+          >
+            Disconnect
+          </button>
+        </div>
       </div>
 
       {scanError && (

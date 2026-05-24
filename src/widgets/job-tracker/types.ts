@@ -60,3 +60,27 @@ export interface ParsedJobEmail {
 export type EmailSuggestion =
   | { kind: "add"; prefill: AppFormData }
   | { kind: "update"; app: Application; newStatus: Status };
+
+export interface JtEmailRule {
+  id: number;
+  status: string;
+  field: "subject" | "body" | "from";
+  operator: "contains" | "not_contains" | "starts_with" | "ends_with" | "regex";
+  value: string;
+  priority: number;
+  created_at: string;
+}
+
+export interface JtAtsDomain {
+  id: number;
+  domain: string;
+  company: string;
+  created_at: string;
+}
+
+export interface JtEmailConfig {
+  id: 1;
+  query: string;
+  days_back: number;
+  max_results: number;
+}

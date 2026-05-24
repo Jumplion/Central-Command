@@ -6,9 +6,65 @@ import {
   parseReqNumber,
   buildSuggestion,
   fetchJobEmails,
+  type FetchJobEmailsOptions,
 } from "./gmail";
-import type { Application, ParsedJobEmail } from "./types";
+import type {
+  Application,
+  JtAtsDomain,
+  JtEmailRule,
+  ParsedJobEmail,
+} from "./types";
 import { Buffer } from "buffer";
+
+// Minimal rule set covering the status test cases
+const TEST_RULES: JtEmailRule[] = [
+  {
+    id: 1,
+    status: "Offer",
+    field: "subject",
+    operator: "contains",
+    value: "offer",
+    priority: 100,
+    created_at: "",
+  },
+  {
+    id: 2,
+    status: "Rejected",
+    field: "body",
+    operator: "contains",
+    value: "unfortunately",
+    priority: 80,
+    created_at: "",
+  },
+  {
+    id: 3,
+    status: "Onsite",
+    field: "body",
+    operator: "contains",
+    value: "onsite",
+    priority: 70,
+    created_at: "",
+  },
+  {
+    id: 4,
+    status: "Phone",
+    field: "body",
+    operator: "contains",
+    value: "phone screen",
+    priority: 60,
+    created_at: "",
+  },
+];
+
+const NO_DOMAINS: JtAtsDomain[] = [];
+
+const DEFAULT_OPTS: FetchJobEmailsOptions = {
+  query: "subject:job",
+  daysBack: 30,
+  maxResults: 50,
+  rules: [],
+  atsDomains: [],
+};
 
 function makeMockApi(overrides: Partial<Record<"all" | "run", unknown>> = {}) {
   const sql = {
@@ -37,6 +93,7 @@ describe("job-tracker gmail parsers", () => {
       parseJobStatus(
         "We are excited to offer you a role",
         "Interview scheduled",
+        TEST_RULES,
       ),
     ).toBe("Offer");
   });
@@ -46,6 +103,7 @@ describe("job-tracker gmail parsers", () => {
       parseJobStatus(
         "Thank you",
         "Unfortunately we will not be moving forward",
+        TEST_RULES,
       ),
     ).toBe("Rejected");
   });
@@ -55,34 +113,39 @@ describe("job-tracker gmail parsers", () => {
       parseJobStatus(
         "Interview Invitation",
         "Your onsite interview is scheduled",
+        TEST_RULES,
       ),
     ).toBe("Onsite");
   });
 
   it("detects Phone interview language", () => {
-    expect(parseJobStatus("Next steps", "Please schedule a phone screen")).toBe(
-      "Phone",
-    );
+    expect(
+      parseJobStatus(
+        "Next steps",
+        "Please schedule a phone screen",
+        TEST_RULES,
+      ),
+    ).toBe("Phone");
   });
 
   it("defaults to Applied when no other status matches", () => {
-    expect(parseJobStatus("Hello", "Thanks for your application")).toBe(
-      "Applied",
-    );
+    expect(
+      parseJobStatus("Hello", "Thanks for your application", TEST_RULES),
+    ).toBe("Applied");
   });
 
   it("parses company from ATS display name and ignores ATS domain", () => {
     const subject = "Your application at Acme Corp";
     const from = "Acme Corp <noreply@greenhouse.io>";
     const body = "Thanks for applying.";
-    expect(parseCompany(subject, from, body)).toBe("Acme Corp");
+    expect(parseCompany(subject, from, body, NO_DOMAINS)).toBe("Acme Corp");
   });
 
   it("parses company from plain sender address using main domain", () => {
     const subject = "Application received";
     const from = "noreply@acme.com";
     const body = "Your application is under review";
-    expect(parseCompany(subject, from, body)).toBe("Acme");
+    expect(parseCompany(subject, from, body, NO_DOMAINS)).toBe("Acme");
   });
 
   it("parses role from explicit title patterns", () => {
@@ -231,7 +294,7 @@ describe("fetchJobEmails", () => {
       },
     ]);
 
-    const result = await fetchJobEmails(api, "token-abc");
+    const result = await fetchJobEmails(api, "token-abc", DEFAULT_OPTS);
 
     expect(api.net.fetch).toHaveBeenCalledTimes(2);
     expect(api.sql.all).toHaveBeenCalledTimes(2);
@@ -255,7 +318,7 @@ describe("fetchJobEmails", () => {
     api.sql.all.mockResolvedValueOnce([{ gmail_id: "existing" }]);
     api.sql.all.mockResolvedValueOnce([]);
 
-    const result = await fetchJobEmails(api, "token-abc");
+    const result = await fetchJobEmails(api, "token-abc", DEFAULT_OPTS);
 
     expect(api.net.fetch).toHaveBeenCalledTimes(1);
     expect(api.sql.all).toHaveBeenCalledTimes(2);
@@ -267,9 +330,9 @@ describe("fetchJobEmails", () => {
     const api = makeMockApi() as any;
     api.net.fetch.mockResolvedValueOnce({ ok: false, status: 401, body: "" });
 
-    await expect(fetchJobEmails(api, "token-abc")).rejects.toThrow(
-      "Gmail list failed: 401",
-    );
+    await expect(
+      fetchJobEmails(api, "token-abc", DEFAULT_OPTS),
+    ).rejects.toThrow("Gmail list failed: 401");
   });
 
   it("continues when an individual message fetch fails", async () => {
@@ -285,7 +348,7 @@ describe("fetchJobEmails", () => {
     api.sql.all.mockResolvedValueOnce([]);
     api.sql.all.mockResolvedValueOnce([]);
 
-    const result = await fetchJobEmails(api, "token-abc");
+    const result = await fetchJobEmails(api, "token-abc", DEFAULT_OPTS);
 
     expect(api.net.fetch).toHaveBeenCalledTimes(2);
     expect(api.sql.run).not.toHaveBeenCalled();

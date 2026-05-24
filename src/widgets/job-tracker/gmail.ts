@@ -11,48 +11,14 @@ import type {
   Application,
   AppFormData,
   EmailSuggestion,
+  JtAtsDomain,
+  JtEmailRule,
   ParsedJobEmail,
   Status,
 } from "./types";
-
-// ─── Gmail search query ───────────────────────────────────────────────────
-
-const GMAIL_QUERY = [
-  'subject:"thank you for applying"',
-  'subject:"your application"',
-  'subject:"we received your application"',
-  'subject:"interview invitation"',
-  'subject:"interview request"',
-  'subject:"phone screen"',
-  'subject:"technical screen"',
-  'subject:"next steps"',
-  'subject:"offer letter"',
-  'subject:"job offer"',
-  'subject:"regret to inform"',
-  'subject:"not moving forward"',
-  'subject:"other candidates"',
-  'subject:"moving forward"',
-].join(" OR ");
-
-const GMAIL_FULL_QUERY = `(${GMAIL_QUERY}) newer_than:180d`;
+import { STATUSES } from "./types";
 
 const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
-
-// ─── ATS domain → company hint ────────────────────────────────────────────
-
-const ATS_DOMAIN_MAP: Record<string, string> = {
-  "greenhouse.io": "", // Greenhouse sends on behalf of companies; use display name
-  "lever.co": "",
-  "workday.com": "",
-  "icims.com": "",
-  "smartrecruiters.com": "",
-  "taleo.net": "",
-  "jobvite.com": "",
-  "ashbyhq.com": "",
-  "rippling.com": "",
-  "bamboohr.com": "",
-  "successfactors.com": "",
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -141,55 +107,53 @@ interface GmailListResponse {
   nextPageToken?: string;
 }
 
+// ─── Rule-based status detection ─────────────────────────────────────────
+
+function ruleMatches(
+  source: string,
+  operator: JtEmailRule["operator"],
+  value: string,
+): boolean {
+  const s = source.toLowerCase();
+  const v = value.toLowerCase();
+  switch (operator) {
+    case "contains":
+      return s.includes(v);
+    case "not_contains":
+      return !s.includes(v);
+    case "starts_with":
+      return s.startsWith(v);
+    case "ends_with":
+      return s.endsWith(v);
+    case "regex": {
+      try {
+        return new RegExp(value, "i").test(source);
+      } catch {
+        return false;
+      }
+    }
+  }
+}
+
 // ─── Parsing ──────────────────────────────────────────────────────────────
 
 /**
- * Detect job-related status from subject + body text.
- * Priority order: Offer > Rejected > Onsite > Phone > Applied.
+ * Detect job-related status using dynamic rules (sorted by priority DESC).
+ * Falls back to "Applied" if no rule matches.
  */
-export function parseJobStatus(subject: string, body: string): Status {
-  const text = (subject + " " + body).toLowerCase();
-
-  if (
-    /\boffer\b/.test(text) ||
-    /pleased to offer/.test(text) ||
-    /we['']re (happy|excited|pleased) to (offer|extend)/.test(text) ||
-    /compensation package/.test(text)
-  )
-    return "Offer";
-
-  if (
-    /unfortunately/.test(text) ||
-    /not (moving|proceed|progress)\w* forward/.test(text) ||
-    /decided (not to|to not) move/.test(text) ||
-    /other candidates/.test(text) ||
-    /regret to (inform|let|tell)/.test(text) ||
-    /not (been )?selected/.test(text) ||
-    /will not be moving/.test(text) ||
-    /not (a )?(fit|match|right fit)/.test(text) ||
-    /position has been filled/.test(text)
-  )
-    return "Rejected";
-
-  if (
-    /\bonsite\b/.test(text) ||
-    /on-site interview/.test(text) ||
-    /\bin-person interview\b/.test(text) ||
-    /\btechnical (interview|assessment|screen)\b/.test(text) ||
-    /\btake-home\b/.test(text) ||
-    /\bcoding (challenge|assessment|test)\b/.test(text)
-  )
-    return "Onsite";
-
-  if (
-    /\binterview\b/.test(text) ||
-    /\bphone (screen|call|interview)\b/.test(text) ||
-    /\bschedule (a|an)? (call|chat|meeting|interview)\b/.test(text) ||
-    /\bnext steps\b/.test(text) ||
-    /\brecruiter (call|screen)\b/.test(text)
-  )
-    return "Phone";
-
+export function parseJobStatus(
+  subject: string,
+  body: string,
+  rules: JtEmailRule[],
+): Status {
+  for (const rule of rules) {
+    const source =
+      rule.field === "subject" ? subject : rule.field === "from" ? "" : body;
+    if (ruleMatches(source, rule.operator, rule.value)) {
+      const s = rule.status as Status;
+      if ((STATUSES as string[]).includes(s)) return s;
+    }
+  }
   return "Applied";
 }
 
@@ -198,6 +162,7 @@ export function parseCompany(
   subject: string,
   from: string,
   body: string,
+  atsDomains: JtAtsDomain[],
 ): string {
   const text = subject + "\n" + body;
 
@@ -208,7 +173,11 @@ export function parseCompany(
   // Sender domain
   const domainMatch = from.match(/@([\w.-]+)/);
   const domain = domainMatch ? domainMatch[1].toLowerCase() : "";
-  const isATS = Object.keys(ATS_DOMAIN_MAP).some((d) => domain.endsWith(d));
+
+  // Check dynamic ATS domain map
+  const atsEntry = atsDomains.find((d) => domain.endsWith(d.domain));
+  const isATS = !!atsEntry;
+  if (atsEntry?.company) return atsEntry.company;
 
   // Body / subject patterns
   const patterns = [
@@ -222,7 +191,6 @@ export function parseCompany(
     if (m?.[1]) return m[1].trim().replace(/[,.]$/, "");
   }
 
-  // If ATS domain, trust the display name over the domain
   if (isATS && displayName) return displayName;
 
   // Use the display name as fallback (strip email-address-only senders)
@@ -270,7 +238,18 @@ function normalizeCompany(name: string): string {
     .trim();
 }
 
+// ─── Fetch options ────────────────────────────────────────────────────────
+
+export interface FetchJobEmailsOptions {
+  query: string;
+  daysBack: number;
+  maxResults: number;
+  rules: JtEmailRule[];
+  atsDomains: JtAtsDomain[];
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────
+
 /** Extract a requisition / job-ID number from subject and body text. */
 export function parseReqNumber(subject: string, body: string): string {
   const text = subject + "\n" + body;
@@ -288,18 +267,21 @@ export function parseReqNumber(subject: string, body: string): string {
 }
 /**
  * Fetch job-related emails from Gmail, upsert them into the `email_jobs` table,
- * and return all currently stored (non-dismissed) emails ordered newest first.
+ * and return all currently stored emails ordered newest first.
  */
 export async function fetchJobEmails(
   api: WidgetApi,
   token: string,
-  maxResults = 50,
+  opts: FetchJobEmailsOptions,
 ): Promise<ParsedJobEmail[]> {
+  const { query, daysBack, maxResults, rules, atsDomains } = opts;
   const headers = { Authorization: `Bearer ${token}` };
+
+  const fullQuery = `(${query}) newer_than:${daysBack}d`;
 
   // 1. List matching messages
   const listRes = await api.net.fetch(
-    `${GMAIL_BASE}/messages?q=${encodeURIComponent(GMAIL_FULL_QUERY)}&maxResults=${maxResults}&fields=messages(id,threadId),nextPageToken`,
+    `${GMAIL_BASE}/messages?q=${encodeURIComponent(fullQuery)}&maxResults=${maxResults}&fields=messages(id,threadId),nextPageToken`,
     { headers },
   );
   if (!listRes.ok) throw new Error(`Gmail list failed: ${listRes.status}`);
@@ -341,9 +323,9 @@ export async function fetchJobEmails(
     }
 
     const bodyText = extractPlainText(msg.payload).slice(0, 3000);
-    const parsed_company = parseCompany(subject, from, bodyText);
+    const parsed_company = parseCompany(subject, from, bodyText, atsDomains);
     const parsed_role = parseRole(subject, bodyText);
-    const parsed_status = parseJobStatus(subject, bodyText);
+    const parsed_status = parseJobStatus(subject, bodyText, rules);
     const parsed_req_number = parseReqNumber(subject, bodyText);
 
     await api.sql.run(
