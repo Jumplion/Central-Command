@@ -99,7 +99,7 @@ describe("SecretsStore", () => {
 
     it("should be idempotent for missing keys", async () => {
       await expect(
-        store.del("widget1", "nonexistent")
+        store.del("widget1", "nonexistent"),
       ).resolves.toBeUndefined();
     });
 
@@ -135,7 +135,6 @@ describe("SecretsStore", () => {
     });
   });
 
-
   describe("widget ID validation", () => {
     it("should reject invalid widget IDs", async () => {
       // Widget IDs must be lowercase alphanumeric with hyphens
@@ -146,11 +145,10 @@ describe("SecretsStore", () => {
 
     it("should accept valid widget IDs", async () => {
       await expect(
-        store.set("valid-widget-id", "key", "value")
+        store.set("valid-widget-id", "key", "value"),
       ).resolves.toBeUndefined();
     });
   });
-
 
   describe("encryption methods", () => {
     it("should use safeStorage.encryptString when storing", async () => {
@@ -186,7 +184,10 @@ describe("SecretsStore", () => {
     it("should handle non-object values in secrets file", async () => {
       const filePath = path.join(root, "secrets");
       await fs.mkdir(filePath, { recursive: true });
-      await fs.writeFile(path.join(filePath, "widget1.json"), '["array", "instead", "of", "object"]');
+      await fs.writeFile(
+        path.join(filePath, "widget1.json"),
+        '["array", "instead", "of", "object"]',
+      );
 
       const store2 = new SecretsStore(root);
       const value = await store2.get("widget1", "key");
@@ -196,7 +197,7 @@ describe("SecretsStore", () => {
     it("should handle null values in secrets file", async () => {
       const filePath = path.join(root, "secrets");
       await fs.mkdir(filePath, { recursive: true });
-      await fs.writeFile(path.join(filePath, "widget1.json"), 'null');
+      await fs.writeFile(path.join(filePath, "widget1.json"), "null");
 
       const store2 = new SecretsStore(root);
       const value = await store2.get("widget1", "key");

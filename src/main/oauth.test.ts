@@ -66,14 +66,17 @@ describe("OAuthManager", () => {
         .mockResolvedValueOnce(JSON.stringify(storedTokens))
         .mockResolvedValueOnce(JSON.stringify(storedCreds));
 
-      global.fetch = vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          access_token: "new-token",
-          expires_in: 3600,
-        }),
-      } as Response));
+      global.fetch = vi.fn(
+        async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              access_token: "new-token",
+              expires_in: 3600,
+            }),
+          }) as Response,
+      );
 
       const token = await manager.getToken("widget1", "gmail");
       expect(token).toBe("new-token");
@@ -83,7 +86,7 @@ describe("OAuthManager", () => {
         expect.stringContaining("oauth2"),
         expect.objectContaining({
           method: "POST",
-        })
+        }),
       );
     });
 
@@ -103,10 +106,13 @@ describe("OAuthManager", () => {
         .mockResolvedValueOnce(JSON.stringify(storedTokens))
         .mockResolvedValueOnce(JSON.stringify(storedCreds));
 
-      global.fetch = vi.fn(async () => ({
-        ok: false,
-        status: 401,
-      } as Response));
+      global.fetch = vi.fn(
+        async () =>
+          ({
+            ok: false,
+            status: 401,
+          }) as Response,
+      );
 
       const token = await manager.getToken("widget1", "gmail");
       expect(token).toBeNull();
@@ -195,15 +201,18 @@ describe("OAuthManager", () => {
         .mockResolvedValueOnce(JSON.stringify(storedTokens))
         .mockResolvedValueOnce(JSON.stringify(storedCreds));
 
-      global.fetch = vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          access_token: "new-token",
-          refresh_token: "new-refresh-token",
-          expires_in: 3600,
-        }),
-      } as Response));
+      global.fetch = vi.fn(
+        async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              access_token: "new-token",
+              refresh_token: "new-refresh-token",
+              expires_in: 3600,
+            }),
+          }) as Response,
+      );
 
       const token = await manager.getToken("widget1", "gmail");
       expect(token).toBe("new-token");
@@ -212,7 +221,7 @@ describe("OAuthManager", () => {
       expect(mockSecrets.set).toHaveBeenCalledWith(
         "widget1",
         expect.stringContaining("google"),
-        expect.stringContaining("new-refresh-token")
+        expect.stringContaining("new-refresh-token"),
       );
     });
   });
@@ -223,7 +232,7 @@ describe("OAuthManager", () => {
 
       expect(mockSecrets.del).toHaveBeenCalledWith(
         "widget1",
-        expect.stringContaining("google")
+        expect.stringContaining("google"),
       );
       expect(mockSecrets.del).toHaveBeenCalledTimes(2); // creds + tokens
     });
@@ -315,5 +324,4 @@ describe("OAuthManager", () => {
       expect(t2).toBe("calendar-token");
     });
   });
-
 });
