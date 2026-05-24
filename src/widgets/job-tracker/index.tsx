@@ -81,7 +81,10 @@ function JobTracker({ api }: WidgetProps) {
 
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(
-      ...namedSql(INSERT_APPLICATION, { ...data, last_updated: Date.now() }),
+      ...namedSql(INSERT_APPLICATION, {
+        ...data,
+        last_updated: Date.now(),
+      }),
     );
     await load();
     setShowAdd(false);

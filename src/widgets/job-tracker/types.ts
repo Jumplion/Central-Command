@@ -4,10 +4,12 @@ export type Status =
   | "Onsite"
   | "Offer"
   | "Rejected"
-  | "Ghosted";
+  | "Ghosted"
+  | "Viewed";
 
 export const STATUSES: Status[] = [
   "Applied",
+  "Viewed",
   "Phone",
   "Onsite",
   "Offer",
@@ -17,6 +19,7 @@ export const STATUSES: Status[] = [
 
 export const STATUS_COLOR: Record<Status, string> = {
   Applied: "#6ea8ff",
+  Viewed: "#06b6d4",
   Phone: "#a78bfa",
   Onsite: "#f59e0b",
   Offer: "#34d399",
