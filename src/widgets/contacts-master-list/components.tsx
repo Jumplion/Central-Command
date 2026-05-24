@@ -92,27 +92,54 @@ export function EditContactForm({
   const [familyName, setFamilyName] = useState(contact.familyName);
   const [emails, setEmails] = useState(
     contact.emails.length > 0
-      ? contact.emails.map((e) => ({ value: e.value ?? "", type: e.type ?? "other" }))
+      ? contact.emails.map((e) => ({
+          value: e.value ?? "",
+          type: e.type ?? "other",
+        }))
       : [{ value: "", type: "other" }],
   );
   const [phones, setPhones] = useState(
     contact.phones.length > 0
-      ? contact.phones.map((p) => ({ value: p.value ?? "", type: p.type ?? "mobile" }))
+      ? contact.phones.map((p) => ({
+          value: p.value ?? "",
+          type: p.type ?? "mobile",
+        }))
       : [{ value: "", type: "mobile" }],
   );
   const [orgName, setOrgName] = useState(contact.organizations[0]?.name ?? "");
-  const [orgTitle, setOrgTitle] = useState(contact.organizations[0]?.title ?? "");
+  const [orgTitle, setOrgTitle] = useState(
+    contact.organizations[0]?.title ?? "",
+  );
   const [note, setNote] = useState(contact.note);
 
   const fieldStyle = { ...inp, fontSize: 11, padding: "3px 6px" } as const;
-  const labelStyle = { fontSize: 10, color: "var(--text-dim)", marginBottom: 2 } as const;
+  const labelStyle = {
+    fontSize: 10,
+    color: "var(--text-dim)",
+    marginBottom: 2,
+  } as const;
 
   const handleSave = () => {
-    void onSave({ givenName, familyName, emails, phones, orgName, orgTitle, note });
+    void onSave({
+      givenName,
+      familyName,
+      emails,
+      phones,
+      orgName,
+      orgTitle,
+      note,
+    });
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "6px 0" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        padding: "6px 0",
+      }}
+    >
       <div style={{ display: "flex", gap: 6 }}>
         <input
           style={{ ...fieldStyle, flex: 1 }}
@@ -247,7 +274,14 @@ export function EditContactForm({
       </div>
 
       <textarea
-        style={{ ...fieldStyle, height: 48, resize: "vertical", fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
+        style={{
+          ...fieldStyle,
+          height: 48,
+          resize: "vertical",
+          fontFamily: "inherit",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
         placeholder="Note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
@@ -255,7 +289,12 @@ export function EditContactForm({
       />
 
       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-        <button className="ghost" style={buttonSmall} onClick={onCancel} disabled={saving}>
+        <button
+          className="ghost"
+          style={buttonSmall}
+          onClick={onCancel}
+          disabled={saving}
+        >
           Cancel
         </button>
         <button
@@ -406,7 +445,13 @@ export function ContactRow({
             />
           ))}
           {contact.note && <DetailRow label="Note" value={contact.note} />}
-          <div style={{ marginTop: 4, display: "flex", justifyContent: "flex-end" }}>
+          <div
+            style={{
+              marginTop: 4,
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
             <button className="ghost" style={buttonSmall} onClick={onEdit}>
               Edit
             </button>

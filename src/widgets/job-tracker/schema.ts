@@ -11,6 +11,13 @@ export const INIT_SQL = `
     req_number   TEXT    NOT NULL DEFAULT '',
     last_updated INTEGER NOT NULL
   );
+
+  -- Remove any rows that violated schema constraints (e.g. from past seeding bugs
+  -- where jt_query_rules data was accidentally inserted into the applications table).
+  -- These are identifiable because last_updated is NOT NULL in schema but was NULL,
+  -- and status should always be a text value like 'Applied', never an integer.
+  DELETE FROM applications WHERE last_updated IS NULL;
+  DELETE FROM applications WHERE typeof(status) = 'integer';
 `;
 
 export const DEFAULT_GMAIL_QUERY = [

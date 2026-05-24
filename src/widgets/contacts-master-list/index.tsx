@@ -8,7 +8,13 @@ import {
   smallDimText,
 } from "../_shared/styles";
 import { NotConnected } from "../_shared/NotConnected";
-import { PEOPLE_API_BASE, PEOPLE_API_UPDATE_BASE, PERSON_FIELDS, PAGE_SIZE, UPDATE_PERSON_FIELDS } from "./constants";
+import {
+  PEOPLE_API_BASE,
+  PEOPLE_API_UPDATE_BASE,
+  PERSON_FIELDS,
+  PAGE_SIZE,
+  UPDATE_PERSON_FIELDS,
+} from "./constants";
 import { parseContact, contactMatchesQuery } from "./helpers";
 import { ContactRow } from "./components";
 import type { Contact, ContactEdit, RawPerson } from "./types";
@@ -96,8 +102,14 @@ function ContactsMasterList({ api, setTitle }: WidgetProps) {
         const body = JSON.stringify({
           etag: contact.etag,
           names: [{ givenName: edit.givenName, familyName: edit.familyName }],
-          emailAddresses: edit.emails.map((e) => ({ value: e.value, type: e.type })),
-          phoneNumbers: edit.phones.map((p) => ({ value: p.value, type: p.type })),
+          emailAddresses: edit.emails.map((e) => ({
+            value: e.value,
+            type: e.type,
+          })),
+          phoneNumbers: edit.phones.map((p) => ({
+            value: p.value,
+            type: p.type,
+          })),
           organizations: edit.orgName
             ? [{ name: edit.orgName, title: edit.orgTitle }]
             : [],

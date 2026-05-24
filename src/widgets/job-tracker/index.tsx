@@ -32,6 +32,8 @@ function JobTracker({ api }: WidgetProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [view, setView] = useState<"list" | "chart" | "emails">("list");
   const [importing, setImporting] = useState(false);
+  const [sortBy, setSortBy] = useState<keyof Application>("last_updated");
+  const [sortAsc, setSortAsc] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
 
   const ready = useSqlInit(api, INIT_SQL + EMAIL_INIT_SQL, SCHEMA_MIGRATIONS);
@@ -64,6 +66,30 @@ function JobTracker({ api }: WidgetProps) {
     [apps, filter],
   );
 
+  const sorted = useMemo(() => {
+    const copy = [...filtered];
+    copy.sort((a, b) => {
+      const aVal = a[sortBy];
+      const bVal = b[sortBy];
+
+      // Handle null/undefined values
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return sortAsc ? -1 : 1;
+      if (bVal == null) return sortAsc ? 1 : -1;
+
+      // Numeric comparison
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortAsc ? aVal - bVal : bVal - aVal;
+      }
+
+      // String comparison
+      const aStr = String(aVal).toLowerCase();
+      const bStr = String(bVal).toLowerCase();
+      return sortAsc ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+    });
+    return copy;
+  }, [filtered, sortBy, sortAsc]);
+
   const companySuggestions = useMemo(
     () => [...new Set(apps.map((a) => a.company).filter(Boolean))],
     [apps],
@@ -78,6 +104,17 @@ function JobTracker({ api }: WidgetProps) {
     () => [...new Set(apps.map((a) => a.location).filter(Boolean))],
     [apps],
   );
+
+  const handleSortColumn = (column: keyof Application) => {
+    if (sortBy === column) {
+      // Toggle ascending/descending if same column clicked
+      setSortAsc(!sortAsc);
+    } else {
+      // Switch to new column, default to ascending
+      setSortBy(column);
+      setSortAsc(true);
+    }
+  };
 
   const handleAdd = async (data: AppFormData) => {
     await api.sql.run(
@@ -311,17 +348,67 @@ function JobTracker({ api }: WidgetProps) {
             >
               <thead>
                 <tr style={{ color: "var(--text-dim)" }}>
-                  <Th>Company</Th>
-                  <Th>Role</Th>
-                  <Th>Location</Th>
-                  <Th>Status</Th>
-                  <Th>Applied</Th>
-                  <Th>Req #</Th>
+                  <Th
+                    onClick={() => handleSortColumn("company")}
+                    sortIndicator={
+                      sortBy === "company" ? (sortAsc ? "asc" : "desc") : null
+                    }
+                  >
+                    Company
+                  </Th>
+                  <Th
+                    onClick={() => handleSortColumn("role")}
+                    sortIndicator={
+                      sortBy === "role" ? (sortAsc ? "asc" : "desc") : null
+                    }
+                  >
+                    Role
+                  </Th>
+                  <Th
+                    onClick={() => handleSortColumn("location")}
+                    sortIndicator={
+                      sortBy === "location" ? (sortAsc ? "asc" : "desc") : null
+                    }
+                  >
+                    Location
+                  </Th>
+                  <Th
+                    onClick={() => handleSortColumn("status")}
+                    sortIndicator={
+                      sortBy === "status" ? (sortAsc ? "asc" : "desc") : null
+                    }
+                  >
+                    Status
+                  </Th>
+                  <Th
+                    onClick={() => handleSortColumn("applied_at")}
+                    sortIndicator={
+                      sortBy === "applied_at"
+                        ? sortAsc
+                          ? "asc"
+                          : "desc"
+                        : null
+                    }
+                  >
+                    Applied
+                  </Th>
+                  <Th
+                    onClick={() => handleSortColumn("req_number")}
+                    sortIndicator={
+                      sortBy === "req_number"
+                        ? sortAsc
+                          ? "asc"
+                          : "desc"
+                        : null
+                    }
+                  >
+                    Req #
+                  </Th>
                   <Th />
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((app) =>
+                {sorted.map((app) =>
                   editingId === app.id ? (
                     <tr key={app.id}>
                       <td colSpan={7} style={{ padding: "4px 0" }}>
