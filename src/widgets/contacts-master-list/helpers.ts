@@ -4,6 +4,7 @@ export function parseContact(p: RawPerson): Contact {
   const photo = p.photos?.find((ph) => !ph.default) ?? p.photos?.[0];
   return {
     id: p.resourceName,
+    etag: p.etag,
     displayName: p.names?.[0]?.displayName ?? "(no name)",
     givenName: p.names?.[0]?.givenName ?? "",
     familyName: p.names?.[0]?.familyName ?? "",

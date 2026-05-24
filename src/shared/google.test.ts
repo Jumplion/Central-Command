@@ -42,7 +42,7 @@ describe("GOOGLE_SERVICES", () => {
     }
   });
 
-  it("uses least-privilege default scopes for built-in services", () => {
+  it("uses expected default scopes for built-in services", () => {
     expect(GOOGLE_SERVICES.gmail.defaultScopes).toEqual([
       "https://www.googleapis.com/auth/gmail.readonly",
     ]);
@@ -53,7 +53,7 @@ describe("GOOGLE_SERVICES", () => {
       "https://www.googleapis.com/auth/drive.readonly",
     ]);
     expect(GOOGLE_SERVICES.contacts.defaultScopes).toEqual([
-      "https://www.googleapis.com/auth/contacts.readonly",
+      "https://www.googleapis.com/auth/contacts",
     ]);
     expect(GOOGLE_SERVICES.notes.defaultScopes).toEqual([
       "https://www.googleapis.com/auth/keep.readonly",
@@ -80,7 +80,7 @@ describe("resolveGoogleScopes", () => {
         clientSecret: "secret",
         service: "contacts",
       }),
-    ).toEqual(["https://www.googleapis.com/auth/contacts.readonly"]);
+    ).toEqual(["https://www.googleapis.com/auth/contacts"]);
   });
 
   it("rejects missing scopes for ad-hoc connections", () => {

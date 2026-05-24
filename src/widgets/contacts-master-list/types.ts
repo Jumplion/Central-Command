@@ -64,6 +64,7 @@ export interface RawPerson {
 
 export interface Contact {
   id: string;
+  etag?: string;
   displayName: string;
   givenName: string;
   familyName: string;
@@ -74,5 +75,15 @@ export interface Contact {
   birthdays: Birthday[];
   photoUrl: string | null;
   urls: Url[];
+  note: string;
+}
+
+export interface ContactEdit {
+  givenName: string;
+  familyName: string;
+  emails: Array<{ value: string; type: string }>;
+  phones: Array<{ value: string; type: string }>;
+  orgName: string;
+  orgTitle: string;
   note: string;
 }

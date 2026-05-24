@@ -27,7 +27,7 @@ export const GOOGLE_SERVICES = {
     name: "Google Contacts",
     description: "Contacts via the Google People API.",
     apiBaseUrl: "https://people.googleapis.com/v1/",
-    defaultScopes: ["https://www.googleapis.com/auth/contacts.readonly"],
+    defaultScopes: ["https://www.googleapis.com/auth/contacts"],
   },
   notes: {
     id: "notes",

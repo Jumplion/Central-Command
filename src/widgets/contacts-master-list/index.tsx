@@ -8,10 +8,10 @@ import {
   smallDimText,
 } from "../_shared/styles";
 import { NotConnected } from "../_shared/NotConnected";
-import { PEOPLE_API_BASE, PERSON_FIELDS, PAGE_SIZE } from "./constants";
+import { PEOPLE_API_BASE, PEOPLE_API_UPDATE_BASE, PERSON_FIELDS, PAGE_SIZE, UPDATE_PERSON_FIELDS } from "./constants";
 import { parseContact, contactMatchesQuery } from "./helpers";
 import { ContactRow } from "./components";
-import type { Contact, RawPerson } from "./types";
+import type { Contact, ContactEdit, RawPerson } from "./types";
 
 // ─── Main widget ───────────────────────────────────────────────────────────
 
@@ -22,6 +22,8 @@ function ContactsMasterList({ api, setTitle }: WidgetProps) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const loadContacts = useCallback(async () => {
     setLoading(true);
@@ -79,6 +81,69 @@ function ContactsMasterList({ api, setTitle }: WidgetProps) {
       setLoading(false);
     }
   }, [api, setTitle]);
+
+  const saveContact = useCallback(
+    async (contact: Contact, edit: ContactEdit) => {
+      setSavingId(contact.id);
+      setError(null);
+      try {
+        const token = await api.google.shared.getToken();
+        if (!token) {
+          setConnected(false);
+          return;
+        }
+
+        const body = JSON.stringify({
+          etag: contact.etag,
+          names: [{ givenName: edit.givenName, familyName: edit.familyName }],
+          emailAddresses: edit.emails.map((e) => ({ value: e.value, type: e.type })),
+          phoneNumbers: edit.phones.map((p) => ({ value: p.value, type: p.type })),
+          organizations: edit.orgName
+            ? [{ name: edit.orgName, title: edit.orgTitle }]
+            : [],
+          biographies: edit.note ? [{ value: edit.note }] : [],
+        });
+
+        const res = await api.net.fetch(
+          `${PEOPLE_API_UPDATE_BASE}/${contact.id}:updateContact?updatePersonFields=${UPDATE_PERSON_FIELDS}`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body,
+          },
+        );
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            setConnected(false);
+            setError("Session expired — reconnect Google in App Settings.");
+          } else {
+            throw new Error(`Update failed: ${res.status}`);
+          }
+          return;
+        }
+
+        const updated = JSON.parse(res.body) as RawPerson;
+        const updatedContact = parseContact(updated);
+        setContacts((prev) => {
+          const next = prev.map((c) =>
+            c.id === contact.id ? updatedContact : c,
+          );
+          next.sort((a, b) => a.displayName.localeCompare(b.displayName));
+          return next;
+        });
+        setEditingId(null);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [api],
+  );
 
   useEffect(() => {
     api.google.shared
@@ -178,9 +243,18 @@ function ContactsMasterList({ api, setTitle }: WidgetProps) {
               key={c.id}
               contact={c}
               expanded={expandedId === c.id}
-              onToggle={() =>
-                setExpandedId((prev) => (prev === c.id ? null : c.id))
-              }
+              onToggle={() => {
+                if (editingId === c.id) return;
+                setExpandedId((prev) => (prev === c.id ? null : c.id));
+              }}
+              editing={editingId === c.id}
+              onEdit={() => {
+                setExpandedId(c.id);
+                setEditingId(c.id);
+              }}
+              onSave={(edit) => saveContact(c, edit)}
+              onCancelEdit={() => setEditingId(null)}
+              saving={savingId === c.id}
             />
           ))
         )}
