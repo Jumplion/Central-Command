@@ -1,15 +1,15 @@
 import { useState } from "react";
 import type { WidgetApi } from "@renderer/plugins/api";
-import type { JtAtsDomain, JtEmailRule, JtQueryRule, Status } from "./types";
-import { STATUSES } from "./types";
+import type { JtAtsDomain, JtEmailRule, JtQueryRule, Status } from "../types";
+import { STATUSES } from "../types";
 import {
   buttonDefault,
   buttonSmall,
   buttonTiny,
   dimText,
   inp,
-} from "../_shared/styles";
-import { TabBar } from "../_shared/TabBar";
+} from "../../_shared/styles";
+import { TabBar } from "../../_shared/TabBar";
 import {
   INSERT_EMAIL_RULE,
   UPDATE_EMAIL_RULE,
@@ -22,13 +22,13 @@ import {
   UPDATE_QUERY_RULE,
   DELETE_QUERY_RULE,
   TOGGLE_QUERY_RULE,
-} from "./queries";
+} from "../queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import {
   DEFAULT_EMAIL_RULES,
   DEFAULT_ATS_DOMAINS,
   DEFAULT_QUERY_RULES,
-} from "./schema";
+} from "../schema";
 
 // ─── Constants ────────────────────────────────────────────────────────────
 

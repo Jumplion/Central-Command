@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { empTypeLabel, formatSalary, relativeDate, stripHtml } from "./utils";
+import { empTypeLabel, formatSalary, relativeDate, stripHtml } from "../utils";
 
 describe("formatSalary", () => {
   it("formats min and max salary with period suffix", () => {

@@ -1,4 +1,4 @@
-import type { FolderTreeNode } from "./types";
+import type { FolderTreeNode } from "../types";
 
 interface FolderNodeProps {
   node: FolderTreeNode;

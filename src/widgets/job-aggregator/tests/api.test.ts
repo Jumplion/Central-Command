@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchFeed, searchArbeitnow } from "./api";
-import type { CompanyFeed, NetFetcher } from "./types";
+import { fetchFeed, searchArbeitnow } from "../api";
+import type { CompanyFeed, NetFetcher } from "../types";
 
 afterEach(() => {
   vi.restoreAllMocks();

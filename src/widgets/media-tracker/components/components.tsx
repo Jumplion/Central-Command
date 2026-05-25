@@ -7,16 +7,16 @@ import type {
   MediaLink,
   MediaStatus,
   MediaType,
-} from "./types";
+} from "../types";
 import {
   LINK_RELATIONS,
   MEDIA_TYPES,
   STATUS_COLORS,
   STATUS_FILTERS,
   CURRENT_VERB,
-} from "./constants";
-import { formatDate, relationLabel, statusLabel, typeEmoji } from "./helpers";
-import { s } from "./styles";
+} from "../constants";
+import { formatDate, relationLabel, statusLabel, typeEmoji } from "../helpers";
+import { s } from "../styles";
 
 // ─── StarRating / StarDisplay ─────────────────────────────────────────────────
 

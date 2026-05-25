@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import type { GmailEmail, GmailFolder, GroupBy } from "./types";
-import { extractDisplayName, getGroupValue } from "./gmail";
-import { dimText, buttonTiny } from "../_shared/styles";
+import type { GmailEmail, GmailFolder, GroupBy } from "../types";
+import { extractDisplayName, getGroupValue } from "../gmail";
+import { dimText, buttonTiny } from "../../_shared/styles";
 
 // ─── Single email row ─────────────────────────────────────────────────────
 

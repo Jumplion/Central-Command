@@ -5,7 +5,7 @@ import {
   relationLabel,
   formatDate,
   lookupMetadata,
-} from "./helpers";
+} from "../helpers";
 import type { WidgetApi } from "@renderer/plugins/api";
 
 // ─── typeEmoji ────────────────────────────────────────────────────────────────

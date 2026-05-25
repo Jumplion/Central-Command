@@ -3,7 +3,7 @@ import {
   filterSuggestions,
   findSuggestion,
   normalizeSuggestionText,
-} from "./autocomplete";
+} from "../autocomplete";
 
 describe("autocomplete helpers", () => {
   it("normalizes text to lowercase trimmed string", () => {

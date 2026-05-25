@@ -1,13 +1,13 @@
 import { useState } from "react";
-import type { GmailFolder, GmailRule } from "./types";
+import type { GmailFolder, GmailRule } from "../types";
 import {
   buttonDefault,
   buttonSmall,
   buttonTiny,
   dimText,
   inp,
-} from "../_shared/styles";
-import { INSERT_RULE, UPDATE_RULE, DELETE_RULE } from "./queries";
+} from "../../_shared/styles";
+import { INSERT_RULE, UPDATE_RULE, DELETE_RULE } from "../queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import type { WidgetApi } from "@renderer/plugins/api";
 

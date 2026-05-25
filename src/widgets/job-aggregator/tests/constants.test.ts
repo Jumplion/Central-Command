@@ -10,7 +10,7 @@ import {
   SEED_VERSION,
   STATUSES,
   STATUS_COLORS,
-} from "./constants";
+} from "../constants";
 
 describe("MONTH_NAMES", () => {
   it("has exactly 12 entries", () => {

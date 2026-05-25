@@ -6,21 +6,21 @@ import type {
   FeedJob,
   FeedType,
   StampedFeedJob,
-} from "./types";
+} from "../types";
 import {
   FEED_LABELS,
   COMPANY_TYPE_LABELS,
   COMPANY_TYPE_COLORS,
   COMPANY_TYPE_ORDER,
-} from "./constants";
+} from "../constants";
 import {
   INSERT_SAVED_JOB,
   INSERT_COMPANY_FEED,
   INSERT_FEED_JOB,
-} from "./queries";
+} from "../queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
-import { inp, buttonDefault } from "../_shared/styles";
-import { fetchFeed } from "./api";
+import { inp, buttonDefault } from "../../_shared/styles";
+import { fetchFeed } from "../api";
 import { AddFeedForm, BoardSection } from "./components";
 
 interface Props {

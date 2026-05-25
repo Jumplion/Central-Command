@@ -6,7 +6,7 @@ import type {
   FeedType,
   CompanyType,
   SavedStatus,
-} from "./types";
+} from "../types";
 import {
   SOURCE_COLORS,
   STATUS_COLORS,
@@ -17,8 +17,8 @@ import {
   STATUSES,
   thStyle,
   tdStyle,
-} from "./constants";
-import { inp } from "../_shared/styles";
+} from "../constants";
+import { inp } from "../../_shared/styles";
 import {
   buttonDefault,
   buttonSmall,
@@ -26,8 +26,8 @@ import {
   badgePill,
   dimText,
   smallDimText,
-} from "../_shared/styles";
-import { formatSalary, relativeDate, empTypeLabel } from "./utils";
+} from "../../_shared/styles";
+import { formatSalary, relativeDate, empTypeLabel } from "../utils";
 
 // ─── SourceBadge ──────────────────────────────────────────────────────────────
 

@@ -15,8 +15,8 @@ import {
   Th,
   Td,
   StatusBadge,
-} from "./components";
-import { EmailsTab } from "./EmailsTab";
+} from "./components/components";
+import { EmailsTab } from "./components/EmailsTab";
 import {
   INSERT_APPLICATION,
   UPDATE_APPLICATION,

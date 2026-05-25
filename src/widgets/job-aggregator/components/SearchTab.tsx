@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { WidgetApi } from "@renderer/plugins/api";
-import type { JobListing } from "./types";
-import { inp } from "../_shared/styles";
-import { searchArbeitnow } from "./api";
+import type { JobListing } from "../types";
+import { inp } from "../../_shared/styles";
+import { searchArbeitnow } from "../api";
 import { JobCard } from "./components";
-import { buttonDefault, dimText, smallDimText } from "../_shared/styles";
-import { INSERT_SAVED_JOB } from "./queries";
+import { buttonDefault, dimText, smallDimText } from "../../_shared/styles";
+import { INSERT_SAVED_JOB } from "../queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 
 interface Props {

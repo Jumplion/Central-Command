@@ -10,14 +10,14 @@ import type {
   CastingSite,
   ProjectType,
   Status,
-} from "./types";
+} from "../types";
 import {
   CASTING_SITES,
   PROJECT_TYPES,
   STATUSES,
   STATUS_COLOR,
-} from "./constants";
-import { formatAgo, recencyColor } from "./helpers";
+} from "../constants";
+import { formatAgo, recencyColor } from "../helpers";
 
 // ─── SiteRow ───────────────────────────────────────────────────────────────────
 

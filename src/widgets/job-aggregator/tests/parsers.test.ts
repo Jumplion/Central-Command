@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGreenhouseJSON, parseLeverXML, parseRSSXML } from "./parsers";
+import { parseGreenhouseJSON, parseLeverXML, parseRSSXML } from "../parsers";
 
 describe("parseLeverXML", () => {
   it("parses lever jobs and falls back apply URL", () => {

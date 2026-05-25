@@ -6,9 +6,9 @@ import { WidgetLoading, TabBar } from "../_shared";
 import type { SavedJob, CompanyFeed, FeedJob } from "./types";
 import { DEFAULT_FEEDS, SEED_VERSION } from "./constants";
 import { INIT_SQL } from "./schema";
-import { SearchTab } from "./SearchTab";
-import { SavedTab } from "./SavedTab";
-import { BoardsTab } from "./BoardsTab";
+import { SearchTab } from "./components/SearchTab";
+import { SavedTab } from "./components/SavedTab";
+import { BoardsTab } from "./components/BoardsTab";
 
 // ─── Main component ───────────────────────────────────────────────────────────
 

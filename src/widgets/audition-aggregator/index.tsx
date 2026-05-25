@@ -29,7 +29,7 @@ import {
   Th,
   TypeBar,
   WeeklyChart,
-} from "./components";
+} from "./components/components";
 
 // ─── Main widget ───────────────────────────────────────────────────────────────
 

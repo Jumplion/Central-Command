@@ -7,13 +7,13 @@ import {
   buildSuggestion,
   fetchJobEmails,
   type FetchJobEmailsOptions,
-} from "./gmail";
+} from "../gmail";
 import type {
   Application,
   JtAtsDomain,
   JtEmailRule,
   ParsedJobEmail,
-} from "./types";
+} from "../types";
 import { Buffer } from "buffer";
 
 // Minimal rule set covering the status test cases

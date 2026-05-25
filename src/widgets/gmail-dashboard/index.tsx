@@ -22,10 +22,10 @@ import {
 } from "./queries";
 import { fetchAndStoreEmails, reapplyAllRules } from "./gmail";
 import { namedSql } from "@renderer/plugins/sqlParams";
-import { FolderTree } from "./FolderTree";
-import { EmailList } from "./EmailList";
-import { RulesEditor } from "./RulesEditor";
-import { FolderManager } from "./FolderManager";
+import { FolderTree } from "./components/FolderTree";
+import { EmailList } from "./components/EmailList";
+import { RulesEditor } from "./components/RulesEditor";
+import { FolderManager } from "./components/FolderManager";
 import { NotConnected } from "../_shared/NotConnected";
 import { buttonDefault, buttonSmall, dimText } from "../_shared/styles";
 

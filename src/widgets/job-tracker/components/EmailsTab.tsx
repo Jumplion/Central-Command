@@ -10,10 +10,10 @@ import type {
   JtQueryRule,
   ParsedJobEmail,
   Status,
-} from "./types";
-import { STATUSES, STATUS_COLOR } from "./types";
+} from "../types";
+import { STATUSES, STATUS_COLOR } from "../types";
 import { AppForm, StatusBadge } from "./components";
-import { fetchJobEmails, buildSuggestion } from "./gmail";
+import { fetchJobEmails, buildSuggestion } from "../gmail";
 import {
   INSERT_APPLICATION,
   UPDATE_APPLICATION_STATUS,
@@ -26,17 +26,17 @@ import {
   INSERT_ATS_DOMAIN,
   SELECT_ALL_QUERY_RULES,
   INSERT_QUERY_RULE,
-} from "./queries";
+} from "../queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
-import { NotConnected } from "../_shared/NotConnected";
-import { buttonDefault, buttonTiny, inp } from "../_shared/styles";
+import { NotConnected } from "../../_shared/NotConnected";
+import { buttonDefault, buttonTiny, inp } from "../../_shared/styles";
 import { EmailConfigEditor } from "./EmailConfigEditor";
 import {
   DEFAULT_EMAIL_RULES,
   DEFAULT_ATS_DOMAINS,
   DEFAULT_GMAIL_QUERY,
   DEFAULT_QUERY_RULES,
-} from "./schema";
+} from "../schema";
 
 // ─── Auth state machine ───────────────────────────────────────────────────
 

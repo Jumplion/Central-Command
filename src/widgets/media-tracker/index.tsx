@@ -20,7 +20,12 @@ import {
 } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
 import { lookupMetadata } from "./helpers";
-import { ImportModal, LinkModal, MediaCard, StarRating } from "./components";
+import {
+  ImportModal,
+  LinkModal,
+  MediaCard,
+  StarRating,
+} from "./components/components";
 import { s } from "./styles";
 
 // ─── Main widget component ────────────────────────────────────────────────────
