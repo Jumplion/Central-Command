@@ -20,23 +20,13 @@ import { STATUSES } from "./types";
 import {
   type GmailHeader,
   type GmailPayload,
+  type GmailApiMessage,
+  type GmailListResponse,
   getHeader,
   extractBodyText,
 } from "../_shared/gmail";
 
 const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
-
-interface GmailMessage {
-  id: string;
-  threadId: string;
-  snippet: string;
-  payload: GmailPayload;
-}
-
-interface GmailListResponse {
-  messages?: Array<{ id: string; threadId: string }>;
-  nextPageToken?: string;
-}
 
 // ─── Rule-based status detection ─────────────────────────────────────────
 
@@ -238,7 +228,7 @@ export async function fetchJobEmails(
     );
     if (!msgRes.ok) continue;
 
-    const msg = JSON.parse(msgRes.body) as GmailMessage;
+    const msg = JSON.parse(msgRes.body) as GmailApiMessage;
     const msgHeaders = msg.payload?.headers ?? [];
     const subject = getHeader(msgHeaders, "Subject");
     const from = getHeader(msgHeaders, "From");

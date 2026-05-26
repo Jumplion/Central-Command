@@ -44,29 +44,3 @@ export interface FolderTreeNode extends GmailFolder {
   emailCount: number;
   unreadCount: number;
 }
-
-// Raw Gmail API types
-export interface GmailHeader {
-  name: string;
-  value: string;
-}
-
-export interface GmailPayload {
-  mimeType: string;
-  headers: GmailHeader[];
-  body?: { data?: string };
-  parts?: GmailPayload[];
-}
-
-export interface GmailApiMessage {
-  id: string;
-  threadId: string;
-  snippet: string;
-  labelIds?: string[];
-  payload: GmailPayload;
-}
-
-export interface GmailListResponse {
-  messages?: Array<{ id: string; threadId: string }>;
-  nextPageToken?: string;
-}

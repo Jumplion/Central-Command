@@ -4,8 +4,8 @@ import type {
   GmailHeader,
   GmailListResponse,
   GmailPayload,
-  GmailRule,
-} from "./types";
+} from "../_shared/gmail";
+import type { GmailRule } from "./types";
 import { GMAIL_BASE } from "./constants";
 import { UPSERT_EMAIL, UPDATE_EMAIL_READ_AND_SNIPPET } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";

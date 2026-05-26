@@ -12,6 +12,19 @@ export interface GmailPayload {
   parts?: GmailPayload[];
 }
 
+export interface GmailApiMessage {
+  id: string;
+  threadId: string;
+  snippet: string;
+  labelIds?: string[];
+  payload: GmailPayload;
+}
+
+export interface GmailListResponse {
+  messages?: Array<{ id: string; threadId: string }>;
+  nextPageToken?: string;
+}
+
 export function decodeBase64Url(encoded: string): string {
   const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
   try {
