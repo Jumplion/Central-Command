@@ -14,6 +14,7 @@ Run these from the repository root, or invoke them directly from `scripts/`.
 - `scripts/typecheck.sh` — run full TypeScript checks
 - `scripts/package.sh` — build and package the app installer
 - `scripts/lint.sh` — run a validation step using TypeScript typecheck
+- `scripts/validate.sh` — complete validation pipeline (lint → tests → build → run)
 
 ## Notes
 
