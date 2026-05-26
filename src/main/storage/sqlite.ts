@@ -100,7 +100,8 @@ export class SqliteStore {
   /** Creates a consistent copy of the database at the destination path. */
   async backup(widgetId: string, destPath: string): Promise<void> {
     await ensureWidgetDir(this.root, widgetId);
-    if (destPath.includes("'")) throw new Error("destPath cannot contain single quotes");
+    if (destPath.includes("'"))
+      throw new Error("destPath cannot contain single quotes");
     this.dbFor(widgetId).exec(`VACUUM INTO '${destPath}'`);
   }
 

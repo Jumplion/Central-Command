@@ -403,8 +403,6 @@ export function Th({ children }: { children?: React.ReactNode }) {
   );
 }
 
-
-
 export function DeadlineCell({ date }: { date: string }) {
   if (!date) return <Td dim>—</Td>;
   const now = new Date();

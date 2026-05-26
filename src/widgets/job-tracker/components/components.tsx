@@ -905,5 +905,3 @@ export function Th({
     </th>
   );
 }
-
-

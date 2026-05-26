@@ -430,7 +430,10 @@ function JobTracker({ api }: WidgetProps) {
                       <Td>{app.role}</Td>
                       <Td>{app.location}</Td>
                       <Td>
-                        <StatusBadge label={app.status} color={STATUS_COLOR[app.status]} />
+                        <StatusBadge
+                          label={app.status}
+                          color={STATUS_COLOR[app.status]}
+                        />
                       </Td>
                       <Td>{app.applied_at}</Td>
                       <Td>{app.req_number}</Td>

@@ -68,23 +68,25 @@ function AuditionAggregator({ api }: WidgetProps) {
   }, [ready]);
 
   const statusCounts = useMemo(
-    () => STATUSES.reduce<Record<Status, number>>(
-      (acc, s) => {
-        acc[s] = auds.filter((a) => a.status === s).length;
-        return acc;
-      },
-      {} as Record<Status, number>,
-    ),
+    () =>
+      STATUSES.reduce<Record<Status, number>>(
+        (acc, s) => {
+          acc[s] = auds.filter((a) => a.status === s).length;
+          return acc;
+        },
+        {} as Record<Status, number>,
+      ),
     [auds],
   );
   const typeCounts = useMemo(
-    () => PROJECT_TYPES.reduce<Record<ProjectType, number>>(
-      (acc, t) => {
-        acc[t] = auds.filter((a) => a.project_type === t).length;
-        return acc;
-      },
-      {} as Record<ProjectType, number>,
-    ),
+    () =>
+      PROJECT_TYPES.reduce<Record<ProjectType, number>>(
+        (acc, t) => {
+          acc[t] = auds.filter((a) => a.project_type === t).length;
+          return acc;
+        },
+        {} as Record<ProjectType, number>,
+      ),
     [auds],
   );
 
@@ -341,7 +343,10 @@ function AuditionAggregator({ api }: WidgetProps) {
                       <Td dim={!aud.role}>{aud.role || "—"}</Td>
                       <Td>{aud.project_type}</Td>
                       <Td>
-                        <StatusBadge label={aud.status} color={STATUS_COLOR[aud.status]} />
+                        <StatusBadge
+                          label={aud.status}
+                          color={STATUS_COLOR[aud.status]}
+                        />
                       </Td>
                       <Td dim={!aud.casting_studio}>
                         {aud.casting_studio || "—"}
