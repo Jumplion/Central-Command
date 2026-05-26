@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { StackedBarChart } from "@widgets/_shared/StackedBarChart";
 import { Chip } from "@widgets/_shared/Chip";
 import { buttonDefault, inp } from "@widgets/_shared/styles";
-import { StatusBadge as _StatusBadge, Td as _Td } from "@widgets/_shared/table";
+import { StatusBadge, Td } from "@widgets/_shared/table";
 import { today } from "@shared/csv";
 import type {
   Audition,
@@ -18,6 +18,8 @@ import {
   STATUS_COLOR,
 } from "../constants";
 import { formatAgo, recencyColor } from "../helpers";
+
+export { StatusBadge, Td };
 
 // ─── SiteRow ───────────────────────────────────────────────────────────────────
 
@@ -401,19 +403,7 @@ export function Th({ children }: { children?: React.ReactNode }) {
   );
 }
 
-export function Td({
-  children,
-  dim,
-}: {
-  children?: React.ReactNode;
-  dim?: boolean;
-}) {
-  return <_Td dim={dim}>{children}</_Td>;
-}
 
-export function StatusBadge({ status }: { status: Status }) {
-  return <_StatusBadge label={status} color={STATUS_COLOR[status]} />;
-}
 
 export function DeadlineCell({ date }: { date: string }) {
   if (!date) return <Td dim>—</Td>;

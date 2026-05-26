@@ -4,11 +4,12 @@ import { LineChart } from "@widgets/_shared/LineChart";
 import { PieChart } from "@widgets/_shared/PieChart";
 import type { PieSlice } from "@widgets/_shared/PieChart";
 import { buttonDefault, inp } from "@widgets/_shared/styles";
-import { StatusBadge as _StatusBadge, Td as _Td } from "@widgets/_shared/table";
+import { StatusBadge, Td } from "@widgets/_shared/table";
 import type { Application, AppFormData, Status } from "../types";
 import { STATUSES, STATUS_COLOR } from "../types";
 
 export { INIT_SQL, EMAIL_INIT_SQL, SCHEMA_MIGRATIONS } from "../schema";
+export { StatusBadge, Td };
 
 import { today } from "@shared/csv";
 
@@ -905,10 +906,4 @@ export function Th({
   );
 }
 
-export function Td({ children }: { children?: React.ReactNode }) {
-  return <_Td>{children}</_Td>;
-}
 
-export function StatusBadge({ status }: { status: Status }) {
-  return <_StatusBadge label={status} color={STATUS_COLOR[status]} />;
-}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { Widget, WidgetProps } from "@renderer/plugins/registry";
 import { useSqlInit } from "@renderer/hooks/useSqlInit";
 import type {
@@ -67,19 +67,25 @@ function AuditionAggregator({ api }: WidgetProps) {
     void Promise.all([load(), loadSiteChecks()]);
   }, [ready]);
 
-  const statusCounts = STATUSES.reduce<Record<Status, number>>(
-    (acc, s) => {
-      acc[s] = auds.filter((a) => a.status === s).length;
-      return acc;
-    },
-    {} as Record<Status, number>,
+  const statusCounts = useMemo(
+    () => STATUSES.reduce<Record<Status, number>>(
+      (acc, s) => {
+        acc[s] = auds.filter((a) => a.status === s).length;
+        return acc;
+      },
+      {} as Record<Status, number>,
+    ),
+    [auds],
   );
-  const typeCounts = PROJECT_TYPES.reduce<Record<ProjectType, number>>(
-    (acc, t) => {
-      acc[t] = auds.filter((a) => a.project_type === t).length;
-      return acc;
-    },
-    {} as Record<ProjectType, number>,
+  const typeCounts = useMemo(
+    () => PROJECT_TYPES.reduce<Record<ProjectType, number>>(
+      (acc, t) => {
+        acc[t] = auds.filter((a) => a.project_type === t).length;
+        return acc;
+      },
+      {} as Record<ProjectType, number>,
+    ),
+    [auds],
   );
 
   const filtered = auds.filter(
@@ -335,7 +341,7 @@ function AuditionAggregator({ api }: WidgetProps) {
                       <Td dim={!aud.role}>{aud.role || "—"}</Td>
                       <Td>{aud.project_type}</Td>
                       <Td>
-                        <StatusBadge status={aud.status} />
+                        <StatusBadge label={aud.status} color={STATUS_COLOR[aud.status]} />
                       </Td>
                       <Td dim={!aud.casting_studio}>
                         {aud.casting_studio || "—"}

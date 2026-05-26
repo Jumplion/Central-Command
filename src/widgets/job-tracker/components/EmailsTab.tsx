@@ -187,7 +187,10 @@ function EmailRow({
         >
           {email.subject}
         </span>
-        <StatusBadge status={(email.parsed_status as Status) || "Applied"} />
+        <StatusBadge
+          label={(email.parsed_status as Status) || "Applied"}
+          color={STATUS_COLOR[(email.parsed_status as Status) || "Applied"]}
+        />
         <span style={{ ...dimText, whiteSpace: "nowrap" }}>{dateDisplay}</span>
         {!dismissed && (
           <button

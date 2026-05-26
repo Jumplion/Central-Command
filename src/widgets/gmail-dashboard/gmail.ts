@@ -9,11 +9,7 @@ import type {
 import { GMAIL_BASE } from "./constants";
 import { UPSERT_EMAIL, UPDATE_EMAIL_READ_AND_SNIPPET } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
-import { getHeader as _getHeader } from "../_shared/gmail";
-
-export function getHeader(headers: GmailHeader[], name: string): string {
-  return _getHeader(headers, name);
-}
+import { getHeader } from "../_shared/gmail";
 
 // ─── Rule evaluation ──────────────────────────────────────────────────────
 
