@@ -3,7 +3,8 @@ import type { Widget, WidgetProps } from "@renderer/plugins/registry";
 import { useSqlInit } from "@renderer/hooks/useSqlInit";
 import { STATUSES, STATUS_COLOR } from "./types";
 import type { Application, AppFormData, Status } from "./types";
-import { parseCSVLine, today } from "@shared/csv";
+import { parseCSVLine } from "@shared/csv";
+import { today } from "@shared/date";
 import { exportCsv } from "@renderer/utils/csv";
 import { buttonDefault, WidgetLoading, TabBar, StatusBar } from "../_shared";
 import {

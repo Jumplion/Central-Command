@@ -17,7 +17,8 @@ import {
 import { INIT_SQL } from "./schema";
 import { INSERT_AUDITION, UPDATE_AUDITION } from "./queries";
 import { namedSql } from "@renderer/plugins/sqlParams";
-import { parseCSVLine, today } from "@shared/csv";
+import { parseCSVLine } from "@shared/csv";
+import { today } from "@shared/date";
 import { exportCsv } from "@renderer/utils/csv";
 import { buttonDefault, WidgetLoading, TabBar, StatusBar } from "../_shared";
 import {

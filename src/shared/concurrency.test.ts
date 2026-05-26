@@ -3,11 +3,7 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import {
-  batchAsync,
-  batchAsyncFailFast,
-  batchAsyncSafe,
-} from "./concurrency";
+import { batchAsync, batchAsyncFailFast, batchAsyncSafe } from "./concurrency";
 
 describe("concurrency", () => {
   describe("batchAsync", () => {

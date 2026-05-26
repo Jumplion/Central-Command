@@ -3,7 +3,7 @@ import { StackedBarChart } from "@widgets/_shared/StackedBarChart";
 import { Chip } from "@widgets/_shared/Chip";
 import { buttonDefault, inp } from "@widgets/_shared/styles";
 import { StatusBadge, Td } from "@widgets/_shared/table";
-import { today } from "@shared/csv";
+import { today } from "@shared/date";
 import type {
   Audition,
   AuditionFormData,

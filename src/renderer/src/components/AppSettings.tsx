@@ -1,36 +1,18 @@
 import { useEffect, useState } from "react";
 import type { DriveSyncStatus } from "@shared/types";
-import { SHARED_GOOGLE_WIDGET_ID, GOOGLE_SERVICES } from "@shared/google";
+import { SHARED_GOOGLE_WIDGET_ID } from "@shared/google";
+import { GoogleAccountSection } from "./GoogleAccountSection";
+import { DriveSyncSection } from "./DriveSyncSection";
 
 interface Props {
   onClose: () => void;
 }
 
-function formatSyncTime(ts: number | null): string {
-  if (!ts) return "Never";
-  const diff = Date.now() - ts;
-  if (diff < 60_000) return "Just now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  return new Date(ts).toLocaleTimeString();
-}
-
 export function AppSettings({ onClose }: Props) {
   const [status, setStatus] = useState<DriveSyncStatus | null>(null);
-
-  // Google Account (shared across all widgets)
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
   const [googleClientId, setGoogleClientId] = useState("");
   const [googleClientSecret, setGoogleClientSecret] = useState("");
-  const [googleConnecting, setGoogleConnecting] = useState(false);
-  const [googleConnectError, setGoogleConnectError] = useState<string | null>(
-    null,
-  );
-
-  // Drive Sync
-  const [driveConnecting, setDriveConnecting] = useState(false);
-  const [driveConnectError, setDriveConnectError] = useState<string | null>(
-    null,
-  );
 
   useEffect(() => {
     void window.cc.driveSync.getStatus().then(setStatus);
@@ -43,59 +25,6 @@ export function AppSettings({ onClose }: Props) {
       .then(setGoogleConnected);
   }, []);
 
-  async function handleGoogleConnect() {
-    if (!googleClientId.trim() || !googleClientSecret.trim()) return;
-    setGoogleConnecting(true);
-    setGoogleConnectError(null);
-    try {
-      await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, {
-        clientId: googleClientId.trim(),
-        clientSecret: googleClientSecret.trim(),
-        scopes: [
-          ...GOOGLE_SERVICES.gmail.defaultScopes,
-          ...GOOGLE_SERVICES.calendar.defaultScopes,
-          ...GOOGLE_SERVICES.contacts.defaultScopes,
-        ],
-      });
-      setGoogleConnected(true);
-      // Keep credentials for Drive Sync reuse
-    } catch (err) {
-      setGoogleConnectError((err as Error).message ?? "Connection failed");
-    } finally {
-      setGoogleConnecting(false);
-    }
-  }
-
-  async function handleGoogleDisconnect() {
-    await window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID);
-    setGoogleConnected(false);
-  }
-
-  async function handleDriveConnect() {
-    setDriveConnecting(true);
-    setDriveConnectError(null);
-    try {
-      await window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, {
-        clientId: googleClientId,
-        clientSecret: googleClientSecret,
-        service: "drive-sync",
-      });
-      await window.cc.driveSync.enable();
-    } catch (err) {
-      setDriveConnectError((err as Error).message ?? "Connection failed");
-    } finally {
-      setDriveConnecting(false);
-    }
-  }
-
-  async function handleDriveDisconnect() {
-    await window.cc.driveSync.disable();
-    await window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID, "drive-sync");
-    setStatus((s) => s && { ...s, enabled: false, state: "disabled" });
-  }
-
-  const driveConnected = status?.state !== "disabled" && status?.enabled;
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -107,163 +36,21 @@ export function AppSettings({ onClose }: Props) {
         </div>
 
         <div className="modal-body">
-          <section>
-            <h3>Google Account</h3>
-            <p className="help-text">
-              Connect your Google account once and all widgets (Gmail, Calendar,
-              Contacts, etc.) will use it automatically. Requires a Google Cloud
-              project with OAuth 2.0 credentials (Desktop app type) and the
-              Gmail, Calendar, and People APIs enabled.
-            </p>
-
-            {googleConnected === null ? (
-              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
-                Checking…
-              </div>
-            ) : !googleConnected ? (
-              <div className="settings-form">
-                <label>
-                  Client ID
-                  <input
-                    type="text"
-                    value={googleClientId}
-                    onChange={(e) => setGoogleClientId(e.target.value)}
-                    placeholder="your-client-id.apps.googleusercontent.com"
-                    disabled={googleConnecting}
-                  />
-                </label>
-                <label>
-                  Client Secret
-                  <input
-                    type="password"
-                    value={googleClientSecret}
-                    onChange={(e) => setGoogleClientSecret(e.target.value)}
-                    placeholder="Client secret"
-                    disabled={googleConnecting}
-                  />
-                </label>
-                {googleConnectError && (
-                  <p className="error-text">{googleConnectError}</p>
-                )}
-                <button
-                  className="primary"
-                  onClick={() => void handleGoogleConnect()}
-                  disabled={
-                    googleConnecting ||
-                    !googleClientId.trim() ||
-                    !googleClientSecret.trim()
-                  }
-                >
-                  {googleConnecting ? "Connecting…" : "Connect with Google"}
-                </button>
-              </div>
-            ) : (
-              <div className="drive-sync-status">
-                <div className="status-row">
-                  <span className="status-dot ok" />
-                  <span>Connected</span>
-                </div>
-                <div className="button-row">
-                  <button
-                    className="ghost danger"
-                    onClick={() => void handleGoogleDisconnect()}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section>
-            <h3>Google Drive Sync</h3>
-            <p className="help-text">
-              Sync your dashboard layout and widget data across machines using
-              Google Drive. Requires a Google Cloud project with the Drive API
-              enabled and the <code>drive.appdata</code> scope on the OAuth
-              consent screen.
-            </p>
-
-            {googleConnected === null ? (
-              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
-                Checking…
-              </div>
-            ) : !googleConnected ? (
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "var(--text-dim)",
-                  padding: 12,
-                  backgroundColor: "var(--surface-secondary)",
-                  borderRadius: 4,
-                }}
-              >
-                <strong>Connect Google Account first</strong>
-                <p>Enable Google Account above to set up Drive Sync.</p>
-              </div>
-            ) : !driveConnected ? (
-              <div className="settings-form">
-                {driveConnectError && (
-                  <p className="error-text">{driveConnectError}</p>
-                )}
-                <button
-                  className="primary"
-                  onClick={() => void handleDriveConnect()}
-                  disabled={driveConnecting}
-                >
-                  {driveConnecting ? "Connecting…" : "Enable Drive Sync"}
-                </button>
-              </div>
-            ) : (
-              <div className="drive-sync-status">
-                <div className="status-row">
-                  <span
-                    className={`status-dot ${status?.state === "error" ? "error" : status?.state === "idle" ? "ok" : "busy"}`}
-                  />
-                  <span>
-                    {status?.state === "uploading" && "Uploading…"}
-                    {status?.state === "downloading" && "Downloading…"}
-                    {status?.state === "idle" && "Connected"}
-                    {status?.state === "error" && "Error"}
-                  </span>
-                  <span className="muted">
-                    Last synced: {formatSyncTime(status?.lastSyncedAt ?? null)}
-                  </span>
-                </div>
-                {status?.lastError && (
-                  <p className="error-text">{status.lastError}</p>
-                )}
-                <div className="button-row">
-                  <button
-                    className="ghost"
-                    onClick={() => void window.cc.driveSync.forcePush()}
-                    disabled={
-                      status?.state === "uploading" ||
-                      status?.state === "downloading"
-                    }
-                  >
-                    Push to Drive
-                  </button>
-                  <button
-                    className="ghost"
-                    onClick={() => void window.cc.driveSync.forcePull()}
-                    disabled={
-                      status?.state === "uploading" ||
-                      status?.state === "downloading"
-                    }
-                  >
-                    Pull from Drive
-                  </button>
-                  <button
-                    className="ghost danger"
-                    onClick={() => void handleDriveDisconnect()}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
+          <GoogleAccountSection
+            connected={googleConnected}
+            onConnectedChange={setGoogleConnected}
+            clientId={googleClientId}
+            clientSecret={googleClientSecret}
+            onClientIdChange={setGoogleClientId}
+            onClientSecretChange={setGoogleClientSecret}
+          />
+          <DriveSyncSection
+            googleConnected={googleConnected}
+            status={status}
+            onStatusChange={setStatus}
+            clientId={googleClientId}
+            clientSecret={googleClientSecret}
+          />
         </div>
       </div>
     </div>

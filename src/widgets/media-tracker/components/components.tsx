@@ -40,7 +40,8 @@ export function StarRating({
             fontSize: 22,
             padding: "0 1px",
             lineHeight: 1,
-            color: star <= (hover || value) ? "#f59e0b" : "#374151",
+            color:
+              star <= (hover || value) ? "var(--warning)" : "var(--text-dim)",
           }}
           onMouseEnter={() => setHover(star)}
           onMouseLeave={() => setHover(0)}
@@ -55,7 +56,7 @@ export function StarRating({
 
 export function StarDisplay({ value }: { value: number }) {
   return (
-    <span style={{ color: "#f59e0b", fontSize: 11, letterSpacing: 1 }}>
+    <span style={{ color: "var(--warning)", fontSize: 11, letterSpacing: 1 }}>
       {"★".repeat(value)}
       {"☆".repeat(5 - value)}
     </span>
@@ -82,10 +83,15 @@ export function StatusTimeline({ history }: { history: HistoryEntry[] }) {
               marginBottom: i < history.length - 1 ? 4 : 0,
             }}
           >
-            <span style={{ fontSize: 11, color: i === 0 ? "#64748b" : color }}>
+            <span
+              style={{
+                fontSize: 11,
+                color: i === 0 ? "var(--text-dim)" : color,
+              }}
+            >
               {i === 0 ? "Added" : `→ ${statusLabel(h.status)}`}
             </span>
-            <span style={{ fontSize: 10, color: "#4b5563" }}>
+            <span style={{ fontSize: 10, color: "var(--text-dim)" }}>
               {formatDate(h.changed_at)}
             </span>
           </div>
@@ -115,7 +121,7 @@ export function LinkedItemPill({
         gap: 4,
         padding: "2px 8px",
         borderRadius: 20,
-        background: "#1a2744",
+        background: "var(--panel-2)",
         border: "1px solid #2d4a7a",
         fontSize: 11,
         cursor: "pointer",
@@ -124,13 +130,13 @@ export function LinkedItemPill({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <span style={{ color: "#93c5fd" }} onClick={onClick}>
+      <span style={{ color: "var(--accent)" }} onClick={onClick}>
         {label}
       </span>
       {hovered && (
         <span
           style={{
-            color: "#ef4444",
+            color: "var(--danger)",
             fontWeight: 700,
             lineHeight: 1,
             fontSize: 13,
@@ -187,7 +193,7 @@ export function LinkModal({
             margin: "0 0 14px",
             fontSize: 15,
             fontWeight: 700,
-            color: "#f1f5f9",
+            color: "var(--text)",
           }}
         >
           Link to Another Entry
@@ -224,7 +230,7 @@ export function LinkModal({
                   cursor: "pointer",
                   fontSize: 12,
                   background:
-                    selectedId === item.id ? "#1e3a5f" : "transparent",
+                    selectedId === item.id ? "var(--panel-2)" : "transparent",
                   borderBottom: "1px solid #1e293b",
                   display: "flex",
                   gap: 6,
@@ -233,9 +239,11 @@ export function LinkModal({
                 onClick={() => setSelectedId(item.id)}
               >
                 <span>{typeEmoji(item.type)}</span>
-                <span style={{ color: "#f3f4f6", flex: 1 }}>{item.title}</span>
+                <span style={{ color: "var(--text)", flex: 1 }}>
+                  {item.title}
+                </span>
                 {item.author_creator && (
-                  <span style={{ color: "#64748b", fontSize: 11 }}>
+                  <span style={{ color: "var(--text-dim)", fontSize: 11 }}>
                     {item.author_creator}
                   </span>
                 )}
@@ -245,7 +253,9 @@ export function LinkModal({
         )}
 
         {candidates.length === 0 && search.length > 0 && (
-          <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 12 }}>
+          <div
+            style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 12 }}
+          >
             No entries found.
           </div>
         )}
@@ -482,7 +492,7 @@ export function ImportModal({
             margin: "0 0 14px",
             fontSize: 15,
             fontWeight: 700,
-            color: "#f1f5f9",
+            color: "var(--text)",
           }}
         >
           Import Library
@@ -500,8 +510,9 @@ export function ImportModal({
                 cursor: "pointer",
                 fontSize: 12,
                 fontWeight: active === t.value ? 700 : 400,
-                background: active === t.value ? "#1e3a5f" : "#1e293b",
-                color: active === t.value ? "#93c5fd" : "#64748b",
+                background:
+                  active === t.value ? "var(--panel-2)" : "var(--panel)",
+                color: active === t.value ? "var(--accent)" : "var(--text-dim)",
               }}
               onClick={() => {
                 setActive(t.value);
@@ -516,7 +527,7 @@ export function ImportModal({
         <p
           style={{
             fontSize: 12,
-            color: "#64748b",
+            color: "var(--text-dim)",
             margin: "0 0 14px",
             lineHeight: 1.5,
           }}
@@ -595,9 +606,13 @@ export function MediaCard({
       ref={cardRef}
       style={{
         borderRadius: 7,
-        border: `1px solid ${highlighted ? "#3b82f6" : isPinned ? "#1e3a5f" : "#1e293b"}`,
+        border: `1px solid ${highlighted ? "var(--accent)" : isPinned ? "var(--panel-2)" : "var(--panel)"}`,
         borderLeft: `3px solid ${color}`,
-        background: highlighted ? "#0d1f3c" : isPinned ? "#0d1f35" : "#0f172a",
+        background: highlighted
+          ? "var(--panel-2)"
+          : isPinned
+            ? "var(--panel)"
+            : "var(--bg)",
         padding: "8px 10px",
         flexShrink: 0,
         transition: "background 0.3s, border-color 0.3s",
@@ -615,7 +630,7 @@ export function MediaCard({
             style={{
               fontWeight: 600,
               fontSize: 13,
-              color: "#f3f4f6",
+              color: "var(--text)",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -627,7 +642,7 @@ export function MediaCard({
             <div
               style={{
                 fontSize: 11,
-                color: "#64748b",
+                color: "var(--text-dim)",
                 marginTop: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -665,10 +680,12 @@ export function MediaCard({
             </span>
             {item.rating ? <StarDisplay value={item.rating} /> : null}
             {isPinned && (
-              <span style={{ fontSize: 10, color: "#f59e0b" }}>📌 pinned</span>
+              <span style={{ fontSize: 10, color: "var(--warning)" }}>
+                📌 pinned
+              </span>
             )}
             {links.length > 0 && (
-              <span style={{ fontSize: 10, color: "#4b5563" }}>
+              <span style={{ fontSize: 10, color: "var(--text-dim)" }}>
                 🔗 {links.length} link{links.length !== 1 ? "s" : ""}
               </span>
             )}
@@ -686,7 +703,7 @@ export function MediaCard({
           <button
             style={{
               ...s.iconBtn,
-              ...(isPinned ? { opacity: 1, color: "#f59e0b" } : {}),
+              ...(isPinned ? { opacity: 1, color: "var(--warning)" } : {}),
             }}
             onClick={onPin}
             title={isPinned ? "Unpin" : "Pin to top"}
@@ -716,9 +733,9 @@ export function MediaCard({
               style={{
                 padding: "7px 9px",
                 borderRadius: 5,
-                background: "#1e293b",
+                background: "var(--panel)",
                 fontSize: 12,
-                color: "#94a3b8",
+                color: "var(--text-dim)",
                 lineHeight: 1.55,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
@@ -748,7 +765,7 @@ export function MediaCard({
                 style={{
                   fontSize: 10,
                   fontWeight: 700,
-                  color: "#4b5563",
+                  color: "var(--text-dim)",
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                 }}
@@ -764,7 +781,7 @@ export function MediaCard({
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
               {links.length === 0 && (
-                <span style={{ fontSize: 11, color: "#374151" }}>
+                <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
                   No links yet.
                 </span>
               )}
