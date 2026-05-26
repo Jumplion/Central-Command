@@ -219,14 +219,15 @@ export async function fetchJobEmails(
 
   const now = Date.now();
 
-  for (const ref of messageRefs) {
-    if (existing.has(ref.id)) continue;
+  // Filter to only new messages and create fetch tasks
+  const newRefs = messageRefs.filter((ref) => !existing.has(ref.id));
 
+  const fetchTasks = newRefs.map((ref) => async () => {
     const msgRes = await api.net.fetch(
       `${GMAIL_BASE}/messages/${ref.id}?format=full&fields=id,threadId,snippet,payload(headers,mimeType,body,parts(mimeType,body,headers,parts(mimeType,body)))`,
       { headers },
     );
-    if (!msgRes.ok) continue;
+    if (!msgRes.ok) return null;
 
     const msg = JSON.parse(msgRes.body) as GmailApiMessage;
     const msgHeaders = msg.payload?.headers ?? [];
@@ -249,22 +250,43 @@ export async function fetchJobEmails(
     const parsed_status = parseJobStatus(subject, bodyText, rules);
     const parsed_req_number = parseReqNumber(subject, bodyText);
 
+    return {
+      ref,
+      subject,
+      from,
+      receivedAt,
+      snippet,
+      parsed_company,
+      parsed_role,
+      parsed_status,
+      parsed_req_number,
+    };
+  });
+
+  // Execute fetches in parallel batches (pool of 8)
+  const { batchAsync } = await import("@shared/concurrency");
+  const fetchedMessages = await batchAsync(fetchTasks, 8);
+
+  // Insert successfully fetched messages
+  for (const msg of fetchedMessages) {
+    if (!msg) continue;
+
     await api.sql.run(
       `INSERT OR IGNORE INTO email_jobs
         (gmail_id, thread_id, subject, from_address, received_at, snippet,
          parsed_company, parsed_role, parsed_status, parsed_req_number, fetched_at)
        VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        ref.id,
-        ref.threadId,
-        subject,
-        from,
-        receivedAt,
-        snippet,
-        parsed_company,
-        parsed_role,
-        parsed_status,
-        parsed_req_number,
+        msg.ref.id,
+        msg.ref.threadId,
+        msg.subject,
+        msg.from,
+        msg.receivedAt,
+        msg.snippet,
+        msg.parsed_company,
+        msg.parsed_role,
+        msg.parsed_status,
+        msg.parsed_req_number,
         now,
       ],
     );

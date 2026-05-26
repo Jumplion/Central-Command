@@ -183,14 +183,15 @@ export async function fetchAndStoreEmails(
   const now = Date.now();
   let fetched = 0;
 
-  for (const ref of refs) {
+  // Create fetch tasks for all messages
+  const fetchTasks = refs.map((ref) => async () => {
     const isNew = !existing.has(ref.id);
 
     const msgRes = await api.net.fetch(
       `${GMAIL_BASE}/messages/${ref.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
       { headers },
     );
-    if (!msgRes.ok) continue;
+    if (!msgRes.ok) return null;
 
     const msg = JSON.parse(msgRes.body) as GmailApiMessage;
     const msgHeaders = msg.payload?.headers ?? [];
@@ -217,17 +218,38 @@ export async function fetchAndStoreEmails(
       ? applyRules(subject, from, snippet, labelNames, rules)
       : null;
 
-    if (isNew) {
+    return {
+      ref,
+      isNew,
+      subject,
+      from,
+      labelNames,
+      receivedAt,
+      snippet,
+      folderId,
+      isRead,
+    };
+  });
+
+  // Execute fetches in parallel batches (pool of 8)
+  const { batchAsync } = await import("@shared/concurrency");
+  const fetchedMessages = await batchAsync(fetchTasks, 8);
+
+  // Process fetched messages sequentially (respecting onProgress callback)
+  for (const msg of fetchedMessages) {
+    if (!msg) continue;
+
+    if (msg.isNew) {
       await api.sql.run(UPSERT_EMAIL, [
-        ref.id,
-        ref.threadId,
-        subject,
-        from,
-        JSON.stringify(labelNames),
-        receivedAt,
-        snippet,
-        folderId,
-        isRead,
+        msg.ref.id,
+        msg.ref.threadId,
+        msg.subject,
+        msg.from,
+        JSON.stringify(msg.labelNames),
+        msg.receivedAt,
+        msg.snippet,
+        msg.folderId,
+        msg.isRead,
         now,
       ]);
       fetched++;
@@ -236,10 +258,10 @@ export async function fetchAndStoreEmails(
       // Update read status and snippet for existing emails
       await api.sql.run(
         ...namedSql(UPDATE_EMAIL_READ_AND_SNIPPET, {
-          is_read: isRead,
-          snippet,
+          is_read: msg.isRead,
+          snippet: msg.snippet,
           fetched_at: now,
-          gmail_id: ref.id,
+          gmail_id: msg.ref.id,
         }),
       );
     }
