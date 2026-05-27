@@ -4,6 +4,11 @@ export interface SiteConfig {
   zoneId: string;
 }
 
+export interface StatusCodeEntry {
+  status: number;
+  requests: number;
+}
+
 export interface DailyBucket {
   date: string;
   requests: number;
@@ -12,6 +17,7 @@ export interface DailyBucket {
   threats: number;
   bytes: number;
   cachedRequests: number;
+  statusCodes: StatusCodeEntry[];
 }
 
 export interface HourlyBucket {
@@ -20,6 +26,7 @@ export interface HourlyBucket {
   pageViews: number;
   uniques: number;
   threats: number;
+  statusCodes: StatusCodeEntry[];
 }
 
 export interface SiteData {
@@ -42,5 +49,22 @@ export interface SiteTotals {
   cacheRate30d: number;
 }
 
-export type Tab = "overview" | "traffic" | "bots" | "sites";
+export interface PingRecord {
+  id: number;
+  site_id: string;
+  ts: number;
+  latency_ms: number | null;
+  status_code: number | null;
+  is_up: number;
+}
+
+export interface SslInfo {
+  domain: string;
+  expiresAt?: Date;
+  daysLeft?: number;
+  issuer?: string;
+  error?: string;
+}
+
+export type Tab = "overview" | "traffic" | "bots" | "health" | "sites";
 export type Period = "30d" | "24h";

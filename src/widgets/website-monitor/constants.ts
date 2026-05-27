@@ -11,5 +11,8 @@ export const CF_ZONES_URL =
   "https://api.cloudflare.com/client/v4/zones?per_page=50&status=active";
 
 export const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+export const PING_INTERVAL_MS = 5 * 60 * 1000;
+export const PING_HISTORY_MS = 26 * 60 * 60 * 1000; // 26h retention
+
 export const KV_SITES_KEY = "sites";
 export const SECRET_TOKEN_KEY = "cfApiToken";

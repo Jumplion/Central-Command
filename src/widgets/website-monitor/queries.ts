@@ -1,4 +1,4 @@
-import type { SiteData, DailyBucket, HourlyBucket } from "./types";
+import type { SiteData, DailyBucket, HourlyBucket, SslInfo } from "./types";
 import { CF_GRAPHQL_URL, CF_ZONES_URL } from "./constants";
 
 type NetFetch = (
@@ -65,7 +65,10 @@ export async function fetchSiteData(
           orderBy: [date_ASC]
         ) {
           dimensions { date }
-          sum { requests pageViews bytes threats cachedRequests }
+          sum {
+            requests pageViews bytes threats cachedRequests
+            responseStatusMap { edgeResponseStatus requests }
+          }
           uniq { uniques }
         }
         httpRequests1hGroups(
@@ -74,7 +77,10 @@ export async function fetchSiteData(
           orderBy: [datetime_ASC]
         ) {
           dimensions { datetime }
-          sum { requests pageViews bytes threats }
+          sum {
+            requests pageViews bytes threats
+            responseStatusMap { edgeResponseStatus requests }
+          }
           uniq { uniques }
         }
       }
@@ -118,6 +124,7 @@ export async function fetchSiteData(
           bytes: number;
           threats: number;
           cachedRequests: number;
+          responseStatusMap?: { edgeResponseStatus: number; requests: number }[];
         };
         uniq: { uniques: number };
       }[];
@@ -128,6 +135,7 @@ export async function fetchSiteData(
           pageViews: number;
           bytes: number;
           threats: number;
+          responseStatusMap?: { edgeResponseStatus: number; requests: number }[];
         };
         uniq: { uniques: number };
       }[];
@@ -142,6 +150,10 @@ export async function fetchSiteData(
         threats: g.sum.threats ?? 0,
         bytes: g.sum.bytes ?? 0,
         cachedRequests: g.sum.cachedRequests ?? 0,
+        statusCodes: (g.sum.responseStatusMap ?? []).map((s) => ({
+          status: s.edgeResponseStatus,
+          requests: s.requests,
+        })),
       }),
     );
 
@@ -152,6 +164,10 @@ export async function fetchSiteData(
         pageViews: g.sum.pageViews ?? 0,
         uniques: g.uniq.uniques ?? 0,
         threats: g.sum.threats ?? 0,
+        statusCodes: (g.sum.responseStatusMap ?? []).map((s) => ({
+          status: s.edgeResponseStatus,
+          requests: s.requests,
+        })),
       }),
     );
 
@@ -163,5 +179,49 @@ export async function fetchSiteData(
       hourly: [],
       error: (e as Error).message ?? "Unknown error",
     };
+  }
+}
+
+export async function fetchSslExpiry(
+  netFetch: NetFetch,
+  domain: string,
+): Promise<SslInfo> {
+  const cleanDomain = domain
+    .replace(/^https?:\/\//, "")
+    .split("/")[0]
+    .toLowerCase();
+  try {
+    const res = await netFetch(
+      `https://crt.sh/?q=${encodeURIComponent(cleanDomain)}&output=json&deduplicate=Y`,
+    );
+    if (!res.ok) return { domain: cleanDomain, error: `HTTP ${res.status}` };
+
+    const entries = JSON.parse(res.body) as Array<{
+      not_before: string;
+      not_after: string;
+      name_value: string;
+      issuer_name?: string;
+    }>;
+
+    const now = Date.now();
+    const valid = entries
+      .filter((c) => new Date(c.not_after).getTime() > now)
+      .sort(
+        (a, b) =>
+          new Date(b.not_before).getTime() - new Date(a.not_before).getTime(),
+      );
+
+    if (valid.length === 0) return { domain: cleanDomain, error: "No valid cert found" };
+
+    const cert = valid[0];
+    const expiresAt = new Date(cert.not_after);
+    const daysLeft = Math.floor((expiresAt.getTime() - now) / 86_400_000);
+    const issuer = cert.issuer_name
+      ? (/O=([^,]+)/.exec(cert.issuer_name)?.[1]?.trim() ?? cert.issuer_name)
+      : undefined;
+
+    return { domain: cleanDomain, expiresAt, daysLeft, issuer };
+  } catch {
+    return { domain: cleanDomain, error: "Check failed" };
   }
 }

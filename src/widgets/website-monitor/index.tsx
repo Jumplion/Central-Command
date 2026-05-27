@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, useRef } from "react";
 import type { Widget, WidgetProps } from "@renderer/plugins/registry";
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
+import { namedSql } from "@renderer/plugins/sqlParams";
 import { TabBar, LineChart, WidgetLoading } from "../_shared";
 import {
   buttonDefault,
@@ -12,9 +14,26 @@ import {
   KV_SITES_KEY,
   SECRET_TOKEN_KEY,
   REFRESH_INTERVAL_MS,
+  PING_INTERVAL_MS,
+  PING_HISTORY_MS,
 } from "./constants";
-import type { SiteConfig, SiteData, SiteTotals, Tab, Period } from "./types";
-import { fetchSiteData, fetchZones } from "./queries";
+import {
+  PING_SCHEMA,
+  PING_MIGRATIONS,
+  INSERT_PING,
+  LOAD_PINGS,
+  PRUNE_PINGS,
+} from "./schema";
+import type {
+  SiteConfig,
+  SiteData,
+  SiteTotals,
+  PingRecord,
+  SslInfo,
+  Tab,
+  Period,
+} from "./types";
+import { fetchSiteData, fetchZones, fetchSslExpiry } from "./queries";
 import type { CFZone } from "./queries";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,8 +98,7 @@ function computeTotals(data: SiteData): SiteTotals {
     threats30d: sum30d.threats,
     bytes30d: sum30d.bytes,
     cachedRequests30d: sum30d.cachedRequests,
-    botRate30d:
-      sum30d.requests > 0 ? sum30d.threats / sum30d.requests : 0,
+    botRate30d: sum30d.requests > 0 ? sum30d.threats / sum30d.requests : 0,
     cacheRate30d:
       sum30d.requests > 0 ? sum30d.cachedRequests / sum30d.requests : 0,
   };
@@ -98,15 +116,16 @@ function buildDailyChart(
   for (const site of sites) {
     dataMap[site.id]?.daily.forEach((d) => dateSet.add(d.date));
   }
-  const dates = Array.from(dateSet).sort();
-  return dates.map((date) => {
-    const point: Record<string, string | number> = { label: fmtDate(date) };
-    for (const site of sites) {
-      point[site.id] =
-        dataMap[site.id]?.daily.find((d) => d.date === date)?.[metric] ?? 0;
-    }
-    return point;
-  });
+  return Array.from(dateSet)
+    .sort()
+    .map((date) => {
+      const point: Record<string, string | number> = { label: fmtDate(date) };
+      for (const site of sites) {
+        point[site.id] =
+          dataMap[site.id]?.daily.find((d) => d.date === date)?.[metric] ?? 0;
+      }
+      return point;
+    });
 }
 
 function buildHourlyChart(
@@ -118,15 +137,17 @@ function buildHourlyChart(
   for (const site of sites) {
     dataMap[site.id]?.hourly.forEach((h) => dtSet.add(h.datetime));
   }
-  const dts = Array.from(dtSet).sort();
-  return dts.map((dt) => {
-    const point: Record<string, string | number> = { label: fmtHour(dt) };
-    for (const site of sites) {
-      point[site.id] =
-        dataMap[site.id]?.hourly.find((h) => h.datetime === dt)?.[metric] ?? 0;
-    }
-    return point;
-  });
+  return Array.from(dtSet)
+    .sort()
+    .map((dt) => {
+      const point: Record<string, string | number> = { label: fmtHour(dt) };
+      for (const site of sites) {
+        point[site.id] =
+          dataMap[site.id]?.hourly.find((h) => h.datetime === dt)?.[metric] ??
+          0;
+      }
+      return point;
+    });
 }
 
 function buildBotRateChart(
@@ -137,14 +158,75 @@ function buildBotRateChart(
   for (const site of sites) {
     dataMap[site.id]?.daily.forEach((d) => dateSet.add(d.date));
   }
-  const dates = Array.from(dateSet).sort();
-  return dates.map((date) => {
-    const point: Record<string, string | number> = { label: fmtDate(date) };
+  return Array.from(dateSet)
+    .sort()
+    .map((date) => {
+      const point: Record<string, string | number> = { label: fmtDate(date) };
+      for (const site of sites) {
+        const b = dataMap[site.id]?.daily.find((d) => d.date === date);
+        point[site.id] =
+          b && b.requests > 0
+            ? Math.round((b.threats / b.requests) * 10_000) / 100
+            : 0;
+      }
+      return point;
+    });
+}
+
+function buildErrorRateChart(
+  sites: SiteConfig[],
+  dataMap: Record<string, SiteData>,
+): Array<Record<string, string | number>> {
+  const dateSet = new Set<string>();
+  for (const site of sites) {
+    dataMap[site.id]?.daily.forEach((d) => dateSet.add(d.date));
+  }
+  return Array.from(dateSet)
+    .sort()
+    .map((date) => {
+      const point: Record<string, string | number> = { label: fmtDate(date) };
+      for (const site of sites) {
+        const b = dataMap[site.id]?.daily.find((d) => d.date === date);
+        if (!b || b.requests === 0) {
+          point[site.id] = 0;
+          continue;
+        }
+        const errors = b.statusCodes
+          .filter((s) => s.status >= 400)
+          .reduce((a, s) => a + s.requests, 0);
+        point[site.id] = Math.round((errors / b.requests) * 10_000) / 100;
+      }
+      return point;
+    });
+}
+
+function buildPingChart(
+  sites: SiteConfig[],
+  pingsMap: Record<string, PingRecord[]>,
+): Array<Record<string, string | number>> {
+  const now = Date.now();
+  const baseHour = Math.floor(now / 3_600_000) * 3_600_000;
+  return Array.from({ length: 24 }, (_, i) => {
+    const start = baseHour - (23 - i) * 3_600_000;
+    const point: Record<string, string | number> = {
+      label:
+        i % 4 === 0
+          ? new Intl.DateTimeFormat(undefined, {
+              hour: "2-digit",
+              minute: "2-digit",
+            }).format(new Date(start))
+          : "",
+    };
     for (const site of sites) {
-      const b = dataMap[site.id]?.daily.find((d) => d.date === date);
+      const inBucket = (pingsMap[site.id] ?? []).filter(
+        (p) => p.ts >= start && p.ts < start + 3_600_000 && p.is_up === 1,
+      );
       point[site.id] =
-        b && b.requests > 0
-          ? Math.round((b.threats / b.requests) * 10_000) / 100
+        inBucket.length > 0
+          ? Math.round(
+              inBucket.reduce((a, p) => a + (p.latency_ms ?? 0), 0) /
+                inBucket.length,
+            )
           : 0;
     }
     return point;
@@ -155,9 +237,14 @@ function buildBotRateChart(
 
 function SiteLegend({ sites }: { sites: SiteConfig[] }) {
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+    <div
+      style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}
+    >
       {sites.map((site, i) => (
-        <div key={site.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div
+          key={site.id}
+          style={{ display: "flex", alignItems: "center", gap: 4 }}
+        >
           <div
             style={{
               width: 8,
@@ -190,12 +277,7 @@ function ChartSection({
   );
   return (
     <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-      }}
+      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
     >
       <div
         style={{
@@ -315,8 +397,7 @@ function ZonePicker({
   onAdd: (zone: CFZone) => void;
   onClose: () => void;
 }) {
-  const filteredZones = availableZones.filter((z) => !currentZoneIds.has(z.id));
-
+  const filtered = availableZones.filter((z) => !currentZoneIds.has(z.id));
   return (
     <div
       style={{
@@ -341,7 +422,7 @@ function ZonePicker({
           ✕
         </button>
       </div>
-      {filteredZones.length === 0 ? (
+      {filtered.length === 0 ? (
         <div
           style={{
             padding: 12,
@@ -353,7 +434,7 @@ function ZonePicker({
           All zones are already added.
         </div>
       ) : (
-        filteredZones.map((zone) => (
+        filtered.map((zone) => (
           <div
             key={zone.id}
             style={{
@@ -384,9 +465,13 @@ function ZonePicker({
 function OverviewTab({
   sites,
   dataMap,
+  pingsMap,
+  sslMap,
 }: {
   sites: SiteConfig[];
   dataMap: Record<string, SiteData>;
+  pingsMap: Record<string, PingRecord[]>;
+  sslMap: Record<string, SslInfo>;
 }) {
   const totals = sites.map((s) =>
     dataMap[s.id] ? computeTotals(dataMap[s.id]) : null,
@@ -458,7 +543,7 @@ function OverviewTab({
           </div>
         ))}
 
-        {/* Errors */}
+        {/* API errors */}
         {sites.some((s) => dataMap[s.id]?.error) && (
           <>
             <div style={labelStyle}>Status</div>
@@ -491,7 +576,6 @@ function OverviewTab({
           values={totals.map((t) => (t ? fmtNum(t.threats24h) : null))}
         />
 
-        {/* Divider */}
         <div
           style={{
             gridColumn: "1 / -1",
@@ -522,6 +606,64 @@ function OverviewTab({
           label="Cache Hit"
           values={totals.map((t) => (t ? fmtPct(t.cacheRate30d) : null))}
         />
+
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            borderTop: "1px solid var(--border)",
+            marginTop: 2,
+          }}
+        />
+
+        {/* Health section */}
+        <div style={sectionStyle}>HEALTH</div>
+        {/* Uptime ping row */}
+        <div style={labelStyle}>Ping</div>
+        {sites.map((site) => {
+          const last = pingsMap[site.id]?.at(-1) ?? null;
+          const isUp = last?.is_up === 1;
+          const color = !last
+            ? "var(--text-dim)"
+            : isUp
+              ? "#34d399"
+              : "#ef4444";
+          return (
+            <div
+              key={site.id}
+              style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color }}
+            >
+              {!last
+                ? "—"
+                : isUp
+                  ? last.latency_ms != null
+                    ? `${last.latency_ms}ms`
+                    : "Up"
+                  : "Down"}
+            </div>
+          );
+        })}
+        {/* SSL expiry row */}
+        <div style={labelStyle}>SSL</div>
+        {sites.map((site) => {
+          const ssl = sslMap[site.id];
+          const days = ssl?.daysLeft;
+          const color =
+            days == null
+              ? "var(--text-dim)"
+              : days < 14
+                ? "#ef4444"
+                : days < 30
+                  ? "#f59e0b"
+                  : "var(--text)";
+          return (
+            <div
+              key={site.id}
+              style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color }}
+            >
+              {ssl?.error ? "—" : days != null ? `${days}d` : "—"}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -544,12 +686,10 @@ function TrafficTab({
     key: s.id,
     color: SITE_COLORS[i % SITE_COLORS.length],
   }));
-
   const visitorsData =
     period === "30d"
       ? buildDailyChart(sites, dataMap, "uniques")
       : buildHourlyChart(sites, dataMap, "uniques");
-
   const requestsData =
     period === "30d"
       ? buildDailyChart(sites, dataMap, "requests")
@@ -557,20 +697,9 @@ function TrafficTab({
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        gap: 8,
-      }}
+      style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          flexShrink: 0,
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
         <TabBar
           tabs={[
             { value: "30d", label: "30d" },
@@ -613,30 +742,17 @@ function BotsTab({
     key: s.id,
     color: SITE_COLORS[i % SITE_COLORS.length],
   }));
-
   const threatsData =
     period === "30d"
       ? buildDailyChart(sites, dataMap, "threats")
       : buildHourlyChart(sites, dataMap, "threats");
-
   const botRateData = buildBotRateChart(sites, dataMap);
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        gap: 8,
-      }}
+      style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          flexShrink: 0,
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
         <TabBar
           tabs={[
             { value: "30d", label: "30d" },
@@ -660,6 +776,167 @@ function BotsTab({
           series={series}
         />
       )}
+    </div>
+  );
+}
+
+// ── Health Tab ────────────────────────────────────────────────────────────────
+
+function HealthTab({
+  sites,
+  pingsMap,
+  sslMap,
+  dataMap,
+  series,
+}: {
+  sites: SiteConfig[];
+  pingsMap: Record<string, PingRecord[]>;
+  sslMap: Record<string, SslInfo>;
+  dataMap: Record<string, SiteData>;
+  series: { key: string; color: string }[];
+}) {
+  const pingChartData = buildPingChart(sites, pingsMap);
+  const errorRateData = buildErrorRateChart(sites, dataMap);
+
+  return (
+    <div
+      style={{ display: "flex", flexDirection: "column", height: "100%", gap: 10 }}
+    >
+      {/* Live ping status row */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          flexShrink: 0,
+          flexWrap: "wrap",
+          padding: "2px 0",
+        }}
+      >
+        {sites.map((site) => {
+          const last = pingsMap[site.id]?.at(-1) ?? null;
+          const isUp = last?.is_up === 1;
+          const dotColor = !last
+            ? "var(--text-dim)"
+            : isUp
+              ? "#34d399"
+              : "#ef4444";
+          return (
+            <div
+              key={site.id}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <div
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: "50%",
+                  background: dotColor,
+                  boxShadow: last ? `0 0 6px ${dotColor}` : "none",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 12, fontWeight: 600 }}>{site.name}</span>
+              <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
+                {!last
+                  ? "No data yet"
+                  : isUp
+                    ? last.latency_ms != null
+                      ? `${last.latency_ms} ms`
+                      : "Up"
+                    : `Down${last.status_code ? ` (${last.status_code})` : ""}`}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Ping latency chart */}
+      <ChartSection
+        title="Response Latency — 24h (ms)"
+        data={pingChartData}
+        series={series}
+      />
+
+      {/* Error rate chart */}
+      <ChartSection
+        title="Error Rate % — 30d (4xx + 5xx)"
+        data={errorRateData}
+        series={series}
+      />
+
+      {/* SSL certificates table */}
+      <div style={{ flexShrink: 0 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "var(--text-dim)",
+            marginBottom: 5,
+            fontWeight: 700,
+          }}
+        >
+          SSL CERTIFICATES
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 130px 52px",
+            rowGap: 4,
+            columnGap: 10,
+          }}
+        >
+          <div style={{ fontSize: 10, color: "var(--text-dim)" }}>Site</div>
+          <div style={{ fontSize: 10, color: "var(--text-dim)" }}>Expires</div>
+          <div
+            style={{
+              fontSize: 10,
+              color: "var(--text-dim)",
+              textAlign: "right",
+            }}
+          >
+            Days
+          </div>
+          {sites.map((site) => {
+            const ssl = sslMap[site.id];
+            const days = ssl?.daysLeft;
+            const expiryColor =
+              days == null
+                ? "var(--text-dim)"
+                : days < 14
+                  ? "#ef4444"
+                  : days < 30
+                    ? "#f59e0b"
+                    : "var(--text)";
+            return (
+              <Fragment key={site.id}>
+                <div style={{ fontSize: 11 }}>{site.name}</div>
+                <div style={{ fontSize: 11, color: expiryColor }}>
+                  {!ssl
+                    ? "Checking…"
+                    : ssl.error
+                      ? ssl.error
+                      : ssl.expiresAt
+                        ? ssl.expiresAt.toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "—"}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: expiryColor,
+                    textAlign: "right",
+                  }}
+                >
+                  {days != null ? `${days}d` : "—"}
+                </div>
+              </Fragment>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -728,12 +1005,23 @@ function SitesTab({
 
       {/* Site list */}
       <div
-        style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "var(--text-dim)" }}
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          marginBottom: 6,
+          color: "var(--text-dim)",
+        }}
       >
         MONITORED SITES
       </div>
       {sites.length === 0 ? (
-        <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 10 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "var(--text-dim)",
+            marginBottom: 10,
+          }}
+        >
           No sites added yet.
         </div>
       ) : (
@@ -749,7 +1037,9 @@ function SitesTab({
                 borderBottom: "1px solid var(--border)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
                 <div
                   style={{
                     width: 8,
@@ -784,7 +1074,6 @@ function SitesTab({
         </div>
       )}
 
-      {/* Add site */}
       {!showPicker && (
         <button style={buttonSmall} onClick={() => void handleShowPicker()}>
           + Add Site
@@ -793,7 +1082,13 @@ function SitesTab({
 
       {showPicker &&
         (loadingZones ? (
-          <div style={{ fontSize: 11, color: "var(--text-dim)", padding: "8px 0" }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: "var(--text-dim)",
+              padding: "8px 0",
+            }}
+          >
             Loading zones…
           </div>
         ) : zonesError ? (
@@ -834,13 +1129,22 @@ function SitesTab({
 type SetupStep = "init" | "token-input" | "dashboard";
 
 function WebsiteMonitor({ api, setTitle }: WidgetProps) {
+  const sqlReady = useSqlInit(api, PING_SCHEMA, PING_MIGRATIONS);
+
   const [step, setStep] = useState<SetupStep>("init");
   const [sites, setSites] = useState<SiteConfig[]>([]);
   const [dataMap, setDataMap] = useState<Record<string, SiteData>>({});
+  const [pingsMap, setPingsMap] = useState<Record<string, PingRecord[]>>({});
+  const [sslMap, setSslMap] = useState<Record<string, SslInfo>>({});
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [period, setPeriod] = useState<Period>("30d");
+
+  const sitesRef = useRef<SiteConfig[]>([]);
+  useEffect(() => {
+    sitesRef.current = sites;
+  }, [sites]);
 
   const loadSitesFromKv = useCallback(async (): Promise<SiteConfig[]> => {
     const raw = await api.kv.get(KV_SITES_KEY);
@@ -876,6 +1180,80 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
     [api],
   );
 
+  const fetchAllSsl = useCallback(
+    async (siteList: SiteConfig[]) => {
+      const active = siteList.filter((s) => s.zoneId);
+      if (active.length === 0) return;
+      const results = await Promise.allSettled(
+        active.map(async (s) => ({
+          siteId: s.id,
+          info: await fetchSslExpiry(api.net.fetch, s.name),
+        })),
+      );
+      setSslMap((prev) => {
+        const next = { ...prev };
+        for (const r of results) {
+          if (r.status === "fulfilled") next[r.value.siteId] = r.value.info;
+        }
+        return next;
+      });
+    },
+    [api],
+  );
+
+  const loadAllPings = useCallback(
+    async (siteList: SiteConfig[]) => {
+      const active = siteList.filter((s) => s.zoneId);
+      if (active.length === 0) return;
+      const cutoff = Date.now() - PING_HISTORY_MS;
+      const map: Record<string, PingRecord[]> = {};
+      for (const s of active) {
+        map[s.id] = await api.sql.all<PingRecord>(LOAD_PINGS, [s.id, cutoff]);
+      }
+      setPingsMap(map);
+    },
+    [api],
+  );
+
+  const runAllPings = useCallback(
+    async (siteList: SiteConfig[]) => {
+      const active = siteList.filter((s) => s.zoneId);
+      if (active.length === 0) return;
+
+      await Promise.all(
+        active.map(async (site) => {
+          const ts = Date.now();
+          let latency_ms: number | null = null;
+          let status_code: number | null = null;
+          let is_up = 0;
+          try {
+            const url = `https://${site.name.replace(/^https?:\/\//, "")}`;
+            const t0 = performance.now();
+            const res = await api.net.fetch(url);
+            latency_ms = Math.round(performance.now() - t0);
+            status_code = res.status;
+            is_up = res.status >= 200 && res.status < 400 ? 1 : 0;
+          } catch {
+            // unreachable — is_up stays 0
+          }
+          await api.sql.run(
+            ...namedSql(INSERT_PING, {
+              site_id: site.id,
+              ts,
+              latency_ms,
+              status_code,
+              is_up,
+            }),
+          );
+        }),
+      );
+
+      await api.sql.run(PRUNE_PINGS, [Date.now() - PING_HISTORY_MS]);
+      await loadAllPings(siteList);
+    },
+    [api, loadAllPings],
+  );
+
   // Initial load
   useEffect(() => {
     const init = async () => {
@@ -889,26 +1267,45 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
       setStep("dashboard");
       const token = (await api.secrets.get(SECRET_TOKEN_KEY)) as string;
       void fetchAll(token, loaded);
+      void fetchAllSsl(loaded);
     };
     void init();
-  }, [api, loadSitesFromKv, fetchAll]);
+  }, [api, loadSitesFromKv, fetchAll, fetchAllSsl]);
 
-  // Auto-refresh
+  // CF data auto-refresh
   useEffect(() => {
     if (step !== "dashboard") return;
     const id = setInterval(async () => {
       const token = (await api.secrets.get(SECRET_TOKEN_KEY)) as string | null;
-      if (token) void fetchAll(token, sites);
+      if (token) void fetchAll(token, sitesRef.current);
     }, REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [step, sites, api, fetchAll]);
+  }, [step, api, fetchAll]);
 
-  // Title update
+  // Ping loop (starts once SQLite is ready and we're in dashboard)
+  useEffect(() => {
+    if (!sqlReady || step !== "dashboard") return;
+    void loadAllPings(sitesRef.current);
+    void runAllPings(sitesRef.current);
+    const id = setInterval(
+      () => void runAllPings(sitesRef.current),
+      PING_INTERVAL_MS,
+    );
+    return () => clearInterval(id);
+  }, [sqlReady, step, loadAllPings, runAllPings]);
+
+  // Title badge on errors
   useEffect(() => {
     const errors = Object.values(dataMap).filter((d) => d.error).length;
-    if (errors > 0) setTitle?.(`⚠ ${errors} error${errors > 1 ? "s" : ""}`);
-    else setTitle?.(undefined);
-  }, [dataMap, setTitle]);
+    const downSites = Object.values(pingsMap).filter((ps) => {
+      const last = ps.at(-1);
+      return last && last.is_up === 0;
+    }).length;
+    const totalIssues = errors + downSites;
+    setTitle?.(
+      totalIssues > 0 ? `⚠ ${totalIssues} issue${totalIssues > 1 ? "s" : ""}` : undefined,
+    );
+  }, [dataMap, pingsMap, setTitle]);
 
   const handleConnect = useCallback(
     async (token: string): Promise<string | null> => {
@@ -919,15 +1316,18 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
       setSites(loaded);
       setStep("dashboard");
       void fetchAll(token, loaded);
+      void fetchAllSsl(loaded);
       return null;
     },
-    [api, loadSitesFromKv, fetchAll],
+    [api, loadSitesFromKv, fetchAll, fetchAllSsl],
   );
 
   const handleDisconnect = useCallback(async () => {
     await api.secrets.del(SECRET_TOKEN_KEY);
     setSites([]);
     setDataMap({});
+    setPingsMap({});
+    setSslMap({});
     setStep("token-input");
   }, [api]);
 
@@ -937,6 +1337,16 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
       setSites(newSites);
       await saveSites(newSites);
       setDataMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setPingsMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setSslMap((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;
@@ -957,22 +1367,23 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
       await saveSites(newSites);
       const token = (await api.secrets.get(SECRET_TOKEN_KEY)) as string | null;
       if (token) {
-        const data = await fetchSiteData(
-          api.net.fetch,
-          token,
-          zone.id,
-          newSite.id,
+        void fetchSiteData(api.net.fetch, token, zone.id, newSite.id).then(
+          (data) => setDataMap((prev) => ({ ...prev, [newSite.id]: data })),
         );
-        setDataMap((prev) => ({ ...prev, [newSite.id]: data }));
       }
+      void fetchSslExpiry(api.net.fetch, zone.name).then((info) =>
+        setSslMap((prev) => ({ ...prev, [newSite.id]: info })),
+      );
+      if (sqlReady) void runAllPings([newSite]);
     },
-    [sites, saveSites, api],
+    [sites, saveSites, api, sqlReady, runAllPings],
   );
 
   const handleRefresh = useCallback(async () => {
     const token = (await api.secrets.get(SECRET_TOKEN_KEY)) as string | null;
     if (token) void fetchAll(token, sites);
-  }, [api, sites, fetchAll]);
+    void fetchAllSsl(sites);
+  }, [api, sites, fetchAll, fetchAllSsl]);
 
   const loadZones = useCallback(async () => {
     const token = (await api.secrets.get(SECRET_TOKEN_KEY)) as string | null;
@@ -985,6 +1396,10 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
 
   const activeSites = sites.filter((s) => s.zoneId);
   const hasActiveSites = activeSites.length > 0;
+  const series = activeSites.map((s, i) => ({
+    key: s.id,
+    color: SITE_COLORS[i % SITE_COLORS.length],
+  }));
 
   return (
     <div
@@ -1041,6 +1456,7 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
           { value: "overview", label: "Overview" },
           { value: "traffic", label: "Traffic" },
           { value: "bots", label: "Bots" },
+          { value: "health", label: "Health" },
           { value: "sites", label: "Sites" },
         ]}
         active={tab}
@@ -1051,12 +1467,7 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
 
       {/* Tab content */}
       <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
+        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       >
         {tab === "sites" && (
           <div style={{ flex: 1, overflow: "auto" }}>
@@ -1091,7 +1502,12 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
 
         {tab === "overview" && hasActiveSites && (
           <div style={{ flex: 1, overflow: "auto" }}>
-            <OverviewTab sites={activeSites} dataMap={dataMap} />
+            <OverviewTab
+              sites={activeSites}
+              dataMap={dataMap}
+              pingsMap={pingsMap}
+              sslMap={sslMap}
+            />
           </div>
         )}
 
@@ -1112,6 +1528,16 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
             onPeriodChange={setPeriod}
           />
         )}
+
+        {tab === "health" && hasActiveSites && (
+          <HealthTab
+            sites={activeSites}
+            pingsMap={pingsMap}
+            sslMap={sslMap}
+            dataMap={dataMap}
+            series={series}
+          />
+        )}
       </div>
     </div>
   );
@@ -1124,11 +1550,12 @@ const widget: Widget = {
     id: "website-monitor",
     name: "Website Monitor",
     description:
-      "Monitor Cloudflare-hosted sites: visitors, traffic, bot activity, bandwidth, and cache stats.",
-    version: "0.1.0",
+      "Monitor Cloudflare-hosted sites: visitors, traffic, bot activity, bandwidth, uptime pings, SSL expiry, and error rates.",
+    version: "0.2.0",
     icon: "🌐",
     defaultSize: { w: 10, h: 11 },
     minSize: { w: 6, h: 7 },
+    permissions: { sqlite: true },
   },
   Component: WebsiteMonitor,
 };
