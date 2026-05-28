@@ -17,13 +17,8 @@ import {
   PING_INTERVAL_MS,
   PING_HISTORY_MS,
 } from "./constants";
-import {
-  PING_SCHEMA,
-  PING_MIGRATIONS,
-  INSERT_PING,
-  LOAD_PINGS,
-  PRUNE_PINGS,
-} from "./schema";
+import { INIT_SQL, MIGRATIONS } from "./schema";
+import { INSERT_PING, LOAD_PINGS, PRUNE_PINGS } from "./queries";
 import type {
   SiteConfig,
   SiteData,
@@ -1129,7 +1124,7 @@ function SitesTab({
 type SetupStep = "init" | "token-input" | "dashboard";
 
 function WebsiteMonitor({ api, setTitle }: WidgetProps) {
-  const sqlReady = useSqlInit(api, PING_SCHEMA, PING_MIGRATIONS);
+  const sqlReady = useSqlInit(api, INIT_SQL, MIGRATIONS);
 
   const [step, setStep] = useState<SetupStep>("init");
   const [sites, setSites] = useState<SiteConfig[]>([]);
@@ -1184,10 +1179,12 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
     async (siteList: SiteConfig[]) => {
       const active = siteList.filter((s) => s.zoneId);
       if (active.length === 0) return;
+      const token = (await api.secrets.get(SECRET_TOKEN_KEY)) as string | null;
+      if (!token) return;
       const results = await Promise.allSettled(
         active.map(async (s) => ({
           siteId: s.id,
-          info: await fetchSslExpiry(api.net.fetch, s.name),
+          info: await fetchSslExpiry(api.net.fetch, token, s.name, s.zoneId),
         })),
       );
       setSslMap((prev) => {
@@ -1370,10 +1367,10 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
         void fetchSiteData(api.net.fetch, token, zone.id, newSite.id).then(
           (data) => setDataMap((prev) => ({ ...prev, [newSite.id]: data })),
         );
+        void fetchSslExpiry(api.net.fetch, token, zone.name, zone.id).then(
+          (info) => setSslMap((prev) => ({ ...prev, [newSite.id]: info })),
+        );
       }
-      void fetchSslExpiry(api.net.fetch, zone.name).then((info) =>
-        setSslMap((prev) => ({ ...prev, [newSite.id]: info })),
-      );
       if (sqlReady) void runAllPings([newSite]);
     },
     [sites, saveSites, api, sqlReady, runAllPings],

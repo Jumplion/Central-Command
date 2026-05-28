@@ -1,10 +1,28 @@
 import type { SiteData, DailyBucket, HourlyBucket, SslInfo } from "./types";
-import { CF_GRAPHQL_URL, CF_ZONES_URL } from "./constants";
+import { CF_GRAPHQL_URL } from "./constants";
 
 type NetFetch = (
   url: string,
   init?: { method?: string; headers?: Record<string, string>; body?: string },
 ) => Promise<{ ok: boolean; status: number; body: string }>;
+
+// ── SQL query strings ─────────────────────────────────────────────────────────
+
+export const INSERT_PING = `
+INSERT INTO pings (site_id, ts, latency_ms, status_code, is_up)
+VALUES (:site_id, :ts, :latency_ms, :status_code, :is_up)
+`;
+
+export const LOAD_PINGS = `
+SELECT id, site_id, ts, latency_ms, status_code, is_up
+FROM pings
+WHERE site_id = ? AND ts >= ?
+ORDER BY ts ASC
+`;
+
+export const PRUNE_PINGS = `DELETE FROM pings WHERE ts < ?`;
+
+// ── Cloudflare REST API ───────────────────────────────────────────────────────
 
 export interface CFZone {
   id: string;
@@ -16,24 +34,36 @@ export async function fetchZones(
   netFetch: NetFetch,
   token: string,
 ): Promise<{ zones?: CFZone[]; error?: string }> {
+  const allZones: CFZone[] = [];
+  let page = 1;
   try {
-    const res = await netFetch(CF_ZONES_URL, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return { error: `HTTP ${res.status}` };
-    const json = JSON.parse(res.body) as {
-      success: boolean;
-      result?: CFZone[];
-      errors?: { message: string }[];
-    };
-    if (!json.success) {
-      return { error: json.errors?.[0]?.message ?? "Request failed" };
+    while (true) {
+      const res = await netFetch(
+        `https://api.cloudflare.com/client/v4/zones?per_page=50&status=active&page=${page}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) return { error: `HTTP ${res.status}` };
+      const json = JSON.parse(res.body) as {
+        success: boolean;
+        result?: CFZone[];
+        result_info?: { page: number; total_pages: number };
+        errors?: { message: string }[];
+      };
+      if (!json.success) {
+        return { error: json.errors?.[0]?.message ?? "Request failed" };
+      }
+      allZones.push(...(json.result ?? []));
+      const info = json.result_info;
+      if (!info || info.page >= info.total_pages) break;
+      page++;
     }
-    return { zones: json.result ?? [] };
+    return { zones: allZones };
   } catch {
     return { error: "Failed to connect to Cloudflare" };
   }
 }
+
+// ── Cloudflare GraphQL analytics ──────────────────────────────────────────────
 
 function getDateRanges() {
   const now = new Date();
@@ -182,14 +212,76 @@ export async function fetchSiteData(
   }
 }
 
+// ── SSL certificate expiry ────────────────────────────────────────────────────
+
 export async function fetchSslExpiry(
   netFetch: NetFetch,
+  token: string,
   domain: string,
+  zoneId: string,
 ): Promise<SslInfo> {
   const cleanDomain = domain
     .replace(/^https?:\/\//, "")
     .split("/")[0]
     .toLowerCase();
+
+  // Prefer Cloudflare's certificate_packs API — returns the live serving cert.
+  // Falls back to crt.sh if the token lacks SSL:Read permission (403).
+  try {
+    const res = await netFetch(
+      `https://api.cloudflare.com/client/v4/zones/${zoneId}/ssl/certificate_packs`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (res.ok) {
+      const json = JSON.parse(res.body) as {
+        success: boolean;
+        result?: {
+          certificates: {
+            id: string;
+            issuer: string;
+            expires_on: string;
+            status: string;
+          }[];
+          primary_certificate: string;
+        }[];
+      };
+      if (json.success && json.result?.length) {
+        const now = Date.now();
+        let bestExpiry: Date | null = null;
+        let bestIssuer: string | undefined;
+        for (const pack of json.result) {
+          const cert =
+            pack.certificates.find((c) => c.id === pack.primary_certificate) ??
+            pack.certificates[0];
+          if (!cert || cert.status !== "active") continue;
+          const expiresAt = new Date(cert.expires_on);
+          if (
+            expiresAt.getTime() > now &&
+            (!bestExpiry || expiresAt > bestExpiry)
+          ) {
+            bestExpiry = expiresAt;
+            bestIssuer = cert.issuer;
+          }
+        }
+        if (bestExpiry) {
+          const daysLeft = Math.floor(
+            (bestExpiry.getTime() - now) / 86_400_000,
+          );
+          return {
+            domain: cleanDomain,
+            expiresAt: bestExpiry,
+            daysLeft,
+            issuer: bestIssuer,
+          };
+        }
+      }
+    }
+    // 403 = token lacks SSL:Read — fall through to crt.sh
+  } catch {
+    // network error — fall through to crt.sh
+  }
+
+  // Fall back: crt.sh certificate transparency log
   try {
     const res = await netFetch(
       `https://crt.sh/?q=${encodeURIComponent(cleanDomain)}&output=json&deduplicate=Y`,
@@ -211,7 +303,9 @@ export async function fetchSslExpiry(
           new Date(b.not_before).getTime() - new Date(a.not_before).getTime(),
       );
 
-    if (valid.length === 0) return { domain: cleanDomain, error: "No valid cert found" };
+    if (valid.length === 0) {
+      return { domain: cleanDomain, error: "No valid cert found" };
+    }
 
     const cert = valid[0];
     const expiresAt = new Date(cert.not_after);
