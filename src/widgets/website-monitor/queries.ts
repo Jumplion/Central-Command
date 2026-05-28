@@ -154,7 +154,10 @@ export async function fetchSiteData(
           bytes: number;
           threats: number;
           cachedRequests: number;
-          responseStatusMap?: { edgeResponseStatus: number; requests: number }[];
+          responseStatusMap?: {
+            edgeResponseStatus: number;
+            requests: number;
+          }[];
         };
         uniq: { uniques: number };
       }[];
@@ -165,27 +168,28 @@ export async function fetchSiteData(
           pageViews: number;
           bytes: number;
           threats: number;
-          responseStatusMap?: { edgeResponseStatus: number; requests: number }[];
+          responseStatusMap?: {
+            edgeResponseStatus: number;
+            requests: number;
+          }[];
         };
         uniq: { uniques: number };
       }[];
     };
 
-    const daily: DailyBucket[] = (zone.httpRequests1dGroups ?? []).map(
-      (g) => ({
-        date: g.dimensions.date,
-        requests: g.sum.requests ?? 0,
-        pageViews: g.sum.pageViews ?? 0,
-        uniques: g.uniq.uniques ?? 0,
-        threats: g.sum.threats ?? 0,
-        bytes: g.sum.bytes ?? 0,
-        cachedRequests: g.sum.cachedRequests ?? 0,
-        statusCodes: (g.sum.responseStatusMap ?? []).map((s) => ({
-          status: s.edgeResponseStatus,
-          requests: s.requests,
-        })),
-      }),
-    );
+    const daily: DailyBucket[] = (zone.httpRequests1dGroups ?? []).map((g) => ({
+      date: g.dimensions.date,
+      requests: g.sum.requests ?? 0,
+      pageViews: g.sum.pageViews ?? 0,
+      uniques: g.uniq.uniques ?? 0,
+      threats: g.sum.threats ?? 0,
+      bytes: g.sum.bytes ?? 0,
+      cachedRequests: g.sum.cachedRequests ?? 0,
+      statusCodes: (g.sum.responseStatusMap ?? []).map((s) => ({
+        status: s.edgeResponseStatus,
+        requests: s.requests,
+      })),
+    }));
 
     const hourly: HourlyBucket[] = (zone.httpRequests1hGroups ?? []).map(
       (g) => ({

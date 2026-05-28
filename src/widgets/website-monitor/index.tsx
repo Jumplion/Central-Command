@@ -233,7 +233,12 @@ function buildPingChart(
 function SiteLegend({ sites }: { sites: SiteConfig[] }) {
   return (
     <div
-      style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
     >
       {sites.map((site, i) => (
         <div
@@ -272,7 +277,12 @@ function ChartSection({
   );
   return (
     <div
-      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
       <div
         style={{
@@ -347,9 +357,8 @@ function ApiKeySetup({
           lineHeight: 1.5,
         }}
       >
-        Enter a Cloudflare API token with{" "}
-        <strong>Zone Analytics:Read</strong> and{" "}
-        <strong>Zone:Read</strong> permissions.
+        Enter a Cloudflare API token with <strong>Zone Analytics:Read</strong>{" "}
+        and <strong>Zone:Read</strong> permissions.
       </div>
       <input
         type="password"
@@ -625,7 +634,12 @@ function OverviewTab({
           return (
             <div
               key={site.id}
-              style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color }}
+              style={{
+                textAlign: "center",
+                fontSize: 12,
+                fontWeight: 600,
+                color,
+              }}
             >
               {!last
                 ? "—"
@@ -653,7 +667,12 @@ function OverviewTab({
           return (
             <div
               key={site.id}
-              style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color }}
+              style={{
+                textAlign: "center",
+                fontSize: 12,
+                fontWeight: 600,
+                color,
+              }}
             >
               {ssl?.error ? "—" : days != null ? `${days}d` : "—"}
             </div>
@@ -692,9 +711,16 @@ function TrafficTab({
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 8,
+      }}
     >
-      <div style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+      <div
+        style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0 }}
+      >
         <TabBar
           tabs={[
             { value: "30d", label: "30d" },
@@ -745,9 +771,16 @@ function BotsTab({
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 8,
+      }}
     >
-      <div style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+      <div
+        style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0 }}
+      >
         <TabBar
           tabs={[
             { value: "30d", label: "30d" },
@@ -795,7 +828,12 @@ function HealthTab({
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", height: "100%", gap: 10 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 10,
+      }}
     >
       {/* Live ping status row */}
       <div
@@ -1032,9 +1070,7 @@ function SitesTab({
                 borderBottom: "1px solid var(--border)",
               }}
             >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: 8 }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div
                   style={{
                     width: 8,
@@ -1300,7 +1336,9 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
     }).length;
     const totalIssues = errors + downSites;
     setTitle?.(
-      totalIssues > 0 ? `⚠ ${totalIssues} issue${totalIssues > 1 ? "s" : ""}` : undefined,
+      totalIssues > 0
+        ? `⚠ ${totalIssues} issue${totalIssues > 1 ? "s" : ""}`
+        : undefined,
     );
   }, [dataMap, pingsMap, setTitle]);
 
@@ -1464,7 +1502,12 @@ function WebsiteMonitor({ api, setTitle }: WidgetProps) {
 
       {/* Tab content */}
       <div
-        style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
         {tab === "sites" && (
           <div style={{ flex: 1, overflow: "auto" }}>
