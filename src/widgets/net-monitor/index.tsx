@@ -17,8 +17,6 @@ import {
 import { INSERT_MEASUREMENT, LOAD_HISTORY, PRUNE_OLD } from "./queries";
 import type { Measurement } from "./types";
 
-
-
 function latencyColor(ms: number | null): string {
   if (ms === null) return "var(--text-dim)";
   if (ms < LATENCY_GOOD_MS) return "#34d399";
@@ -359,32 +357,84 @@ function NetMonitor({ api, settings, setTitle }: WidgetProps) {
           </div>
         ))}
         {/* Latency row */}
-        <div style={{ fontSize: 10, color: "var(--text-dim)", display: "flex", alignItems: "center" }}>
+        <div
+          style={{
+            fontSize: 10,
+            color: "var(--text-dim)",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
           Latency
         </div>
         {([nowStats, last5Stats, hrStats] as const).map((s, i) => (
-          <div key={i} style={{ textAlign: "center", fontSize: 13, fontWeight: 600, color: latencyColor(s.latency) }}>
+          <div
+            key={i}
+            style={{
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 600,
+              color: latencyColor(s.latency),
+            }}
+          >
             {fmtLatency(s.latency)}
           </div>
         ))}
         {/* Speed row */}
-        <div style={{ fontSize: 10, color: "var(--text-dim)", display: "flex", alignItems: "center" }}>
+        <div
+          style={{
+            fontSize: 10,
+            color: "var(--text-dim)",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
           Speed
         </div>
         {([nowStats, last5Stats, hrStats] as const).map((s, i) => (
-          <div key={i} style={{ textAlign: "center", fontSize: 13, fontWeight: 600, color: "#60a5fa" }}>
+          <div
+            key={i}
+            style={{
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#60a5fa",
+            }}
+          >
             {fmtSpeed(s.speed)}
           </div>
         ))}
         {/* Uptime row */}
-        <div style={{ fontSize: 10, color: "var(--text-dim)", display: "flex", alignItems: "center" }}>
+        <div
+          style={{
+            fontSize: 10,
+            color: "var(--text-dim)",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
           Uptime
         </div>
-        <div style={{ textAlign: "center", fontSize: 13, fontWeight: 600, color: statusColor }}>
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: 13,
+            fontWeight: 600,
+            color: statusColor,
+          }}
+        >
           {statusLabel}
         </div>
         {([last5Stats, hrStats] as const).map((s, i) => (
-          <div key={i} style={{ textAlign: "center", fontSize: 13, fontWeight: 600, color: winUpColor(s.uptime) }}>
+          <div
+            key={i}
+            style={{
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 600,
+              color: winUpColor(s.uptime),
+            }}
+          >
             {s.uptime !== null ? `${s.uptime}%` : "—"}
           </div>
         ))}
