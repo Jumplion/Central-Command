@@ -28,6 +28,11 @@ function JobTracker({ api }: WidgetProps) {
   const [apps, setApps] = useState<Application[]>([]);
   const [filter, setFilter] = useState<Status | "All">("All");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [inlineEditing, setInlineEditing] = useState<{
+    appId: number;
+    field: "company" | "role" | "status" | "applied_at";
+  } | null>(null);
+  const [inlineValue, setInlineValue] = useState<string>("");
   const [showAdd, setShowAdd] = useState(false);
   const [view, setView] = useState<"list" | "chart" | "emails">("list");
   const [importing, setImporting] = useState(false);
@@ -141,6 +146,39 @@ function JobTracker({ api }: WidgetProps) {
   const handleDelete = async (id: number) => {
     await api.sql.run(DELETE_APPLICATION, [id]);
     await load();
+  };
+
+  const handleInlineEdit = async (
+    app: Application,
+    field: "company" | "role" | "status" | "applied_at",
+    value: string,
+  ) => {
+    const updates: Partial<AppFormData> = {
+      company: app.company,
+      role: app.role,
+      status: app.status,
+      applied_at: app.applied_at,
+      location: app.location,
+      source: app.source,
+      link: app.link,
+      notes: app.notes,
+      req_number: app.req_number,
+    };
+    if (field === "status") {
+      updates.status = value as Status;
+    } else {
+      updates[field] = value;
+    }
+
+    await api.sql.run(
+      ...namedSql(UPDATE_APPLICATION, {
+        ...updates,
+        last_updated: Date.now(),
+        id: app.id,
+      }),
+    );
+    await load();
+    setInlineEditing(null);
   };
 
   const handleExportCSV = () => {
@@ -417,7 +455,6 @@ function JobTracker({ api }: WidgetProps) {
                       style={{
                         borderTop: "1px solid var(--border)",
                         transition: "background-color 0.15s",
-                        cursor: "pointer",
                       }}
                       onMouseEnter={(e) =>
                         (e.currentTarget.style.backgroundColor =
@@ -427,16 +464,186 @@ function JobTracker({ api }: WidgetProps) {
                         (e.currentTarget.style.backgroundColor = "")
                       }
                     >
-                      <Td>{app.company}</Td>
-                      <Td>{app.role}</Td>
-                      <Td>{app.location}</Td>
+                      {/* Company */}
                       <Td>
-                        <StatusBadge
-                          label={app.status}
-                          color={STATUS_COLOR[app.status]}
-                        />
+                        {inlineEditing?.appId === app.id &&
+                        inlineEditing?.field === "company" ? (
+                          <input
+                            type="text"
+                            value={inlineValue}
+                            onChange={(e) => setInlineValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                void handleInlineEdit(
+                                  app,
+                                  "company",
+                                  inlineValue,
+                                );
+                              } else if (e.key === "Escape") {
+                                setInlineEditing(null);
+                              }
+                            }}
+                            onBlur={() =>
+                              void handleInlineEdit(app, "company", inlineValue)
+                            }
+                            autoFocus
+                            style={{
+                              width: "100%",
+                              padding: "2px 4px",
+                              border: "1px solid var(--border)",
+                              borderRadius: 2,
+                              fontSize: 12,
+                            }}
+                          />
+                        ) : (
+                          <span
+                            onClick={() => {
+                              setInlineEditing({
+                                appId: app.id,
+                                field: "company",
+                              });
+                              setInlineValue(app.company);
+                            }}
+                            style={{ cursor: "pointer", padding: "2px 4px" }}
+                            title="Click to edit"
+                          >
+                            {app.company}
+                          </span>
+                        )}
                       </Td>
-                      <Td>{app.applied_at}</Td>
+
+                      {/* Role (Job Title) */}
+                      <Td>
+                        {inlineEditing?.appId === app.id &&
+                        inlineEditing?.field === "role" ? (
+                          <input
+                            type="text"
+                            value={inlineValue}
+                            onChange={(e) => setInlineValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                void handleInlineEdit(app, "role", inlineValue);
+                              } else if (e.key === "Escape") {
+                                setInlineEditing(null);
+                              }
+                            }}
+                            onBlur={() =>
+                              void handleInlineEdit(app, "role", inlineValue)
+                            }
+                            autoFocus
+                            style={{
+                              width: "100%",
+                              padding: "2px 4px",
+                              border: "1px solid var(--border)",
+                              borderRadius: 2,
+                              fontSize: 12,
+                            }}
+                          />
+                        ) : (
+                          <span
+                            onClick={() => {
+                              setInlineEditing({
+                                appId: app.id,
+                                field: "role",
+                              });
+                              setInlineValue(app.role);
+                            }}
+                            style={{ cursor: "pointer", padding: "2px 4px" }}
+                            title="Click to edit"
+                          >
+                            {app.role}
+                          </span>
+                        )}
+                      </Td>
+
+                      <Td>{app.location}</Td>
+
+                      {/* Status */}
+                      <Td>
+                        {inlineEditing?.appId === app.id &&
+                        inlineEditing?.field === "status" ? (
+                          <select
+                            value={inlineValue}
+                            onChange={(e) => {
+                              void handleInlineEdit(
+                                app,
+                                "status",
+                                e.target.value,
+                              );
+                            }}
+                            autoFocus
+                            style={{
+                              padding: "2px 4px",
+                              border: "1px solid var(--border)",
+                              borderRadius: 2,
+                              fontSize: 12,
+                            }}
+                          >
+                            {STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            onClick={() => {
+                              setInlineEditing({
+                                appId: app.id,
+                                field: "status",
+                              });
+                              setInlineValue(app.status);
+                            }}
+                            style={{ cursor: "pointer" }}
+                            title="Click to edit"
+                          >
+                            <StatusBadge
+                              label={app.status}
+                              color={STATUS_COLOR[app.status]}
+                            />
+                          </span>
+                        )}
+                      </Td>
+
+                      {/* Applied At */}
+                      <Td>
+                        {inlineEditing?.appId === app.id &&
+                        inlineEditing?.field === "applied_at" ? (
+                          <input
+                            type="date"
+                            value={inlineValue}
+                            onChange={(e) => {
+                              void handleInlineEdit(
+                                app,
+                                "applied_at",
+                                e.target.value,
+                              );
+                            }}
+                            autoFocus
+                            style={{
+                              padding: "2px 4px",
+                              border: "1px solid var(--border)",
+                              borderRadius: 2,
+                              fontSize: 12,
+                            }}
+                          />
+                        ) : (
+                          <span
+                            onClick={() => {
+                              setInlineEditing({
+                                appId: app.id,
+                                field: "applied_at",
+                              });
+                              setInlineValue(app.applied_at);
+                            }}
+                            style={{ cursor: "pointer", padding: "2px 4px" }}
+                            title="Click to edit"
+                          >
+                            {app.applied_at}
+                          </span>
+                        )}
+                      </Td>
+
                       <Td>{app.req_number}</Td>
                       <td
                         style={{
