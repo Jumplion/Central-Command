@@ -51,9 +51,12 @@ const mockWindowCc = {
   },
 };
 
-// Mock emitApiCall
+// Mock emitApiCall and widget lifecycle events
 vi.mock("./apiEvents", () => ({
   emitApiCall: vi.fn(),
+  emitWidgetMount: vi.fn(),
+  emitWidgetUnmount: vi.fn(),
+  subscribeWidgetEvents: vi.fn(() => () => {}),
 }));
 
 beforeEach(() => {
