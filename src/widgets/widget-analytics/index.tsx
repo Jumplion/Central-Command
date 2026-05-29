@@ -55,7 +55,7 @@ function exportCsvData(rows: UsageRow[]): void {
   a.href = url;
   a.download = `widget-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // -- Component ---------------------------------------------------------------
