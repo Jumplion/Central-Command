@@ -3,9 +3,44 @@ import GridLayout, { Layout } from "react-grid-layout";
 import { useDashboard } from "@renderer/state/dashboard";
 import { getWidget } from "@renderer/plugins/registry";
 import { WidgetHost } from "./WidgetHost";
+import type { WidgetManifest } from "@shared/types";
 
 const COLS = 12;
 const ROW_HEIGHT = 60;
+const MAX_HISTORY = 20;
+
+type LayoutSnapshot = {
+  instanceId: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}[];
+
+function ResizeHint({
+  w,
+  h,
+  manifest,
+}: {
+  w: number;
+  h: number;
+  manifest?: WidgetManifest;
+}) {
+  const isGoodFit =
+    manifest?.defaultSize != null &&
+    w === manifest.defaultSize.w &&
+    h === manifest.defaultSize.h;
+
+  return (
+    <div className={`resize-hint${isGoodFit ? " resize-hint--good-fit" : ""}`}>
+      {isGoodFit && <span className="resize-hint__check">✓</span>}
+      <span>
+        {w} × {h}
+      </span>
+      {isGoodFit && <span className="resize-hint__label">Recommended</span>}
+    </div>
+  );
+}
 
 export function Dashboard() {
   const dashboard = useDashboard((s) => s.activeDashboard());
@@ -14,6 +49,13 @@ export function Dashboard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousInstanceIdsRef = useRef<Set<string>>(new Set());
   const [width, setWidth] = useState(800);
+  const [resizingItem, setResizingItem] = useState<{
+    id: string;
+    w: number;
+    h: number;
+  } | null>(null);
+  const layoutHistoryRef = useRef<LayoutSnapshot[]>([]);
+  const layoutFutureRef = useRef<LayoutSnapshot[]>([]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -93,14 +135,13 @@ export function Dashboard() {
     });
   }, [dashboard.instances]);
 
-  const gridItems = useMemo(
-    () =>
-      dashboard.instances.map((i) => (
-        <div key={i.instanceId} data-instance-id={i.instanceId}>
-          <WidgetHost instance={i} widget={widgetMap.get(i.widgetId)} />
-        </div>
-      )),
-    [dashboard.instances, widgetMap],
+  const snapshotCurrentLayout = useCallback(
+    (): LayoutSnapshot =>
+      dashboard.instances.map((i) => ({
+        instanceId: i.instanceId,
+        ...i.layout,
+      })),
+    [dashboard.instances],
   );
 
   const handleChange = useCallback(
@@ -110,6 +151,98 @@ export function Dashboard() {
       );
     },
     [updateLayout],
+  );
+
+  const pushHistory = useCallback(() => {
+    layoutFutureRef.current = [];
+    const snap = snapshotCurrentLayout();
+    layoutHistoryRef.current = [
+      ...layoutHistoryRef.current.slice(-(MAX_HISTORY - 1)),
+      snap,
+    ];
+  }, [snapshotCurrentLayout]);
+
+  const handleDragStart = useCallback(() => {
+    pushHistory();
+  }, [pushHistory]);
+
+  const handleResizeStart = useCallback(
+    (_layout: Layout[], oldItem: Layout) => {
+      pushHistory();
+      setResizingItem({ id: oldItem.i, w: oldItem.w, h: oldItem.h });
+    },
+    [pushHistory],
+  );
+
+  const handleResize = useCallback(
+    (_layout: Layout[], _oldItem: Layout, newItem: Layout) => {
+      setResizingItem({ id: newItem.i, w: newItem.w, h: newItem.h });
+    },
+    [],
+  );
+
+  const handleResizeStop = useCallback(
+    (next: Layout[]) => {
+      setResizingItem(null);
+      handleChange(next);
+    },
+    [handleChange],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        const history = layoutHistoryRef.current;
+        if (history.length === 0) return;
+        const prev = history[history.length - 1];
+        layoutHistoryRef.current = history.slice(0, -1);
+        layoutFutureRef.current = [
+          snapshotCurrentLayout(),
+          ...layoutFutureRef.current.slice(0, MAX_HISTORY - 1),
+        ];
+        updateLayout(prev);
+      } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        const future = layoutFutureRef.current;
+        if (future.length === 0) return;
+        const next = future[0];
+        layoutFutureRef.current = future.slice(1);
+        layoutHistoryRef.current = [
+          ...layoutHistoryRef.current.slice(-(MAX_HISTORY - 1)),
+          snapshotCurrentLayout(),
+        ];
+        updateLayout(next);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [snapshotCurrentLayout, updateLayout]);
+
+  const gridItems = useMemo(
+    () =>
+      dashboard.instances.map((i) => {
+        const widget = widgetMap.get(i.widgetId);
+        const isResizing = resizingItem?.id === i.instanceId;
+        return (
+          <div key={i.instanceId} data-instance-id={i.instanceId}>
+            <div className="widget-cell">
+              <WidgetHost instance={i} widget={widget} />
+              {isResizing && (
+                <ResizeHint
+                  w={resizingItem!.w}
+                  h={resizingItem!.h}
+                  manifest={widget?.manifest}
+                />
+              )}
+            </div>
+          </div>
+        );
+      }),
+    [dashboard.instances, widgetMap, resizingItem],
   );
 
   return (
@@ -133,8 +266,11 @@ export function Dashboard() {
           containerPadding={[16, 16]}
           draggableHandle=".widget-header"
           draggableCancel=".widget-actions"
+          onDragStart={handleDragStart}
           onDragStop={handleChange}
-          onResizeStop={handleChange}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeStop={handleResizeStop}
           compactType={null}
           preventCollision={true}
         >
