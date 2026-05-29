@@ -38,6 +38,8 @@ export const IPC = {
   DRIVE_SYNC_FORCE_PULL: "cc:drive-sync:force-pull",
   /** Push event from main → renderer on any status change or after a remote pull. */
   DRIVE_SYNC_STATUS_CHANGED: "cc:drive-sync:status-changed",
+
+  CLIPBOARD_READ: "cc:clipboard:read",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

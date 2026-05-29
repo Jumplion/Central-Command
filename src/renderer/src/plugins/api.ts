@@ -62,6 +62,9 @@ export interface WidgetApi {
     del(key: string): Promise<void>;
     has(key: string): Promise<boolean>;
   };
+  clipboard: {
+    read(): Promise<string>;
+  };
   /**
    * Google OAuth helper. Call `connect` once to run the PKCE loopback flow;
    * `getToken` returns a fresh access token (auto-refreshes when expired).
@@ -209,5 +212,8 @@ export function createWidgetApi(
       has: (key) => window.cc.secrets.has(widgetId, key),
     },
     google: createGoogleApi(widgetId),
+    clipboard: {
+      read: () => window.cc.clipboard.read(),
+    },
   };
 }

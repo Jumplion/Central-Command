@@ -169,6 +169,9 @@ export interface CCApi {
     disconnect(widgetId: string, service?: GoogleServiceId): Promise<void>;
     isConnected(widgetId: string, service?: GoogleServiceId): Promise<boolean>;
   };
+  clipboard: {
+    read(): Promise<string>;
+  };
   driveSync: {
     getStatus(): Promise<DriveSyncStatus>;
     enable(): Promise<void>;

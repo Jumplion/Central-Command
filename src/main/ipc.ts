@@ -1,4 +1,4 @@
-import { ipcMain, shell, dialog, net } from "electron";
+import { ipcMain, shell, dialog, net, clipboard } from "electron";
 import { IPC } from "@shared/ipc";
 import { openExternal } from "./platform";
 import type {
@@ -241,6 +241,8 @@ export function registerIpc(
   );
 
   // ─── Drive Sync handlers ───────────────────────────────────────────────────
+  registerHandler(IPC.CLIPBOARD_READ, [], () => clipboard.readText());
+
   registerHandler(IPC.DRIVE_SYNC_GET_STATUS, [], () => syncManager.getStatus());
   registerHandler(IPC.DRIVE_SYNC_ENABLE, [], () => syncManager.enable());
   registerHandler(IPC.DRIVE_SYNC_DISABLE, [], () => syncManager.disable());
