@@ -538,6 +538,42 @@ pre {
   font-size: 13px;
 }
 
+/* Widget cell: inner positioning context for resize hint overlays */
+.widget-cell {
+  position: relative;
+  height: 100%;
+}
+
+/* Resize size badge shown while dragging a widget handle */
+.resize-hint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.72);
+  color: var(--text);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+.resize-hint--good-fit {
+  background: var(--accent);
+  color: #fff;
+}
+
+.resize-hint__check {
+  font-size: 12px;
+}
+
 /* react-grid-layout overrides */
 .react-grid-item.react-grid-placeholder {
   background: var(--accent) !important;
