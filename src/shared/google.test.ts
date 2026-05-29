@@ -56,7 +56,7 @@ describe("GOOGLE_SERVICES", () => {
       "https://www.googleapis.com/auth/contacts",
     ]);
     expect(GOOGLE_SERVICES.notes.defaultScopes).toEqual([
-      "https://www.googleapis.com/auth/keep.readonly",
+      "https://www.googleapis.com/auth/keep",
     ]);
   });
 });

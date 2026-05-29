@@ -34,7 +34,7 @@ export const GOOGLE_SERVICES = {
     name: "Google Notes",
     description: "Notes data via Google Keep APIs when available.",
     apiBaseUrl: "https://keep.googleapis.com/v1/",
-    defaultScopes: ["https://www.googleapis.com/auth/keep.readonly"],
+    defaultScopes: ["https://www.googleapis.com/auth/keep"],
   },
   "drive-sync": {
     id: "drive-sync",
