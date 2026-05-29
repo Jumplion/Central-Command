@@ -293,4 +293,103 @@ describe("SyncManagerBase", () => {
       expect(manager.uploadDbCalls).toContain("widget-b");
     });
   });
+
+  describe("_ensureDriveIds", () => {
+    it("populates drive IDs from listFiles and sets the loaded flag", async () => {
+      const files = [
+        { id: "id-1", name: "cc-state.json", modifiedTime: "2024-01-01T00:00:00Z" },
+        { id: "id-2", name: "cc-kv-my-widget.json", modifiedTime: "2024-01-01T00:00:00Z" },
+      ];
+      const drive = makeDrive();
+      vi.mocked(drive.listFiles).mockResolvedValue(files);
+
+      class EnsureDriveIdsManager extends TestSyncManager {
+        async runEnsureDriveIds() {
+          await this._ensureDriveIds();
+        }
+        get driveIdsLoaded() {
+          return this._driveIdsLoaded;
+        }
+        get driveIds() {
+          return this._driveIds;
+        }
+      }
+
+      const m = new EnsureDriveIdsManager(drive);
+      await m.runEnsureDriveIds();
+
+      expect(m.driveIdsLoaded).toBe(true);
+      expect(m.driveIds.get("cc-state.json")).toBe("id-1");
+      expect(m.driveIds.get("cc-kv-my-widget.json")).toBe("id-2");
+      expect(drive.listFiles).toHaveBeenCalledOnce();
+
+      // second call should be a no-op (already loaded)
+      await m.runEnsureDriveIds();
+      expect(drive.listFiles).toHaveBeenCalledOnce();
+
+      m.dispose();
+    });
+  });
+
+  describe("_setError", () => {
+    it("transitions state to error and records the error message", async () => {
+      class FailingUploadManager extends TestSyncManager {
+        protected async _doUploadAll() {
+          throw new Error("upload failed");
+        }
+      }
+
+      const m = new FailingUploadManager(makeDrive());
+      m.enable();
+      await m.queue; // drain initial pull
+      m.triggerKvFlushed("w");
+      await m.queue;
+
+      const status = m.getStatus();
+      expect(status.state).toBe("error");
+      expect(status.lastError).toBe("upload failed");
+      m.dispose();
+    });
+
+    it("emits a notification when an error is recorded", async () => {
+      class FailingUploadManager extends TestSyncManager {
+        protected async _doUploadAll() {
+          throw new Error("boom");
+        }
+      }
+
+      const m = new FailingUploadManager(makeDrive());
+      m.enable();
+      await m.queue;
+      const notificationsBefore = m.notifications.length;
+      m.triggerKvFlushed("w");
+      await m.queue;
+
+      expect(m.notifications.length).toBeGreaterThan(notificationsBefore);
+      m.dispose();
+    });
+  });
+
+  describe("polling interval", () => {
+    it("fires a pull after one poll interval elapses", async () => {
+      const pullCalls: number[] = [];
+
+      class TrackingPullManager extends TestSyncManager {
+        protected async _doPull() {
+          pullCalls.push(Date.now());
+        }
+      }
+
+      const m = new TrackingPullManager(makeDrive());
+      m.enable();
+      await m.queue; // drain the initial pull triggered by enable()
+
+      const callsAfterEnable = pullCalls.length;
+      vi.advanceTimersByTime(SYNC_POLL_INTERVAL_MS);
+      await m.queue;
+
+      expect(pullCalls.length).toBeGreaterThan(callsAfterEnable);
+      m.dispose();
+    });
+  });
 });
