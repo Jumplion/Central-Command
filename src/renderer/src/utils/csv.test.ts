@@ -69,8 +69,8 @@ describe("exportCsv", () => {
 
   it("creates the blob with text/csv MIME type", () => {
     let capturedBlob: Blob | null = null;
-    vi.mocked(URL.createObjectURL).mockImplementation((blob: Blob) => {
-      capturedBlob = blob;
+    vi.mocked(URL.createObjectURL).mockImplementation((obj: Blob | MediaSource) => {
+      capturedBlob = obj as Blob;
       return mockObjectUrl;
     });
     exportCsv(["A"], [["1"]], "data.csv");
@@ -80,8 +80,8 @@ describe("exportCsv", () => {
 
   it("includes the header row and data row in the blob content", async () => {
     let capturedBlob: Blob | null = null;
-    vi.mocked(URL.createObjectURL).mockImplementation((blob: Blob) => {
-      capturedBlob = blob;
+    vi.mocked(URL.createObjectURL).mockImplementation((obj: Blob | MediaSource) => {
+      capturedBlob = obj as Blob;
       return mockObjectUrl;
     });
 
