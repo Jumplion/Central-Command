@@ -8,7 +8,9 @@ const MAX_RECENT = 5;
 
 function loadRecent(): string[] {
   try {
-    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    const parsed = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === "string");
   } catch {
     return [];
   }
@@ -22,6 +24,36 @@ function recordRecent(widgetId: string): string[] {
   );
   localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   return next;
+}
+
+/**
+ * Returns a relevance score if every character of `query` appears in `target`
+ * as a subsequence, or null if they don't. Consecutive runs and prefix matches
+ * score higher so that tighter matches float to the top.
+ */
+function fuzzyScore(target: string, query: string): number | null {
+  const t = target.toLowerCase();
+  const q = query.toLowerCase();
+  let ti = 0;
+  let qi = 0;
+  let score = 0;
+  let consecutive = 0;
+  let firstMatch = -1;
+  while (ti < t.length && qi < q.length) {
+    if (t[ti] === q[qi]) {
+      if (firstMatch === -1) firstMatch = ti;
+      score += 1 + consecutive * 2;
+      consecutive++;
+      qi++;
+    } else {
+      consecutive = 0;
+    }
+    ti++;
+  }
+  if (qi < q.length) return null;
+  if (firstMatch === 0) score += 20;
+  if (t.includes(q)) score += 30;
+  return score;
 }
 
 interface Section {
@@ -51,13 +83,16 @@ export function WidgetPalette({ onClose }: Props) {
     const q = query.trim().toLowerCase();
 
     if (q) {
-      const filtered = allWidgets.filter(
-        (w) =>
-          w.manifest.name.toLowerCase().includes(q) ||
-          w.manifest.id.toLowerCase().includes(q) ||
-          (w.manifest.description?.toLowerCase().includes(q) ?? false),
-      );
-      return [{ label: null, widgets: filtered, offset: 0 }];
+      const scored = allWidgets.flatMap((w) => {
+        const best = Math.max(
+          fuzzyScore(w.manifest.name, q) ?? -1,
+          fuzzyScore(w.manifest.id, q) ?? -1,
+          w.manifest.description ? (fuzzyScore(w.manifest.description, q) ?? -1) : -1,
+        );
+        return best >= 0 ? [{ widget: w, score: best }] : [];
+      });
+      scored.sort((a, b) => b.score - a.score);
+      return [{ label: null, widgets: scored.map((s) => s.widget), offset: 0 }];
     }
 
     const recentSet = new Set(recentIds);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDashboard } from "@renderer/state/dashboard";
 import { AddWidgetDialog } from "./AddWidgetDialog";
 import { AppSettings } from "./AppSettings";
@@ -9,6 +9,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
+  const paletteShortcut = useMemo(
+    () => (/Mac/i.test(navigator.platform) ? "⌘K" : "Ctrl+K"),
+    [],
+  );
   const dashboards = useDashboard((s) => s.state.dashboards);
   const activeId = useDashboard((s) => s.state.activeDashboardId);
   const setActive = useDashboard((s) => s.setActiveDashboard);
@@ -117,7 +121,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             <button className="primary block" onClick={() => setShowAdd(true)}>
               + Add widget
             </button>
-            <div className="sidebar-shortcut-hint">or press ⌘K</div>
+            <div className="sidebar-shortcut-hint">or press {paletteShortcut}</div>
           </div>
 
           <div className="sidebar-footer">
