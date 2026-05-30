@@ -48,6 +48,7 @@ function ClipboardHistory({ api }: WidgetProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const lastSeenRef = useRef<string | null>(null);
   const initDoneRef = useRef(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     api.kv
@@ -109,12 +110,22 @@ function ClipboardHistory({ api }: WidgetProps) {
     [api],
   );
 
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
+
   const copyEntry = useCallback(async (entry: ClipboardEntry) => {
     try {
       await writeClipboard(entry.text);
       lastSeenRef.current = entry.text;
       setCopiedId(entry.id);
-      setTimeout(() => setCopiedId((c) => (c === entry.id ? null : c)), 1200);
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => {
+        copiedTimerRef.current = null;
+        setCopiedId((c) => (c === entry.id ? null : c));
+      }, 1200);
     } catch {
       // ignore
     }

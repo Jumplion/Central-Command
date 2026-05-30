@@ -240,9 +240,10 @@ export function registerIpc(
     oauth.isConnected(w, s),
   );
 
-  // ─── Drive Sync handlers ───────────────────────────────────────────────────
+  // ─── Clipboard handlers ────────────────────────────────────────────────────
   registerHandler(IPC.CLIPBOARD_READ, [], () => clipboard.readText());
 
+  // ─── Drive Sync handlers ───────────────────────────────────────────────────
   registerHandler(IPC.DRIVE_SYNC_GET_STATUS, [], () => syncManager.getStatus());
   registerHandler(IPC.DRIVE_SYNC_ENABLE, [], () => syncManager.enable());
   registerHandler(IPC.DRIVE_SYNC_DISABLE, [], () => syncManager.disable());
