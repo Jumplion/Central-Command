@@ -1,4 +1,4 @@
-import { ipcMain, shell, dialog, net } from "electron";
+import { ipcMain, shell, dialog, net, clipboard } from "electron";
 import { IPC } from "@shared/ipc";
 import { openExternal } from "./platform";
 import type {
@@ -239,6 +239,9 @@ export function registerIpc(
   googleServiceHandler(IPC.GOOGLE_IS_CONNECTED, (w, s) =>
     oauth.isConnected(w, s),
   );
+
+  // ─── Clipboard handlers ────────────────────────────────────────────────────
+  registerHandler(IPC.CLIPBOARD_READ, [], () => clipboard.readText());
 
   // ─── Drive Sync handlers ───────────────────────────────────────────────────
   registerHandler(IPC.DRIVE_SYNC_GET_STATUS, [], () => syncManager.getStatus());

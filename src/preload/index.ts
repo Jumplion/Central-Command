@@ -77,6 +77,9 @@ const api: CCApi = {
     isConnected: (widgetId: string, service?: GoogleServiceId) =>
       ipcRenderer.invoke(IPC.GOOGLE_IS_CONNECTED, widgetId, service),
   },
+  clipboard: {
+    read: (): Promise<string> => ipcRenderer.invoke(IPC.CLIPBOARD_READ),
+  },
   driveSync: {
     getStatus: (): Promise<DriveSyncStatus> =>
       ipcRenderer.invoke(IPC.DRIVE_SYNC_GET_STATUS),

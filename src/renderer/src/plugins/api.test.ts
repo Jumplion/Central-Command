@@ -49,6 +49,9 @@ const mockWindowCc = {
     disconnect: vi.fn(),
     isConnected: vi.fn(),
   },
+  clipboard: {
+    read: vi.fn(),
+  },
 };
 
 // Mock emitApiCall
@@ -560,6 +563,7 @@ describe("createWidgetApi", () => {
     expect(api).toHaveProperty("net");
     expect(api).toHaveProperty("secrets");
     expect(api).toHaveProperty("google");
+    expect(api).toHaveProperty("clipboard");
   });
 
   it("should properly scope KV operations", async () => {

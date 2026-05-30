@@ -29,6 +29,9 @@ vi.mock("electron", () => ({
       text: vi.fn().mockResolvedValue("{}"),
     }),
   },
+  clipboard: {
+    readText: vi.fn().mockReturnValue(""),
+  },
 }));
 
 vi.mock("./platform", () => ({
@@ -511,6 +514,16 @@ describe("Google delegation", () => {
   it("delegates google.disconnect to oauth.disconnect", async () => {
     await call(IPC.GOOGLE_DISCONNECT, "w", "drive");
     expect(mockOAuth.disconnect).toHaveBeenCalledWith("w", "drive");
+  });
+});
+
+// ── Clipboard handler ─────────────────────────────────────────────────────────
+
+describe("CLIPBOARD_READ", () => {
+  it("delegates to clipboard.readText and returns its value", async () => {
+    const { clipboard } = await import("electron");
+    vi.mocked(clipboard.readText).mockReturnValue("hello world");
+    expect(await call(IPC.CLIPBOARD_READ)).toBe("hello world");
   });
 });
 
