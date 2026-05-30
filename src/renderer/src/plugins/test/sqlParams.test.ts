@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { namedSql } from "./sqlParams";
+import { namedSql } from "../sqlParams";
 
 describe("namedSql", () => {
   it("substitutes a single named param", () => {

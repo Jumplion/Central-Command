@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createMigration } from "./sqlMigrationHelper";
+import { createMigration } from "../sqlMigrationHelper";
 
 describe("createMigration", () => {
   it("returns a SqlMigration with the provided table, column, and sql", () => {

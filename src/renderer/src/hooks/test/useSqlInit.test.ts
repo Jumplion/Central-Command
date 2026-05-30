@@ -16,7 +16,7 @@ import {
   INIT_SQL as EXAMPLE_INIT_SQL,
   MIGRATIONS as EXAMPLE_MIGRATIONS,
 } from "@widgets/example-widget/constants";
-import type { SqlMigration } from "./useSqlInit";
+import type { SqlMigration } from "../useSqlInit";
 
 /**
  * Parses CREATE TABLE statements and returns a map of table name → set of column names.

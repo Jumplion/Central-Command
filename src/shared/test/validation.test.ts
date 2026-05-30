@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertValidWidgetId, isValidWidgetId } from "./validation";
+import { assertValidWidgetId, isValidWidgetId } from "../validation";
 
 describe("isValidWidgetId", () => {
   it("accepts a single lowercase letter", () =>

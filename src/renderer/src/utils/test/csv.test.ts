@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { exportCsv } from "./csv";
+import { exportCsv } from "../csv";
 
 describe("exportCsv", () => {
   let mockObjectUrl: string;

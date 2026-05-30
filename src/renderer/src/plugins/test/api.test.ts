@@ -5,7 +5,7 @@ import {
   createSqlApi,
   createGoogleApi,
   createWidgetApi,
-} from "./api";
+} from "../api";
 
 // Mock window.cc
 const mockWindowCc = {

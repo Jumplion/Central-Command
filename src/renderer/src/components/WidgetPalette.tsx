@@ -87,7 +87,9 @@ export function WidgetPalette({ onClose }: Props) {
         const best = Math.max(
           fuzzyScore(w.manifest.name, q) ?? -1,
           fuzzyScore(w.manifest.id, q) ?? -1,
-          w.manifest.description ? (fuzzyScore(w.manifest.description, q) ?? -1) : -1,
+          w.manifest.description
+            ? (fuzzyScore(w.manifest.description, q) ?? -1)
+            : -1,
         );
         return best >= 0 ? [{ widget: w, score: best }] : [];
       });
@@ -189,8 +191,8 @@ export function WidgetPalette({ onClose }: Props) {
         <div className="palette-results" ref={resultsRef}>
           {allWidgets.length === 0 ? (
             <div className="palette-empty">
-              No widgets installed. Add a widget under{" "}
-              <code>src/widgets/</code>.
+              No widgets installed. Add a widget under <code>src/widgets/</code>
+              .
             </div>
           ) : totalItems === 0 ? (
             <div className="palette-empty">

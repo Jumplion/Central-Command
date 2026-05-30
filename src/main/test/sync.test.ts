@@ -19,7 +19,7 @@ vi.mock("electron", () => ({
 vi.mock("node:fs", () => ({ default: { promises: mockFs }, promises: mockFs }));
 
 // ── Mock atomicWrite ─────────────────────────────────────────────────────────
-vi.mock("./storage/helpers", () => ({ atomicWrite: mockAtomicWrite }));
+vi.mock("../storage/helpers", () => ({ atomicWrite: mockAtomicWrite }));
 
 // ── Mock DriveSync/DriveError ─────────────────────────────────────────────────
 const MockDriveError = vi.hoisted(() => {
@@ -35,13 +35,13 @@ const MockDriveError = vi.hoisted(() => {
   return DriveError;
 });
 
-vi.mock("./storage/drive", () => ({
+vi.mock("../storage/drive", () => ({
   DriveError: MockDriveError,
   DriveSync: class {},
 }));
 
 // ── Imports after mocks ───────────────────────────────────────────────────────
-import { SyncManager } from "./sync";
+import { SyncManager } from "../sync";
 import { DRIVE_STATE_FILE } from "@shared/sync-base";
 import { IPC } from "@shared/ipc";
 

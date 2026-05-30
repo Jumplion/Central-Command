@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escapeCSVField, parseCSVLine } from "./csv";
+import { escapeCSVField, parseCSVLine } from "../csv";
 
 describe("parseCSVLine", () => {
   it("splits a simple comma-separated line", () => {

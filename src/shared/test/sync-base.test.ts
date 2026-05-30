@@ -8,7 +8,7 @@ import {
   driveKvName,
   kvWidgetIdFromDriveName,
   type IDriveSync,
-} from "./sync-base";
+} from "../sync-base";
 
 describe("SYNC_POLL_INTERVAL_MS", () => {
   it("equals 5 minutes in milliseconds", () => {

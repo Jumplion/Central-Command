@@ -121,7 +121,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             <button className="primary block" onClick={() => setShowAdd(true)}>
               + Add widget
             </button>
-            <div className="sidebar-shortcut-hint">or press {paletteShortcut}</div>
+            <div className="sidebar-shortcut-hint">
+              or press {paletteShortcut}
+            </div>
           </div>
 
           <div className="sidebar-footer">

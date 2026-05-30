@@ -29,7 +29,7 @@ vi.mock("electron", () => ({
   },
 }));
 
-import { SecretsStore } from "./secrets";
+import { SecretsStore } from "../secrets";
 
 let root: string;
 let store: SecretsStore;

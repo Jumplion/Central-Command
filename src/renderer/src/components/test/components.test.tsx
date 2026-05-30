@@ -137,16 +137,16 @@ vi.mock("@renderer/plugins/apiEvents", () => ({
   subscribeWidgetEvents: vi.fn(),
 }));
 
-import { AddWidgetDialog } from "./AddWidgetDialog";
-import { AppSettings } from "./AppSettings";
-import { WidgetHost } from "./WidgetHost";
-import { WidgetSettingsPanel } from "./WidgetSettingsPanel";
-import { Sidebar } from "./Sidebar";
+import { AddWidgetDialog } from "../AddWidgetDialog";
+import { AppSettings } from "../AppSettings";
+import { WidgetHost } from "../WidgetHost";
+import { WidgetSettingsPanel } from "../WidgetSettingsPanel";
+import { Sidebar } from "../Sidebar";
 import {
   emitWidgetMount,
   emitWidgetUnmount,
 } from "@renderer/plugins/apiEvents";
-import { WidgetPalette } from "./WidgetPalette";
+import { WidgetPalette } from "../WidgetPalette";
 
 const createContainer = () => {
   const container = document.createElement("div");

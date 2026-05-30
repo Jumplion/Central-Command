@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OAuthManager } from "./oauth";
+import { OAuthManager } from "../oauth";
 
 const mockSecrets = {
   get: vi.fn(),

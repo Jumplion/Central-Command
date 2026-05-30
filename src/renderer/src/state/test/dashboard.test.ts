@@ -8,7 +8,7 @@ vi.mock("@renderer/plugins/registry", () => ({
 }));
 
 // Imports must come after vi.mock so mocks are in place when dashboard.ts loads
-import { useDashboard } from "./dashboard";
+import { useDashboard } from "../dashboard";
 import { getWidget, defaultSettingsFor } from "@renderer/plugins/registry";
 
 const mockGetWidget = vi.mocked(getWidget);

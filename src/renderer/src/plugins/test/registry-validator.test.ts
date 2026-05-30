@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getWidgetRegistrationError } from "./registry-validator";
+import { getWidgetRegistrationError } from "../registry-validator";
 
 describe("getWidgetRegistrationError", () => {
   const currentPlatform = "desktop" as const;

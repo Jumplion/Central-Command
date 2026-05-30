@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { IPC } from "@shared/ipc";
-import { registerIpc } from "./ipc";
+import { registerIpc } from "../ipc";
 
 // handlers map must exist before vi.mock factories run
 const handlers = vi.hoisted(

@@ -8,7 +8,7 @@ import {
   resolveGoogleScopes,
   parseStoredGoogleCreds,
   getGoogleReconnectOptions,
-} from "./google";
+} from "../google";
 
 describe("GOOGLE_SERVICES", () => {
   it("defines API base URLs for all built-in services", () => {

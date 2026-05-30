@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { today } from "./date";
+import { today } from "../date";
 
 describe("today", () => {
   afterEach(() => {
