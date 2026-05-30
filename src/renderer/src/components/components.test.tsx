@@ -130,11 +130,22 @@ vi.mock("@renderer/plugins/api", () => ({
   })),
 }));
 
+vi.mock("@renderer/plugins/apiEvents", () => ({
+  emitWidgetMount: vi.fn(),
+  emitWidgetUnmount: vi.fn(),
+  subscribeApiCalls: vi.fn(),
+  subscribeWidgetEvents: vi.fn(),
+}));
+
 import { AddWidgetDialog } from "./AddWidgetDialog";
 import { AppSettings } from "./AppSettings";
 import { WidgetHost } from "./WidgetHost";
 import { WidgetSettingsPanel } from "./WidgetSettingsPanel";
 import { Sidebar } from "./Sidebar";
+import {
+  emitWidgetMount,
+  emitWidgetUnmount,
+} from "@renderer/plugins/apiEvents";
 
 const createContainer = () => {
   const container = document.createElement("div");
@@ -536,6 +547,86 @@ describe("WidgetHost", () => {
 
     expect(container.textContent).toContain("Widget crashed.");
     expect(container.textContent).toContain("boom");
+    cleanupContainer(container);
+  });
+
+  it("emits widget lifecycle events on mount and unmount", async () => {
+    const testWidget: Widget = {
+      manifest: {
+        id: "widget-lifecycle",
+        name: "Lifecycle Widget",
+        version: "1.0.0",
+        icon: "L",
+        defaultSize: { w: 3, h: 2 },
+      },
+      Component: () => <div>Widget Body</div>,
+    };
+    const container = createContainer();
+    const root = createRoot(container);
+    const instance = {
+      instanceId: "inst-lifecycle-123",
+      widgetId: "widget-lifecycle",
+      title: undefined,
+      settings: {},
+      layout: { x: 0, y: 0, w: 2, h: 2 },
+    };
+
+    vi.clearAllMocks();
+
+    await act(async () => {
+      root.render(<WidgetHost instance={instance} widget={testWidget} />);
+    });
+
+    expect(emitWidgetMount).toHaveBeenCalledOnce();
+    expect(emitWidgetMount).toHaveBeenCalledWith(
+      "inst-lifecycle-123",
+      "widget-lifecycle",
+    );
+
+    vi.clearAllMocks();
+
+    await act(async () => {
+      root.unmount();
+    });
+
+    expect(emitWidgetUnmount).toHaveBeenCalledOnce();
+    const [instanceId, widgetId, durationMs] =
+      vi.mocked(emitWidgetUnmount).mock.calls[0];
+    expect(instanceId).toBe("inst-lifecycle-123");
+    expect(widgetId).toBe("widget-lifecycle");
+    expect(typeof durationMs).toBe("number");
+    expect(durationMs).toBeGreaterThanOrEqual(0);
+
+    cleanupContainer(container);
+  });
+
+  it("does not emit unmount event when widget prop is missing", async () => {
+    const container = createContainer();
+    const root = createRoot(container);
+    const instance = {
+      instanceId: "inst-no-widget",
+      widgetId: "missing-widget",
+      title: undefined,
+      settings: {},
+      layout: { x: 0, y: 0, w: 2, h: 2 },
+    };
+
+    vi.clearAllMocks();
+
+    await act(async () => {
+      root.render(<WidgetHost instance={instance} widget={undefined} />);
+    });
+
+    expect(emitWidgetMount).not.toHaveBeenCalled();
+
+    vi.clearAllMocks();
+
+    await act(async () => {
+      root.unmount();
+    });
+
+    expect(emitWidgetUnmount).not.toHaveBeenCalled();
+
     cleanupContainer(container);
   });
 });

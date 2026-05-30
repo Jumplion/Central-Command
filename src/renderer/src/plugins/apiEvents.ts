@@ -23,7 +23,7 @@ export function emitApiCall(record: ApiCallRecord): void {
   for (const l of listeners) l(record);
 }
 
-export type WidgetEventKind = 'mount' | 'unmount';
+export type WidgetEventKind = "mount" | "unmount";
 
 export interface WidgetLifecycleEvent {
   kind: WidgetEventKind;
@@ -38,12 +38,17 @@ const widgetListeners = new Set<WidgetListener>();
 
 export function subscribeWidgetEvents(listener: WidgetListener): () => void {
   widgetListeners.add(listener);
-  return () => { widgetListeners.delete(listener); };
+  return () => {
+    widgetListeners.delete(listener);
+  };
 }
 
 export function emitWidgetMount(instanceId: string, widgetId: string): void {
   const event: WidgetLifecycleEvent = {
-    kind: 'mount', widgetId, instanceId, timestamp: Date.now(),
+    kind: "mount",
+    widgetId,
+    instanceId,
+    timestamp: Date.now(),
   };
   for (const l of widgetListeners) l(event);
 }
@@ -54,7 +59,11 @@ export function emitWidgetUnmount(
   durationMs: number,
 ): void {
   const event: WidgetLifecycleEvent = {
-    kind: 'unmount', widgetId, instanceId, timestamp: Date.now(), durationMs,
+    kind: "unmount",
+    widgetId,
+    instanceId,
+    timestamp: Date.now(),
+    durationMs,
   };
   for (const l of widgetListeners) l(event);
 }

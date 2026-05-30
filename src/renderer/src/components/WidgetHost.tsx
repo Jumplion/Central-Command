@@ -11,7 +11,10 @@ import {
 import type { WidgetInstance } from "@shared/types";
 import type { Widget } from "@renderer/plugins/registry";
 import { createWidgetApi } from "@renderer/plugins/api";
-import { emitWidgetMount, emitWidgetUnmount } from "@renderer/plugins/apiEvents";
+import {
+  emitWidgetMount,
+  emitWidgetUnmount,
+} from "@renderer/plugins/apiEvents";
 import { useDashboard } from "@renderer/state/dashboard";
 import { WidgetSettingsPanel } from "./WidgetSettingsPanel";
 

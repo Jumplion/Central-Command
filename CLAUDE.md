@@ -103,6 +103,7 @@ Two backends, both owned by `src/main/storage/`:
 - **AppState** — `userData/state.json`, written atomically (temp file + rename) via `atomicWrite` from `src/main/storage/helpers.ts`.
 
 Storage helpers in `src/main/storage/helpers.ts`:
+
 - `widgetDir(root, widgetId)` — returns the per-widget data directory path (validates widgetId)
 - `widgetFile(root, widgetId, fileName)` — returns a file path inside the widget directory
 - `ensureWidgetDir(root, widgetId)` — creates the widget directory; concurrent callers share one `mkdir` promise
@@ -139,10 +140,12 @@ Beyond types and IPC constants, `src/shared/` provides:
 `src/renderer/src/plugins/apiEvents.ts` is a lightweight in-renderer pub/sub bus for cross-widget observability. Currently used by the `api-tracker` widget to receive records of every `api.net.fetch` call:
 
 ```ts
-import { subscribeApiCalls, emitApiCall } from '@renderer/plugins/apiEvents';
+import { subscribeApiCalls, emitApiCall } from "@renderer/plugins/apiEvents";
 
 // Subscribe (returns unsubscribe fn)
-const unsub = subscribeApiCalls((record) => { /* record: ApiCallRecord */ });
+const unsub = subscribeApiCalls((record) => {
+  /* record: ApiCallRecord */
+});
 
 // Emit (called automatically inside api.net.fetch)
 emitApiCall({ widgetId, url, method, timestamp, status, duration, ok });
@@ -200,17 +203,17 @@ This creates `constants.ts` (schema + empty migrations), `types.ts`, and `index.
 `api` in the component props is an instance-scoped wrapper defined in `src/renderer/src/plugins/api.ts`:
 
 ```ts
-api.widgetId;        // widget type id
-api.instanceId;      // unique instance id
+api.widgetId; // widget type id
+api.instanceId; // unique instance id
 
-api.kv;              // instance-scoped JSON KV (instanceId:: prefix auto-applied)
-api.sql;             // widget-shared SQLite (declare permissions.sqlite)
-api.shell;           // openExternal / openPath / showItemInFolder
-api.dialog;          // openPath (native file picker)
-api.net;             // fetch via Electron net (avoids browser CORS)
-api.secrets;         // encrypted per-widget KV (widget-shared, not per-instance)
-api.google;          // PKCE OAuth + token management (declare permissions.google)
-api.google.shared;   // shared OAuth namespace ('google' widgetId)
+api.kv; // instance-scoped JSON KV (instanceId:: prefix auto-applied)
+api.sql; // widget-shared SQLite (declare permissions.sqlite)
+api.shell; // openExternal / openPath / showItemInFolder
+api.dialog; // openPath (native file picker)
+api.net; // fetch via Electron net (avoids browser CORS)
+api.secrets; // encrypted per-widget KV (widget-shared, not per-instance)
+api.google; // PKCE OAuth + token management (declare permissions.google)
+api.google.shared; // shared OAuth namespace ('google' widgetId)
 ```
 
 ### Widget conventions
@@ -232,8 +235,11 @@ Every widget that uses SQLite must follow this pattern to avoid "duplicate colum
 
 ```ts
 // constants.ts
-import { createMigration, emptyMigrations } from '@renderer/hooks/sqlMigrationHelper';
-import type { SqlMigration } from '@renderer/hooks/useSqlInit';
+import {
+  createMigration,
+  emptyMigrations,
+} from "@renderer/hooks/sqlMigrationHelper";
+import type { SqlMigration } from "@renderer/hooks/useSqlInit";
 
 export const INIT_SQL = `
   CREATE TABLE IF NOT EXISTS items (
@@ -252,8 +258,8 @@ export const MIGRATIONS: SqlMigration[] = emptyMigrations();
 
 ```tsx
 // index.tsx
-import { useSqlInit } from '@renderer/hooks/useSqlInit';
-import { INIT_SQL, MIGRATIONS } from './constants';
+import { useSqlInit } from "@renderer/hooks/useSqlInit";
+import { INIT_SQL, MIGRATIONS } from "./constants";
 
 function MyWidget({ api }: WidgetProps) {
   const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
@@ -274,12 +280,14 @@ See `src/renderer/src/hooks/SCHEMA_PATTERN.md` for the complete guide and common
 For any INSERT/UPDATE/DELETE with 3+ parameters, use `namedSql` from `src/renderer/src/plugins/sqlParams.ts` instead of positional `?` arrays to prevent silent parameter-order bugs:
 
 ```ts
-import { namedSql } from '@renderer/plugins/sqlParams';
+import { namedSql } from "@renderer/plugins/sqlParams";
 
-await api.sql.run(...namedSql(
-  'INSERT INTO items (title, status, priority) VALUES (:title, :status, :priority)',
-  { title: 'foo', status: 'active', priority: 1 },
-));
+await api.sql.run(
+  ...namedSql(
+    "INSERT INTO items (title, status, priority) VALUES (:title, :status, :priority)",
+    { title: "foo", status: "active", priority: 1 },
+  ),
+);
 ```
 
 `namedSql` converts `:name` tokens to `?` and returns `[sql, valuesArray]`. It throws at call-time if any `:name` token has no matching key.
@@ -289,145 +297,150 @@ await api.sql.run(...namedSql(
 Components and utilities shared across multiple widgets. Import from the barrel:
 
 ```ts
-import { TabBar, LineChart, WidgetLoading, NotConnected, /* ... */ } from '../_shared';
-import { buttonDefault, inputBase, dimText } from '../_shared/styles';
+import {
+  TabBar,
+  LineChart,
+  WidgetLoading,
+  NotConnected /* ... */,
+} from "../_shared";
+import { buttonDefault, inputBase, dimText } from "../_shared/styles";
 ```
 
 ### UI components
 
-| Export            | File               | Description                                                        |
-| ----------------- | ------------------ | ------------------------------------------------------------------ |
-| `TabBar`          | `TabBar.tsx`       | Horizontal tab navigation bar (`tabs: TabDef[]`, `active`, `onSelect`) |
-| `LineChart`       | `LineChart.tsx`    | Simple SVG line chart for time-series data                         |
-| `PieChart`        | `PieChart.tsx`     | SVG pie/donut chart; accepts `PieSlice[]`                          |
-| `StackedBarChart` | `StackedBarChart.tsx` | Horizontal stacked bar with legend (CSS-only, no charting lib)  |
-| `StatusBar`       | `StatusBar.tsx`    | Horizontal colored status indicator bar                            |
-| `Chip`            | `Chip.tsx`         | Small inline badge/tag element                                     |
-| `NotConnected`    | `NotConnected.tsx` | Standard "not connected" placeholder with a connect button         |
-| `WidgetLoading`   | `WidgetLoading.tsx`| Spinner/skeleton shown while data loads                            |
+| Export            | File                  | Description                                                            |
+| ----------------- | --------------------- | ---------------------------------------------------------------------- |
+| `TabBar`          | `TabBar.tsx`          | Horizontal tab navigation bar (`tabs: TabDef[]`, `active`, `onSelect`) |
+| `LineChart`       | `LineChart.tsx`       | Simple SVG line chart for time-series data                             |
+| `PieChart`        | `PieChart.tsx`        | SVG pie/donut chart; accepts `PieSlice[]`                              |
+| `StackedBarChart` | `StackedBarChart.tsx` | Horizontal stacked bar with legend (CSS-only, no charting lib)         |
+| `StatusBar`       | `StatusBar.tsx`       | Horizontal colored status indicator bar                                |
+| `Chip`            | `Chip.tsx`            | Small inline badge/tag element                                         |
+| `NotConnected`    | `NotConnected.tsx`    | Standard "not connected" placeholder with a connect button             |
+| `WidgetLoading`   | `WidgetLoading.tsx`   | Spinner/skeleton shown while data loads                                |
 
 ### Form & list primitives
 
-| Export               | File       | Description                                                   |
-| -------------------- | ---------- | ------------------------------------------------------------- |
-| `FormField`          | `form.tsx` | Labeled field wrapper                                         |
-| `FormGrid`           | `form.tsx` | Responsive grid for form fields                               |
-| `FormActions`        | `form.tsx` | Action button row                                             |
-| `formInputStyle`     | `form.tsx` | CSSProperties for `<input>` elements in forms                 |
-| `InteractiveListRow` | `list.tsx` | Accessible clickable row with hover styles                    |
-| `TableHeader`        | `list.tsx` | Header row for list layouts                                   |
-| `TableCell`          | `list.tsx` | Individual cell in a list/table row                           |
+| Export               | File       | Description                                   |
+| -------------------- | ---------- | --------------------------------------------- |
+| `FormField`          | `form.tsx` | Labeled field wrapper                         |
+| `FormGrid`           | `form.tsx` | Responsive grid for form fields               |
+| `FormActions`        | `form.tsx` | Action button row                             |
+| `formInputStyle`     | `form.tsx` | CSSProperties for `<input>` elements in forms |
+| `InteractiveListRow` | `list.tsx` | Accessible clickable row with hover styles    |
+| `TableHeader`        | `list.tsx` | Header row for list layouts                   |
+| `TableCell`          | `list.tsx` | Individual cell in a list/table row           |
 
 ### Utilities
 
-| Export                | File               | Description                                                   |
-| --------------------- | ------------------ | ------------------------------------------------------------- |
-| `filterSuggestions`   | `autocomplete.ts`  | Returns prefix-matched items from a list                      |
-| `findSuggestion`      | `autocomplete.ts`  | Finds the first exact/prefix match                            |
-| `suggestionMenuStyle` | `autocomplete.ts`  | CSSProperties for dropdown suggestion container               |
-| `suggestionItemStyle` | `autocomplete.ts`  | CSSProperties for individual suggestion items                 |
+| Export                | File                     | Description                                                             |
+| --------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `filterSuggestions`   | `autocomplete.ts`        | Returns prefix-matched items from a list                                |
+| `findSuggestion`      | `autocomplete.ts`        | Finds the first exact/prefix match                                      |
+| `suggestionMenuStyle` | `autocomplete.ts`        | CSSProperties for dropdown suggestion container                         |
+| `suggestionItemStyle` | `autocomplete.ts`        | CSSProperties for individual suggestion items                           |
 | `useGoogleConnection` | `useGoogleConnection.ts` | Hook: returns `[connected: boolean \| null, set]` tracking OAuth status |
-| Gmail helpers         | `gmail.ts`         | Shared Gmail API fetch helpers used by Gmail widgets          |
+| Gmail helpers         | `gmail.ts`               | Shared Gmail API fetch helpers used by Gmail widgets                    |
 
 ### Style constants (`_shared/styles.ts`)
 
 Pre-defined `CSSProperties` objects for consistent inline styling:
 
-| Export              | Use for                                    |
-| ------------------- | ------------------------------------------ |
-| `buttonDefault`     | Standard button size (12px, 4/10px pad)    |
-| `buttonSmall`       | Smaller button (11px, 2/8px pad)           |
-| `buttonTiny`        | Tiny button (11px, 1/6px pad)              |
-| `buttonExtraSmall`  | Extra-tiny button (10px)                   |
-| `inputBase`         | Standard text input (12px, 6/8px pad)      |
-| `inp`               | Compact input (12px, 4/6px pad)            |
-| `dimText`           | Muted text `var(--text-dim)`               |
-| `mutedText`         | Small muted text (11px)                    |
-| `smallDimText`      | Extra-small muted text (10px)              |
-| `centeredEmptyState`| Centered empty-state flex container        |
-| `tooltipPanel`      | Absolute-positioned tooltip panel          |
+| Export               | Use for                                 |
+| -------------------- | --------------------------------------- |
+| `buttonDefault`      | Standard button size (12px, 4/10px pad) |
+| `buttonSmall`        | Smaller button (11px, 2/8px pad)        |
+| `buttonTiny`         | Tiny button (11px, 1/6px pad)           |
+| `buttonExtraSmall`   | Extra-tiny button (10px)                |
+| `inputBase`          | Standard text input (12px, 6/8px pad)   |
+| `inp`                | Compact input (12px, 4/6px pad)         |
+| `dimText`            | Muted text `var(--text-dim)`            |
+| `mutedText`          | Small muted text (11px)                 |
+| `smallDimText`       | Extra-small muted text (10px)           |
+| `centeredEmptyState` | Centered empty-state flex container     |
+| `tooltipPanel`       | Absolute-positioned tooltip panel       |
 
 ## CSS theme variables
 
 All widgets inherit the app's dark theme through CSS custom properties defined in `src/renderer/src/styles/globals.css`:
 
-| Variable       | Value     | Use                         |
-| -------------- | --------- | --------------------------- |
-| `--bg`         | `#0e0f12` | Page background             |
-| `--panel`      | `#16181d` | Widget/panel background     |
-| `--panel-2`    | `#1b1e25` | Nested panel / button bg    |
-| `--border`     | `#262a32` | Dividers and borders        |
-| `--text`       | `#e6e8ec` | Primary text                |
-| `--text-dim`   | `#9aa0aa` | Secondary / muted text      |
-| `--accent`     | `#6ea8ff` | Links, focus rings, primary |
-| `--danger`     | `#ff6e6e` | Destructive actions         |
-| `--warning`    | `#f59e0b` | Warning states              |
-| `--radius`     | `8px`     | Border radius               |
+| Variable     | Value     | Use                         |
+| ------------ | --------- | --------------------------- |
+| `--bg`       | `#0e0f12` | Page background             |
+| `--panel`    | `#16181d` | Widget/panel background     |
+| `--panel-2`  | `#1b1e25` | Nested panel / button bg    |
+| `--border`   | `#262a32` | Dividers and borders        |
+| `--text`     | `#e6e8ec` | Primary text                |
+| `--text-dim` | `#9aa0aa` | Secondary / muted text      |
+| `--accent`   | `#6ea8ff` | Links, focus rings, primary |
+| `--danger`   | `#ff6e6e` | Destructive actions         |
+| `--warning`  | `#f59e0b` | Warning states              |
+| `--radius`   | `8px`     | Border radius               |
 
 Button classes `primary`, `ghost`, `danger`, `block`, and `small` are defined globally. Prefer them over inline button styles where applicable.
 
 ## Widget inventory
 
-| Widget id               | Description                                                        |
-| ----------------------- | ------------------------------------------------------------------ |
-| `api-tracker`           | Live log of every `api.net.fetch` call across all widgets          |
-| `audition-aggregator`   | Tracks acting auditions with status/date filtering; multi-tab UI   |
-| `contacts-master-list`  | Manages a contact list backed by Google Contacts API               |
-| `daily-calendar`        | Shows today's Google Calendar events; requires `api.google.shared` |
-| `example-widget`        | Fully-annotated reference widget exercising all major APIs         |
-| `file-shortcuts`        | Configurable list of files/folders; click to open with OS default  |
-| `gmail`                 | Reads Gmail inbox threads via Gmail API                            |
-| `gmail-dashboard`       | Advanced Gmail client with folder trees, rules, and email list     |
-| `job-aggregator`        | Searches job postings from multiple sources; saves/bookmarks jobs  |
-| `job-tracker`           | Kanban board for job applications; CSV import/export; Gmail sync   |
-| `media-tracker`         | Tracks books, movies, TV shows, games with chart visualizations    |
-| `net-monitor`           | Monitors network latency and download speed with historical charts |
-| `quick-copy`            | Stores reusable text snippets; click to copy to clipboard          |
-| `website-monitor`       | Pings configured sites, tracks uptime/latency, shows trends        |
+| Widget id              | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| `api-tracker`          | Live log of every `api.net.fetch` call across all widgets          |
+| `audition-aggregator`  | Tracks acting auditions with status/date filtering; multi-tab UI   |
+| `contacts-master-list` | Manages a contact list backed by Google Contacts API               |
+| `daily-calendar`       | Shows today's Google Calendar events; requires `api.google.shared` |
+| `example-widget`       | Fully-annotated reference widget exercising all major APIs         |
+| `file-shortcuts`       | Configurable list of files/folders; click to open with OS default  |
+| `gmail`                | Reads Gmail inbox threads via Gmail API                            |
+| `gmail-dashboard`      | Advanced Gmail client with folder trees, rules, and email list     |
+| `job-aggregator`       | Searches job postings from multiple sources; saves/bookmarks jobs  |
+| `job-tracker`          | Kanban board for job applications; CSV import/export; Gmail sync   |
+| `media-tracker`        | Tracks books, movies, TV shows, games with chart visualizations    |
+| `net-monitor`          | Monitors network latency and download speed with historical charts |
+| `quick-copy`           | Stores reusable text snippets; click to copy to clipboard          |
+| `website-monitor`      | Pings configured sites, tracks uptime/latency, shows trends        |
 
 ## Key files
 
-| Purpose                   | File                                                  |
-| ------------------------- | ----------------------------------------------------- |
-| Shared type definitions   | `src/shared/types.ts`                                 |
-| IPC channel constants     | `src/shared/ipc.ts`                                   |
-| Google service presets    | `src/shared/google.ts`                                |
-| Default AppState          | `src/shared/defaults.ts`                              |
-| Widget ID validation      | `src/shared/validation.ts`                            |
-| Bounded async concurrency | `src/shared/concurrency.ts`                           |
-| Date utility              | `src/shared/date.ts`                                  |
-| CSV utilities             | `src/shared/csv.ts`                                   |
-| Sync base class           | `src/shared/sync-base.ts`                             |
-| Main process entry        | `src/main/index.ts`                                   |
-| IPC handler registration  | `src/main/ipc.ts`                                     |
-| Storage orchestrator      | `src/main/storage/index.ts`                           |
-| Storage helpers           | `src/main/storage/helpers.ts`                         |
-| JSON KV store             | `src/main/storage/json.ts`                            |
-| SQLite store              | `src/main/storage/sqlite.ts`                          |
-| Google Drive wrapper      | `src/main/storage/drive.ts`                           |
-| Google OAuth              | `src/main/oauth.ts`                                   |
-| Encrypted secrets         | `src/main/secrets.ts`                                 |
-| Drive sync manager        | `src/main/sync.ts`                                    |
-| WSL detection             | `src/main/platform.ts`                                |
-| Preload contextBridge     | `src/preload/index.ts`                                |
-| Dashboard Zustand store   | `src/renderer/src/state/dashboard.ts`                 |
-| Widget registry           | `src/renderer/src/plugins/registry.ts`                |
-| Registry validator        | `src/renderer/src/plugins/registry-validator.ts`      |
-| WidgetApi wrapper         | `src/renderer/src/plugins/api.ts`                     |
-| apiEvents event bus       | `src/renderer/src/plugins/apiEvents.ts`               |
-| namedSql utility          | `src/renderer/src/plugins/sqlParams.ts`               |
-| SQL init hook             | `src/renderer/src/hooks/useSqlInit.ts`                |
-| Migration helper          | `src/renderer/src/hooks/sqlMigrationHelper.ts`        |
-| SQL schema pattern guide  | `src/renderer/src/hooks/SCHEMA_PATTERN.md`            |
-| Global CSS + theme vars   | `src/renderer/src/styles/globals.css`                 |
-| GridLayout component      | `src/renderer/src/components/Dashboard.tsx`           |
-| Widget error boundary     | `src/renderer/src/components/WidgetHost.tsx`          |
-| App settings UI           | `src/renderer/src/components/AppSettings.tsx`         |
-| Shared widget components  | `src/widgets/_shared/`                                |
-| Widget scaffold script    | `src/widgets/create-widget.sh`                        |
-| Build config              | `electron.vite.config.ts`                             |
-| Vitest config             | `vitest.config.ts`                                    |
-| Widget authoring guide    | `src/widgets/README.md`                               |
+| Purpose                   | File                                             |
+| ------------------------- | ------------------------------------------------ |
+| Shared type definitions   | `src/shared/types.ts`                            |
+| IPC channel constants     | `src/shared/ipc.ts`                              |
+| Google service presets    | `src/shared/google.ts`                           |
+| Default AppState          | `src/shared/defaults.ts`                         |
+| Widget ID validation      | `src/shared/validation.ts`                       |
+| Bounded async concurrency | `src/shared/concurrency.ts`                      |
+| Date utility              | `src/shared/date.ts`                             |
+| CSV utilities             | `src/shared/csv.ts`                              |
+| Sync base class           | `src/shared/sync-base.ts`                        |
+| Main process entry        | `src/main/index.ts`                              |
+| IPC handler registration  | `src/main/ipc.ts`                                |
+| Storage orchestrator      | `src/main/storage/index.ts`                      |
+| Storage helpers           | `src/main/storage/helpers.ts`                    |
+| JSON KV store             | `src/main/storage/json.ts`                       |
+| SQLite store              | `src/main/storage/sqlite.ts`                     |
+| Google Drive wrapper      | `src/main/storage/drive.ts`                      |
+| Google OAuth              | `src/main/oauth.ts`                              |
+| Encrypted secrets         | `src/main/secrets.ts`                            |
+| Drive sync manager        | `src/main/sync.ts`                               |
+| WSL detection             | `src/main/platform.ts`                           |
+| Preload contextBridge     | `src/preload/index.ts`                           |
+| Dashboard Zustand store   | `src/renderer/src/state/dashboard.ts`            |
+| Widget registry           | `src/renderer/src/plugins/registry.ts`           |
+| Registry validator        | `src/renderer/src/plugins/registry-validator.ts` |
+| WidgetApi wrapper         | `src/renderer/src/plugins/api.ts`                |
+| apiEvents event bus       | `src/renderer/src/plugins/apiEvents.ts`          |
+| namedSql utility          | `src/renderer/src/plugins/sqlParams.ts`          |
+| SQL init hook             | `src/renderer/src/hooks/useSqlInit.ts`           |
+| Migration helper          | `src/renderer/src/hooks/sqlMigrationHelper.ts`   |
+| SQL schema pattern guide  | `src/renderer/src/hooks/SCHEMA_PATTERN.md`       |
+| Global CSS + theme vars   | `src/renderer/src/styles/globals.css`            |
+| GridLayout component      | `src/renderer/src/components/Dashboard.tsx`      |
+| Widget error boundary     | `src/renderer/src/components/WidgetHost.tsx`     |
+| App settings UI           | `src/renderer/src/components/AppSettings.tsx`    |
+| Shared widget components  | `src/widgets/_shared/`                           |
+| Widget scaffold script    | `src/widgets/create-widget.sh`                   |
+| Build config              | `electron.vite.config.ts`                        |
+| Vitest config             | `vitest.config.ts`                               |
+| Widget authoring guide    | `src/widgets/README.md`                          |
 
 ## Testing
 
