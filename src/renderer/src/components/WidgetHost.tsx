@@ -3,12 +3,18 @@ import {
   ReactNode,
   memo,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { WidgetInstance } from "@shared/types";
 import type { Widget } from "@renderer/plugins/registry";
 import { createWidgetApi } from "@renderer/plugins/api";
+import {
+  emitWidgetMount,
+  emitWidgetUnmount,
+} from "@renderer/plugins/apiEvents";
 import { useDashboard } from "@renderer/state/dashboard";
 import { WidgetSettingsPanel } from "./WidgetSettingsPanel";
 
@@ -36,6 +42,18 @@ export const WidgetHost = memo(function WidgetHost({
     },
     [instance.instanceId, setTitle],
   );
+
+  const mountedAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!widget) return;
+    mountedAtRef.current = Date.now();
+    emitWidgetMount(instance.instanceId, instance.widgetId);
+    return () => {
+      const durationMs = Date.now() - mountedAtRef.current;
+      emitWidgetUnmount(instance.instanceId, instance.widgetId, durationMs);
+    };
+  }, [instance.instanceId, instance.widgetId, widget]);
 
   if (!widget) {
     return (
