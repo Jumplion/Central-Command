@@ -297,8 +297,16 @@ describe("SyncManagerBase", () => {
   describe("_ensureDriveIds", () => {
     it("populates drive IDs from listFiles and sets the loaded flag", async () => {
       const files = [
-        { id: "id-1", name: "cc-state.json", modifiedTime: "2024-01-01T00:00:00Z" },
-        { id: "id-2", name: "cc-kv-my-widget.json", modifiedTime: "2024-01-01T00:00:00Z" },
+        {
+          id: "id-1",
+          name: "cc-state.json",
+          modifiedTime: "2024-01-01T00:00:00Z",
+        },
+        {
+          id: "id-2",
+          name: "cc-kv-my-widget.json",
+          modifiedTime: "2024-01-01T00:00:00Z",
+        },
       ];
       const drive = makeDrive();
       vi.mocked(drive.listFiles).mockResolvedValue(files);

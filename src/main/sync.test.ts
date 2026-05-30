@@ -73,9 +73,10 @@ function makeStorage(root = "/mock/root") {
   };
 }
 
-function makeWindow(
-  destroyed = false,
-): { webContents: { send: ReturnType<typeof vi.fn> }; isDestroyed: () => boolean } {
+function makeWindow(destroyed = false): {
+  webContents: { send: ReturnType<typeof vi.fn> };
+  isDestroyed: () => boolean;
+} {
   return {
     webContents: { send: vi.fn() },
     isDestroyed: () => destroyed,
@@ -93,11 +94,7 @@ function makeManager(
   const d = drive ?? makeDrive();
   const s = storage ?? makeStorage();
   const w = win === undefined ? makeWindow() : win;
-  const manager = new SyncManager(
-    d as never,
-    s as never,
-    () => w as never,
-  );
+  const manager = new SyncManager(d as never, s as never, () => w as never);
   return { manager, drive: d, storage: s, win: w };
 }
 
@@ -176,7 +173,9 @@ describe("SyncManager._doUploadAll", () => {
     const storage = makeStorage();
     storage.json.getCachedWidgetIds.mockReturnValue([]);
     mockFs.readFile.mockResolvedValue('{"version":1}');
-    mockFs.stat.mockRejectedValue(Object.assign(new Error(), { code: "ENOENT" }));
+    mockFs.stat.mockRejectedValue(
+      Object.assign(new Error(), { code: "ENOENT" }),
+    );
 
     const { manager } = makeManager(drive, storage);
     await manager.forcePush();
@@ -196,12 +195,16 @@ describe("SyncManager._doUploadAll", () => {
     const storage = makeStorage();
     storage.json.getCachedWidgetIds.mockReturnValue(["widget-a", "widget-b"]);
     mockFs.readFile.mockResolvedValue('{"key":"val"}');
-    mockFs.stat.mockRejectedValue(Object.assign(new Error(), { code: "ENOENT" }));
+    mockFs.stat.mockRejectedValue(
+      Object.assign(new Error(), { code: "ENOENT" }),
+    );
 
     const { manager } = makeManager(drive, storage);
     await manager.forcePush();
 
-    const uploadedNames = drive.upsertFile.mock.calls.map((c) => c[0] as string);
+    const uploadedNames = drive.upsertFile.mock.calls.map(
+      (c) => c[0] as string,
+    );
     expect(uploadedNames).toContain("cc-kv-widget-a.json");
     expect(uploadedNames).toContain("cc-kv-widget-b.json");
     manager.dispose();
@@ -217,12 +220,16 @@ describe("SyncManager._doUploadAll", () => {
       .mockRejectedValueOnce(
         Object.assign(new Error("not found"), { code: "ENOENT" }),
       );
-    mockFs.stat.mockRejectedValue(Object.assign(new Error(), { code: "ENOENT" }));
+    mockFs.stat.mockRejectedValue(
+      Object.assign(new Error(), { code: "ENOENT" }),
+    );
 
     const { manager } = makeManager(drive, storage);
     await manager.forcePush();
 
-    const uploadedNames = drive.upsertFile.mock.calls.map((c) => c[0] as string);
+    const uploadedNames = drive.upsertFile.mock.calls.map(
+      (c) => c[0] as string,
+    );
     expect(uploadedNames).not.toContain("cc-kv-missing-widget.json");
     expect(manager.getStatus().state).toBe("idle");
     manager.dispose();
@@ -274,7 +281,9 @@ describe("SyncManager._uploadDb", () => {
       .mockResolvedValueOnce('{"kv":1}') // kv store
       .mockResolvedValue(Buffer.from("db-bytes")); // backup file
     mockFs.access.mockResolvedValue(undefined); // db exists
-    mockFs.stat.mockRejectedValue(Object.assign(new Error(), { code: "ENOENT" }));
+    mockFs.stat.mockRejectedValue(
+      Object.assign(new Error(), { code: "ENOENT" }),
+    );
 
     const { manager } = makeManager(drive, storage);
     await manager.forcePush();
@@ -283,7 +292,9 @@ describe("SyncManager._uploadDb", () => {
       "tracker",
       expect.stringContaining("data.db.sync-backup"),
     );
-    const uploadedNames = drive.upsertFile.mock.calls.map((c) => c[0] as string);
+    const uploadedNames = drive.upsertFile.mock.calls.map(
+      (c) => c[0] as string,
+    );
     expect(uploadedNames).toContain("cc-db-tracker.db");
     manager.dispose();
   });

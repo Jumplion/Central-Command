@@ -144,7 +144,12 @@ function ClipboardHistory({ api }: WidgetProps) {
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        gap: 8,
+      }}
     >
       <div
         style={{
