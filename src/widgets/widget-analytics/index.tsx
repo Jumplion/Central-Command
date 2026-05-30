@@ -75,7 +75,7 @@ function WidgetAnalytics({ api, settings }: WidgetProps) {
   const [dailySeries, setDailySeries] = useState<DailyRow[]>([]);
   const [tab, setTab] = useState<TabId>('table');
 
-  const dayCount = Number(settings?.chartDays ?? 14);
+  const dayCount = Math.max(1, Math.min(365, Number(settings?.chartDays ?? 14) || 14));
 
   const loadData = useCallback(async () => {
     const sinceDay = new Date(Date.now() - dayCount * 86_400_000)
