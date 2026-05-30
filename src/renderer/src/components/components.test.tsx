@@ -146,6 +146,7 @@ import {
   emitWidgetMount,
   emitWidgetUnmount,
 } from "@renderer/plugins/apiEvents";
+import { WidgetPalette } from "./WidgetPalette";
 
 const createContainer = () => {
   const container = document.createElement("div");
@@ -826,6 +827,248 @@ describe("Sidebar", () => {
     expect(confirmSpy).toHaveBeenCalled();
     expect(dashboardState.removeDashboard).toHaveBeenCalledWith("dash-2");
     confirmSpy.mockRestore();
+    cleanupContainer(container);
+  });
+});
+
+describe("WidgetPalette", () => {
+  const RECENT_KEY = "cc:widget-palette:recent";
+
+  beforeEach(() => {
+    localStorage.clear();
+    // scrollIntoView is not implemented in jsdom
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("renders search input and all installed widgets", async () => {
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    expect(container.querySelector(".palette-input")).toBeTruthy();
+    expect(container.querySelectorAll(".palette-item").length).toBe(2);
+    cleanupContainer(container);
+  });
+
+  it("filters widgets by substring query", async () => {
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    const input = container.querySelector<HTMLInputElement>(".palette-input")!;
+    await dispatchValueEvent(input, "Widget B");
+
+    expect(container.querySelectorAll(".palette-item").length).toBe(1);
+    expect(container.textContent).toContain("Widget B");
+    cleanupContainer(container);
+  });
+
+  it("matches widgets with fuzzy (non-contiguous) query", async () => {
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    const input = container.querySelector<HTMLInputElement>(".palette-input")!;
+    // "wa" is a subsequence of "Widget A" (W...A) but not of "Widget B"
+    await dispatchValueEvent(input, "wa");
+
+    expect(container.querySelectorAll(".palette-item").length).toBe(1);
+    expect(container.textContent).toContain("Widget A");
+    cleanupContainer(container);
+  });
+
+  it("shows no-match message when query has no results", async () => {
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    const input = container.querySelector<HTMLInputElement>(".palette-input")!;
+    await dispatchValueEvent(input, "xyznotfound");
+
+    expect(container.querySelectorAll(".palette-item").length).toBe(0);
+    expect(container.textContent).toContain("No widgets match");
+    cleanupContainer(container);
+  });
+
+  it("adds widget and closes when an item is clicked", async () => {
+    const onClose = vi.fn();
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={onClose} />);
+    });
+
+    await clickElement(container.querySelector(".palette-item")!);
+
+    expect(dashboardState.addInstance).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledOnce();
+    cleanupContainer(container);
+  });
+
+  it("adds the selected widget on Enter and closes", async () => {
+    const onClose = vi.fn();
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={onClose} />);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      );
+    });
+
+    expect(dashboardState.addInstance).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledOnce();
+    cleanupContainer(container);
+  });
+
+  it("calls onClose on Escape key", async () => {
+    const onClose = vi.fn();
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={onClose} />);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+
+    expect(onClose).toHaveBeenCalledOnce();
+    cleanupContainer(container);
+  });
+
+  it("moves selection with ArrowDown and ArrowUp", async () => {
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    expect(
+      container.querySelector(".palette-item.selected")?.textContent,
+    ).toContain("Widget A");
+
+    await act(async () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+      );
+    });
+
+    expect(
+      container.querySelector(".palette-item.selected")?.textContent,
+    ).toContain("Widget B");
+
+    await act(async () => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+      );
+    });
+
+    expect(
+      container.querySelector(".palette-item.selected")?.textContent,
+    ).toContain("Widget A");
+
+    cleanupContainer(container);
+  });
+
+  it("shows Recent section and puts recent widget first when no query", async () => {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(["widget-b"]));
+
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    expect(container.textContent).toContain("Recent");
+    const items = container.querySelectorAll(".palette-item");
+    expect(items[0].textContent).toContain("Widget B");
+    cleanupContainer(container);
+  });
+
+  it("persists the added widget id to localStorage on add", async () => {
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    await clickElement(container.querySelector(".palette-item")!);
+
+    const stored: string[] = JSON.parse(
+      localStorage.getItem(RECENT_KEY) ?? "[]",
+    );
+    expect(stored[0]).toBe("widget-a");
+    cleanupContainer(container);
+  });
+
+  it("falls back gracefully when localStorage contains malformed data", async () => {
+    localStorage.setItem(RECENT_KEY, "{{not-valid-json");
+
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    expect(container.querySelectorAll(".palette-item").length).toBe(2);
+    expect(container.textContent).not.toContain("Recent");
+    cleanupContainer(container);
+  });
+
+  it("falls back gracefully when localStorage contains a non-array value", async () => {
+    localStorage.setItem(RECENT_KEY, JSON.stringify({ id: "widget-a" }));
+
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    expect(container.querySelectorAll(".palette-item").length).toBe(2);
+    expect(container.textContent).not.toContain("Recent");
+    cleanupContainer(container);
+  });
+
+  it("falls back gracefully when localStorage array contains non-string items", async () => {
+    localStorage.setItem(RECENT_KEY, JSON.stringify([42, null, "widget-b"]));
+
+    const container = createContainer();
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<WidgetPalette onClose={vi.fn()} />);
+    });
+
+    // Only "widget-b" is a valid string entry — it surfaces as recent
+    expect(container.textContent).toContain("Recent");
+    const items = container.querySelectorAll(".palette-item");
+    expect(items[0].textContent).toContain("Widget B");
     cleanupContainer(container);
   });
 });
