@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { Widget, WidgetProps } from '@renderer/plugins/registry';
-import { WidgetLoading } from '../_shared';
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { Widget, WidgetProps } from "@renderer/plugins/registry";
+import { WidgetLoading } from "../_shared";
 import {
   REFRESH_INTERVAL_MS,
   CACHE_KEY,
@@ -8,31 +8,37 @@ import {
   OPEN_METEO_URL,
   GEOCODING_URL,
   getWmoInfo,
-} from './constants';
-import type { WeatherData, ForecastDay } from './types';
+} from "./constants";
+import type { WeatherData, ForecastDay } from "./types";
 
 function toF(c: number): number {
   return Math.round((c * 9) / 5 + 32);
 }
 
 function fmtTemp(celsius: number, units: string): string {
-  return units === 'fahrenheit' ? `${toF(celsius)}°F` : `${Math.round(celsius)}°C`;
+  return units === "fahrenheit"
+    ? `${toF(celsius)}°F`
+    : `${Math.round(celsius)}°C`;
 }
 
 function fmtWind(kmh: number, units: string): string {
-  return units === 'fahrenheit'
+  return units === "fahrenheit"
     ? `${Math.round(kmh * 0.621371)} mph`
     : `${Math.round(kmh)} km/h`;
 }
 
 function dayAbbr(dateStr: string): string {
-  return new Date(`${dateStr}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: "short",
+  });
 }
 
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 1 }}>{label}</div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 1 }}>
+        {label}
+      </div>
       <div style={{ fontSize: 12, fontWeight: 600 }}>{value}</div>
     </div>
   );
@@ -44,20 +50,26 @@ function ForecastCard({ day, units }: { day: ForecastDay; units: string }) {
     <div
       style={{
         flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         gap: 2,
-        padding: '6px 2px',
-        background: 'var(--panel-2)',
-        borderRadius: 'var(--radius)',
+        padding: "6px 2px",
+        background: "var(--panel-2)",
+        borderRadius: "var(--radius)",
         minWidth: 0,
       }}
     >
-      <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>{dayAbbr(day.date)}</div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
+        {dayAbbr(day.date)}
+      </div>
       <div style={{ fontSize: 20 }}>{wmo.emoji}</div>
-      <div style={{ fontSize: 11, fontWeight: 700 }}>{fmtTemp(day.tempMax, units)}</div>
-      <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>{fmtTemp(day.tempMin, units)}</div>
+      <div style={{ fontSize: 11, fontWeight: 700 }}>
+        {fmtTemp(day.tempMax, units)}
+      </div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
+        {fmtTemp(day.tempMin, units)}
+      </div>
     </div>
   );
 }
@@ -69,7 +81,7 @@ function WeatherWidget({ api, settings, setTitle }: WidgetProps) {
   const [refreshing, setRefreshing] = useState(false);
 
   const location = String(settings.location ?? DEFAULT_LOCATION);
-  const units = String(settings.units ?? 'celsius');
+  const units = String(settings.units ?? "celsius");
 
   const fetchWeather = useCallback(
     async (forceRefresh = false) => {
@@ -91,7 +103,9 @@ function WeatherWidget({ api, settings, setTitle }: WidgetProps) {
 
         let lat: number, lon: number, locationName: string;
 
-        const latLonMatch = /^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/.exec(location);
+        const latLonMatch = /^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/.exec(
+          location,
+        );
         if (latLonMatch) {
           lat = parseFloat(latLonMatch[1]);
           lon = parseFloat(latLonMatch[2]);
@@ -100,6 +114,8 @@ function WeatherWidget({ api, settings, setTitle }: WidgetProps) {
           const geoResp = await api.net.fetch(
             `${GEOCODING_URL}?name=${encodeURIComponent(location)}&count=1&language=en&format=json`,
           );
+          if (!geoResp.ok)
+            throw new Error(`Geocoding failed: HTTP ${geoResp.status}`);
           const geoData = JSON.parse(geoResp.body) as {
             results?: Array<{
               latitude: number;
@@ -109,25 +125,29 @@ function WeatherWidget({ api, settings, setTitle }: WidgetProps) {
               admin1?: string;
             }>;
           };
-          if (!geoData.results?.length) throw new Error(`Location "${location}" not found`);
+          if (!geoData.results?.length)
+            throw new Error(`Location "${location}" not found`);
           const r = geoData.results[0];
           lat = r.latitude;
           lon = r.longitude;
-          locationName = r.admin1 ? `${r.name}, ${r.admin1}` : `${r.name}, ${r.country}`;
+          locationName = r.admin1
+            ? `${r.name}, ${r.admin1}`
+            : `${r.name}, ${r.country}`;
         }
 
         const params = new URLSearchParams({
           latitude: String(lat),
           longitude: String(lon),
           current:
-            'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code',
+            "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
           daily:
-            'temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum',
-          timezone: 'auto',
-          forecast_days: '6',
+            "temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum",
+          timezone: "auto",
+          forecast_days: "6",
         });
 
         const resp = await api.net.fetch(`${OPEN_METEO_URL}?${params}`);
+        if (!resp.ok) throw new Error(`Weather API error: HTTP ${resp.status}`);
         const data = JSON.parse(resp.body) as {
           current: {
             temperature_2m: number;
@@ -191,14 +211,20 @@ function WeatherWidget({ api, settings, setTitle }: WidgetProps) {
 
   useEffect(() => {
     if (weather) setTitle(weather.locationName);
-    return () => setTitle(undefined);
   }, [weather, setTitle]);
+
+  // Store setTitle in a ref so the unmount cleanup always has the latest
+  // reference without re-running (and re-triggering) the effect on every render.
+  const setTitleRef = useRef(setTitle);
+  setTitleRef.current = setTitle;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => setTitleRef.current(undefined), []);
 
   if (loading) return <WidgetLoading />;
 
   if (error && !weather) {
     return (
-      <div style={{ padding: 12, color: 'var(--danger)', fontSize: 12 }}>
+      <div style={{ padding: 12, color: "var(--danger)", fontSize: 12 }}>
         {error}
       </div>
     );
@@ -212,58 +238,65 @@ function WeatherWidget({ api, settings, setTitle }: WidgetProps) {
   return (
     <div
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '10px 12px',
-        boxSizing: 'border-box',
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        padding: "10px 12px",
+        boxSizing: "border-box",
         gap: 10,
       }}
     >
       {/* Current conditions */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ fontSize: 44, lineHeight: 1, flexShrink: 0 }}>{wmo.emoji}</div>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ fontSize: 44, lineHeight: 1, flexShrink: 0 }}>
+          {wmo.emoji}
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1 }}>
             {fmtTemp(current.temp, units)}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
+          <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 3 }}>
             {wmo.label}
           </div>
         </div>
         <button
           className="ghost small"
-          style={{ fontSize: 13, padding: '2px 7px', flexShrink: 0 }}
+          style={{ fontSize: 13, padding: "2px 7px", flexShrink: 0 }}
           disabled={refreshing}
           onClick={() => void fetchWeather(true)}
           title="Refresh weather"
         >
-          {refreshing ? '…' : '↺'}
+          {refreshing ? "…" : "↺"}
         </button>
       </div>
 
       {/* Stats row */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <StatItem label="Feels like" value={fmtTemp(current.feelsLike, units)} />
+      <div style={{ display: "flex", gap: 8 }}>
+        <StatItem
+          label="Feels like"
+          value={fmtTemp(current.feelsLike, units)}
+        />
         <StatItem label="Humidity" value={`${current.humidity}%`} />
         <StatItem label="Wind" value={fmtWind(current.windSpeed, units)} />
       </div>
 
-      <div style={{ borderTop: '1px solid var(--border)' }} />
+      <div style={{ borderTop: "1px solid var(--border)" }} />
 
       {/* 5-day forecast */}
-      <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'stretch' }}>
+      <div style={{ flex: 1, display: "flex", gap: 4, alignItems: "stretch" }}>
         {forecast.map((day) => (
           <ForecastCard key={day.date} day={day} units={units} />
         ))}
       </div>
 
       {/* Last updated */}
-      <div style={{ fontSize: 10, color: 'var(--text-dim)', textAlign: 'right' }}>
-        Updated{' '}
+      <div
+        style={{ fontSize: 10, color: "var(--text-dim)", textAlign: "right" }}
+      >
+        Updated{" "}
         {new Date(weather.timestamp).toLocaleTimeString(undefined, {
-          hour: '2-digit',
-          minute: '2-digit',
+          hour: "2-digit",
+          minute: "2-digit",
         })}
       </div>
     </div>
@@ -272,30 +305,30 @@ function WeatherWidget({ api, settings, setTitle }: WidgetProps) {
 
 const widget: Widget = {
   manifest: {
-    id: 'weather',
-    name: 'Weather',
+    id: "weather",
+    name: "Weather",
     description:
-      'Current conditions and 5-day forecast via Open-Meteo — no API key required',
-    version: '0.1.0',
-    icon: '🌤️',
+      "Current conditions and 5-day forecast via Open-Meteo — no API key required",
+    version: "0.1.0",
+    icon: "🌤️",
     defaultSize: { w: 4, h: 5 },
     minSize: { w: 3, h: 4 },
     settings: [
       {
-        kind: 'string',
-        key: 'location',
-        label: 'Location',
+        kind: "string",
+        key: "location",
+        label: "Location",
         default: DEFAULT_LOCATION,
-        placeholder: 'City name or lat,lon (e.g. 40.71,-74.01)',
+        placeholder: "City name or lat,lon (e.g. 40.71,-74.01)",
       },
       {
-        kind: 'select',
-        key: 'units',
-        label: 'Temperature units',
-        default: 'celsius',
+        kind: "select",
+        key: "units",
+        label: "Temperature units",
+        default: "celsius",
         options: [
-          { value: 'celsius', label: 'Celsius (°C)' },
-          { value: 'fahrenheit', label: 'Fahrenheit (°F)' },
+          { value: "celsius", label: "Celsius (°C)" },
+          { value: "fahrenheit", label: "Fahrenheit (°F)" },
         ],
       },
     ],
