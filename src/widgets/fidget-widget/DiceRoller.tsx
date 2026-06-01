@@ -1,57 +1,91 @@
-import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
-type DieType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
+type DieType = "d4" | "d6" | "d8" | "d10" | "d12" | "d20";
 
 const DIE_SIDES: Record<DieType, number> = {
-  d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20,
+  d4: 4,
+  d6: 6,
+  d8: 8,
+  d10: 10,
+  d12: 12,
+  d20: 20,
 };
 
 // Pip positions [x%, y%] within a d6 face
 const PIPS: Record<number, [number, number][]> = {
   1: [[50, 50]],
-  2: [[68, 28], [32, 72]],
-  3: [[68, 28], [50, 50], [32, 72]],
-  4: [[28, 28], [72, 28], [28, 72], [72, 72]],
-  5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
-  6: [[28, 22], [28, 50], [28, 78], [72, 22], [72, 50], [72, 78]],
+  2: [
+    [68, 28],
+    [32, 72],
+  ],
+  3: [
+    [68, 28],
+    [50, 50],
+    [32, 72],
+  ],
+  4: [
+    [28, 28],
+    [72, 28],
+    [28, 72],
+    [72, 72],
+  ],
+  5: [
+    [28, 28],
+    [72, 28],
+    [50, 50],
+    [28, 72],
+    [72, 72],
+  ],
+  6: [
+    [28, 22],
+    [28, 50],
+    [28, 78],
+    [72, 22],
+    [72, 50],
+    [72, 78],
+  ],
 };
 
 // SVG polygon points in a 0 0 100 100 viewBox
 const SVG_SHAPES: Record<string, string> = {
-  d4:  '50,8 93,88 7,88',
-  d8:  '50,5 95,50 50,95 5,50',
-  d10: '50,5 93,40 75,92 25,92 7,40',
-  d12: '50,5 7,34 22,87 78,87 93,34',
-  d20: '50,5 97,92 3,92',
+  d4: "50,8 93,88 7,88",
+  d8: "50,5 95,50 50,95 5,50",
+  d10: "50,5 93,40 75,92 25,92 7,40",
+  d12: "50,5 7,34 22,87 78,87 93,34",
+  d20: "50,5 97,92 3,92",
 };
 
 // Approximate centroid y for text placement per die type
 const TEXT_Y: Record<string, number> = {
-  d4: 65, d8: 52, d10: 57, d12: 52, d20: 66,
+  d4: 65,
+  d8: 52,
+  d10: 57,
+  d12: 52,
+  d20: 66,
 };
 
 const ROLL_DURATION = 1400;
 
-const DIE_TYPES: DieType[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+const DIE_TYPES: DieType[] = ["d4", "d6", "d8", "d10", "d12", "d20"];
 
 function PipLayout({ face, size }: { face: number; size: number }) {
   const pips = PIPS[face];
   const pipSize = size * 0.14;
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
       {pips.map(([x, y], i) => (
         <div
           key={i}
           style={{
-            position: 'absolute',
+            position: "absolute",
             width: pipSize,
             height: pipSize,
-            borderRadius: '50%',
-            backgroundColor: '#dde2ec',
+            borderRadius: "50%",
+            backgroundColor: "#dde2ec",
             left: `${x}%`,
             top: `${y}%`,
-            transform: 'translate(-50%, -50%)',
+            transform: "translate(-50%, -50%)",
           }}
         />
       ))}
@@ -65,8 +99,8 @@ function D6Cube({ result, rolling }: { result: number; rolling: boolean }) {
   useEffect(() => {
     if (!rolling || !cubeRef.current) return;
     const el = cubeRef.current;
-    el.style.animation = 'none';
-    el.style.transform = 'rotateX(20deg) rotateY(-30deg)';
+    el.style.animation = "none";
+    el.style.transform = "rotateX(20deg) rotateY(-30deg)";
     void el.offsetHeight;
     el.style.animation = `d6-spin-${result} ${ROLL_DURATION}ms cubic-bezier(0.25,0.1,0.25,1) forwards`;
   }, [rolling, result]);
@@ -75,14 +109,14 @@ function D6Cube({ result, rolling }: { result: number; rolling: boolean }) {
   const half = size / 2;
 
   const faceBase: CSSProperties = {
-    position: 'absolute',
+    position: "absolute",
     width: size,
     height: size,
-    backgroundColor: '#1a1d2a',
-    border: '1.5px solid #3a4060',
+    backgroundColor: "#1a1d2a",
+    border: "1.5px solid #3a4060",
     borderRadius: 10,
-    backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
+    backfaceVisibility: "hidden",
+    WebkitBackfaceVisibility: "hidden",
   };
 
   const faces: { face: number; transform: string }[] = [
@@ -95,15 +129,17 @@ function D6Cube({ result, rolling }: { result: number; rolling: boolean }) {
   ];
 
   return (
-    <div style={{ perspective: 280, width: size, height: size, margin: 'auto' }}>
+    <div
+      style={{ perspective: 280, width: size, height: size, margin: "auto" }}
+    >
       <div
         ref={cubeRef}
         style={{
           width: size,
           height: size,
-          position: 'relative',
-          transformStyle: 'preserve-3d',
-          transform: 'rotateX(20deg) rotateY(-30deg)',
+          position: "relative",
+          transformStyle: "preserve-3d",
+          transform: "rotateX(20deg) rotateY(-30deg)",
         }}
       >
         {faces.map(({ face, transform }) => (
@@ -116,7 +152,15 @@ function D6Cube({ result, rolling }: { result: number; rolling: boolean }) {
   );
 }
 
-function SvgDie({ type, result, rolling }: { type: DieType; result: number; rolling: boolean }) {
+function SvgDie({
+  type,
+  result,
+  rolling,
+}: {
+  type: DieType;
+  result: number;
+  rolling: boolean;
+}) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [displayNum, setDisplayNum] = useState<number>(result);
   const sides = DIE_SIDES[type];
@@ -128,8 +172,8 @@ function SvgDie({ type, result, rolling }: { type: DieType; result: number; roll
   useEffect(() => {
     if (!rolling || !svgRef.current) return;
     const el = svgRef.current;
-    el.style.animation = 'none';
-    void el.offsetHeight;
+    el.style.animation = "none";
+    void (el as unknown as HTMLElement).offsetHeight;
     el.style.animation = `svg-roll ${ROLL_DURATION}ms ease-out forwards`;
 
     let count = 0;
@@ -147,7 +191,7 @@ function SvgDie({ type, result, rolling }: { type: DieType; result: number; roll
 
   const shape = SVG_SHAPES[type];
   const textY = TEXT_Y[type] ?? 54;
-  const fontSize = type === 'd10' ? 19 : type === 'd12' ? 21 : 23;
+  const fontSize = type === "d10" ? 19 : type === "d12" ? 21 : 23;
 
   return (
     <svg
@@ -155,11 +199,17 @@ function SvgDie({ type, result, rolling }: { type: DieType; result: number; roll
       viewBox="0 0 100 100"
       width={100}
       height={100}
-      style={{ display: 'block', margin: 'auto', overflow: 'visible' }}
+      style={{ display: "block", margin: "auto", overflow: "visible" }}
     >
       <defs>
         <filter id="die-shadow">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.5" />
+          <feDropShadow
+            dx="0"
+            dy="2"
+            stdDeviation="3"
+            floodColor="#000"
+            floodOpacity="0.5"
+          />
         </filter>
       </defs>
       <polygon
@@ -179,7 +229,7 @@ function SvgDie({ type, result, rolling }: { type: DieType; result: number; roll
         fontSize={fontSize}
         fontWeight="700"
         fontFamily="ui-monospace, monospace"
-        style={{ userSelect: 'none' }}
+        style={{ userSelect: "none" }}
       >
         {displayNum}
       </text>
@@ -188,7 +238,7 @@ function SvgDie({ type, result, rolling }: { type: DieType; result: number; roll
 }
 
 export function DiceRoller() {
-  const [selected, setSelected] = useState<DieType>('d6');
+  const [selected, setSelected] = useState<DieType>("d6");
   const [rolling, setRolling] = useState(false);
   const [result, setResult] = useState<number>(1);
   const [hasRolled, setHasRolled] = useState(false);
@@ -202,7 +252,7 @@ export function DiceRoller() {
     setHasRolled(true);
     setTimeout(() => {
       setRolling(false);
-      setHistory(prev => [{ die: selected, value }, ...prev].slice(0, 12));
+      setHistory((prev) => [{ die: selected, value }, ...prev].slice(0, 12));
     }, ROLL_DURATION + 80);
   };
 
@@ -213,28 +263,37 @@ export function DiceRoller() {
   }, [selected]);
 
   const btnBase: CSSProperties = {
-    padding: '4px 0',
+    padding: "4px 0",
     borderRadius: 5,
-    cursor: 'pointer',
+    cursor: "pointer",
     fontSize: 11,
     fontWeight: 600,
     flex: 1,
-    transition: 'background 0.15s, color 0.15s',
+    transition: "background 0.15s, color 0.15s",
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        height: "100%",
+      }}
+    >
       {/* Die type selector */}
-      <div style={{ display: 'flex', gap: 3 }}>
-        {DIE_TYPES.map(d => (
+      <div style={{ display: "flex", gap: 3 }}>
+        {DIE_TYPES.map((d) => (
           <button
             key={d}
-            onClick={() => { if (!rolling) setSelected(d); }}
+            onClick={() => {
+              if (!rolling) setSelected(d);
+            }}
             style={{
               ...btnBase,
-              background: selected === d ? 'var(--accent)30' : 'transparent',
-              border: `1px solid ${selected === d ? 'var(--accent)' : 'var(--border)'}`,
-              color: selected === d ? 'var(--accent)' : 'var(--text-dim)',
+              background: selected === d ? "var(--accent)30" : "transparent",
+              border: `1px solid ${selected === d ? "var(--accent)" : "var(--border)"}`,
+              color: selected === d ? "var(--accent)" : "var(--text-dim)",
             }}
           >
             {d.toUpperCase()}
@@ -247,39 +306,51 @@ export function DiceRoller() {
         onClick={handleRoll}
         style={{
           flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           minHeight: 110,
-          cursor: rolling ? 'default' : 'pointer',
+          cursor: rolling ? "default" : "pointer",
         }}
       >
-        {selected === 'd6'
-          ? <D6Cube result={result} rolling={rolling} />
-          : <SvgDie type={selected} result={result} rolling={rolling} />
-        }
+        {selected === "d6" ? (
+          <D6Cube result={result} rolling={rolling} />
+        ) : (
+          <SvgDie type={selected} result={result} rolling={rolling} />
+        )}
       </div>
 
       {/* Result */}
-      <div style={{ textAlign: 'center', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {rolling
-          ? <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>rolling…</span>
-          : hasRolled && (
+      <div
+        style={{
+          textAlign: "center",
+          height: 32,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {rolling ? (
+          <span style={{ fontSize: 12, color: "var(--text-dim)" }}>
+            rolling…
+          </span>
+        ) : (
+          hasRolled && (
             <span
               key={`${selected}-${result}`}
               style={{
                 fontSize: 26,
                 fontWeight: 800,
-                color: 'var(--accent)',
-                display: 'inline-block',
-                animation: 'result-pop 0.25s ease-out',
-                fontFamily: 'ui-monospace, monospace',
+                color: "var(--accent)",
+                display: "inline-block",
+                animation: "result-pop 0.25s ease-out",
+                fontFamily: "ui-monospace, monospace",
               }}
             >
               {result}
             </span>
           )
-        }
+        )}
       </div>
 
       {/* Roll button */}
@@ -287,38 +358,55 @@ export function DiceRoller() {
         onClick={handleRoll}
         disabled={rolling}
         style={{
-          padding: '7px 0',
-          background: rolling ? 'transparent' : 'var(--accent)20',
-          border: `1px solid ${rolling ? 'var(--border)' : 'var(--accent)50'}`,
+          padding: "7px 0",
+          background: rolling ? "transparent" : "var(--accent)20",
+          border: `1px solid ${rolling ? "var(--border)" : "var(--accent)50"}`,
           borderRadius: 6,
-          color: rolling ? 'var(--text-dim)' : 'var(--accent)',
-          cursor: rolling ? 'default' : 'pointer',
+          color: rolling ? "var(--text-dim)" : "var(--accent)",
+          cursor: rolling ? "default" : "pointer",
           fontSize: 13,
           fontWeight: 600,
         }}
       >
-        {rolling ? '…' : `Roll ${selected.toUpperCase()}`}
+        {rolling ? "…" : `Roll ${selected.toUpperCase()}`}
       </button>
 
       {/* History */}
       {history.length > 0 && (
-        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
           {history.map((h, i) => (
             <div
               key={i}
               title={`${h.die}: ${h.value}`}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '2px 5px',
-                background: 'var(--panel-2)',
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                padding: "2px 5px",
+                background: "var(--panel-2)",
                 borderRadius: 4,
                 minWidth: 26,
               }}
             >
-              <span style={{ fontSize: 9, color: 'var(--text-dim)', lineHeight: 1.2 }}>{h.die}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', lineHeight: 1.4 }}>{h.value}</span>
+              <span
+                style={{
+                  fontSize: 9,
+                  color: "var(--text-dim)",
+                  lineHeight: 1.2,
+                }}
+              >
+                {h.die}
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  lineHeight: 1.4,
+                }}
+              >
+                {h.value}
+              </span>
             </div>
           ))}
         </div>
