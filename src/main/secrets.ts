@@ -111,4 +111,9 @@ export class SecretsStore {
     const obj = await this.load(namespace);
     return key in obj;
   }
+
+  destroy(): void {
+    for (const timer of this.saveTimers.values()) clearTimeout(timer);
+    this.saveTimers.clear();
+  }
 }

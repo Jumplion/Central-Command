@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Xvfb :99 -screen 0 1280x800x24)",
+      "Bash(DISPLAY=:99 npm run dev)",
+      "Bash(echo \"DEV_PID=$!\")",
+      "Bash(apt list *)",
+      "Bash(dpkg -l xvfb)",
+      "Read(//usr/bin/**)"
+    ]
+  }
+}

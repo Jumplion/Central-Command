@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { ThreeDie } from "./ThreeDie";
 
-type DieType = "d4" | "d6" | "d8" | "d10" | "d12" | "d20";
+type DieType = "d2" | "d4" | "d6" | "d8" | "d10" | "d12" | "d20";
+type CoinSide = "heads" | "tails";
 
 const DIE_SIDES: Record<DieType, number> = {
+  d2: 2,
   d4: 4,
   d6: 6,
   d8: 8,
@@ -67,7 +70,7 @@ const TEXT_Y: Record<string, number> = {
 
 const ROLL_DURATION = 1400;
 
-const DIE_TYPES: DieType[] = ["d4", "d6", "d8", "d10", "d12", "d20"];
+const DIE_TYPES: DieType[] = ["d2", "d4", "d6", "d8", "d10", "d12", "d20"];
 
 function PipLayout({ face, size }: { face: number; size: number }) {
   const pips = PIPS[face];
@@ -237,6 +240,94 @@ function SvgDie({
   );
 }
 
+function CoinVisual({
+  result,
+  rolling,
+}: {
+  result: CoinSide | null;
+  rolling: boolean;
+}) {
+  const coinRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!rolling || !coinRef.current || result === null) return;
+    const el = coinRef.current;
+    el.style.animation = "none";
+    void el.offsetHeight;
+    el.style.animation = `coin-flip-${result} ${ROLL_DURATION}ms cubic-bezier(0.25,0.1,0.25,1) forwards`;
+  }, [rolling, result]);
+
+  const size = 96;
+  const faceBase: CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backfaceVisibility: "hidden",
+    WebkitBackfaceVisibility: "hidden",
+  };
+
+  return (
+    <div
+      style={{ perspective: 400, width: size, height: size, margin: "auto" }}
+    >
+      <div
+        ref={coinRef}
+        style={{
+          width: size,
+          height: size,
+          position: "relative",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        <div
+          style={{
+            ...faceBase,
+            background: "radial-gradient(circle at 38% 35%, #f5d060, #c8960a)",
+            border: "3px solid #a07820",
+            boxShadow: "inset 0 -3px 6px rgba(0,0,0,0.3)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 30,
+              fontWeight: 800,
+              color: "#7a5000",
+              letterSpacing: -1,
+              userSelect: "none",
+            }}
+          >
+            H
+          </span>
+        </div>
+        <div
+          style={{
+            ...faceBase,
+            background: "radial-gradient(circle at 38% 35%, #c8d4e8, #7888a8)",
+            border: "3px solid #607090",
+            boxShadow: "inset 0 -3px 6px rgba(0,0,0,0.3)",
+            transform: "rotateY(180deg)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 30,
+              fontWeight: 800,
+              color: "#3a4f6e",
+              letterSpacing: -1,
+              userSelect: "none",
+            }}
+          >
+            T
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DiceRoller() {
   const [selected, setSelected] = useState<DieType>("d6");
   const [rolling, setRolling] = useState(false);
@@ -313,10 +404,22 @@ export function DiceRoller() {
           cursor: rolling ? "default" : "pointer",
         }}
       >
-        {selected === "d6" ? (
+        {selected === "d2" ? (
+          <CoinVisual
+            result={hasRolled ? (result === 1 ? "heads" : "tails") : null}
+            rolling={rolling}
+          />
+        ) : selected === "d6" ? (
           <D6Cube result={result} rolling={rolling} />
-        ) : (
+        ) : selected === "d10" ? (
           <SvgDie type={selected} result={result} rolling={rolling} />
+        ) : (
+          <ThreeDie
+            type={selected}
+            result={result}
+            rolling={rolling}
+            size={110}
+          />
         )}
       </div>
 
@@ -332,22 +435,29 @@ export function DiceRoller() {
       >
         {rolling ? (
           <span style={{ fontSize: 12, color: "var(--text-dim)" }}>
-            rolling…
+            {selected === "d2" ? "flipping…" : "rolling…"}
           </span>
         ) : (
           hasRolled && (
             <span
               key={`${selected}-${result}`}
               style={{
-                fontSize: 26,
+                fontSize: selected === "d2" ? 18 : 26,
                 fontWeight: 800,
-                color: "var(--accent)",
+                color:
+                  selected === "d2"
+                    ? result === 1
+                      ? "#f5c030"
+                      : "#8898b8"
+                    : "var(--accent)",
                 display: "inline-block",
                 animation: "result-pop 0.25s ease-out",
                 fontFamily: "ui-monospace, monospace",
+                textTransform: selected === "d2" ? "uppercase" : undefined,
+                letterSpacing: selected === "d2" ? 1 : undefined,
               }}
             >
-              {result}
+              {selected === "d2" ? (result === 1 ? "Heads" : "Tails") : result}
             </span>
           )
         )}
@@ -368,7 +478,11 @@ export function DiceRoller() {
           fontWeight: 600,
         }}
       >
-        {rolling ? "…" : `Roll ${selected.toUpperCase()}`}
+        {rolling
+          ? "…"
+          : selected === "d2"
+            ? "Flip Coin"
+            : `Roll ${selected.toUpperCase()}`}
       </button>
 
       {/* History */}
@@ -377,7 +491,7 @@ export function DiceRoller() {
           {history.map((h, i) => (
             <div
               key={i}
-              title={`${h.die}: ${h.value}`}
+              title={`${h.die}: ${h.die === "d2" ? (h.value === 1 ? "Heads" : "Tails") : h.value}`}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -401,11 +515,16 @@ export function DiceRoller() {
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: "var(--text)",
+                  color:
+                    h.die === "d2"
+                      ? h.value === 1
+                        ? "#f5c030"
+                        : "#8898b8"
+                      : "var(--text)",
                   lineHeight: 1.4,
                 }}
               >
-                {h.value}
+                {h.die === "d2" ? (h.value === 1 ? "H" : "T") : h.value}
               </span>
             </div>
           ))}

@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { Widget } from "@renderer/plugins/registry";
-import { TabBar } from "../_shared";
 import { DiceRoller } from "./DiceRoller";
-import { Coin } from "./Coin";
 
 // Inject CSS animations once per page load
 let cssInjected = false;
@@ -44,51 +42,24 @@ function ensureCss() {
   document.head.appendChild(el);
 }
 
-type Tab = "dice" | "coin";
-
-const TABS = [
-  { value: "dice" as Tab, label: "🎲 Dice" },
-  { value: "coin" as Tab, label: "🪙 Coin" },
-];
-
 const widget: Widget = {
   manifest: {
     id: "fidget-widget",
     name: "Fidget",
-    description: "Quick micro-tools: animated dice roller and coin flip",
+    description: "Quick micro-tools: animated dice roller with d2 coin flip",
     version: "0.1.0",
     icon: "🎲",
     defaultSize: { w: 4, h: 6 },
     minSize: { w: 3, h: 5 },
   },
   Component(_props) {
-    const [tab, setTab] = useState<Tab>("dice");
-
     useEffect(() => {
       ensureCss();
     }, []);
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-          gap: 10,
-        }}
-      >
-        <TabBar tabs={TABS} active={tab} onChange={setTab} equalWidth />
-        <div
-          style={{
-            flex: 1,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {tab === "dice" && <DiceRoller />}
-          {tab === "coin" && <Coin />}
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <DiceRoller />
       </div>
     );
   },

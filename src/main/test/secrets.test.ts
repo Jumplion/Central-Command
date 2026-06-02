@@ -41,6 +41,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  store.destroy();
   await fs.rm(root, { recursive: true, force: true });
 });
 
