@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
+import { useShallow } from "zustand/react/shallow";
 import { useDashboard } from "@renderer/state/dashboard";
 import { getWidget } from "@renderer/plugins/registry";
 import { WidgetHost } from "./WidgetHost";
@@ -69,7 +70,7 @@ const GridCell = memo(function GridCell({
 });
 
 export function Dashboard() {
-  const dashboard = useDashboard((s) => s.activeDashboard());
+  const instances = useDashboard(useShallow((s) => s.activeInstances()));
   const updateLayout = useDashboard((s) => s.updateLayout);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -108,17 +109,17 @@ export function Dashboard() {
 
   const widgetMap = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getWidget> | undefined>();
-    for (const instance of dashboard.instances) {
+    for (const instance of instances) {
       if (!map.has(instance.widgetId)) {
         map.set(instance.widgetId, getWidget(instance.widgetId));
       }
     }
     return map;
-  }, [dashboard.instances]);
+  }, [instances]);
 
   const layout = useMemo<Layout[]>(
     () =>
-      dashboard.instances.map((i) => {
+      instances.map((i) => {
         const min = widgetMap.get(i.widgetId)?.manifest.minSize;
         return {
           i: i.instanceId,
@@ -130,12 +131,12 @@ export function Dashboard() {
           minH: min?.h ?? 2,
         };
       }),
-    [dashboard.instances, widgetMap],
+    [instances, widgetMap],
   );
 
   useEffect(() => {
     const currentIds = new Set(
-      dashboard.instances.map((instance) => instance.instanceId),
+      instances.map((instance) => instance.instanceId),
     );
     const previousIds = previousInstanceIdsRef.current;
     const newInstanceIds = Array.from(currentIds).filter(
@@ -159,15 +160,15 @@ export function Dashboard() {
       block: "nearest",
       inline: "nearest",
     });
-  }, [dashboard.instances]);
+  }, [instances]);
 
   const snapshotCurrentLayout = useCallback(
     (): LayoutSnapshot =>
-      dashboard.instances.map((i) => ({
+      instances.map((i) => ({
         instanceId: i.instanceId,
         ...i.layout,
       })),
-    [dashboard.instances],
+    [instances],
   );
 
   const handleChange = useCallback(
@@ -250,7 +251,7 @@ export function Dashboard() {
 
   const gridItems = useMemo(
     () =>
-      dashboard.instances.map((i) => {
+      instances.map((i) => {
         const widget = widgetMap.get(i.widgetId);
         const isResizing = resizingItem?.id === i.instanceId;
         return (
@@ -264,12 +265,12 @@ export function Dashboard() {
           />
         );
       }),
-    [dashboard.instances, widgetMap, resizingItem],
+    [instances, widgetMap, resizingItem],
   );
 
   return (
     <div className="dashboard" ref={containerRef}>
-      {dashboard.instances.length === 0 ? (
+      {instances.length === 0 ? (
         <div className="empty">
           <h2>No widgets yet</h2>
           <p>

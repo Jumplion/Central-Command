@@ -144,6 +144,7 @@ export class SyncManager extends SyncManagerBase {
             const content = await this.drive.downloadFile(driveFile.id);
             await atomicWrite(localPath, content);
             stateChangedByRemote = true;
+            this._pullHadChanges = true;
           }
           continue;
         }
@@ -160,6 +161,7 @@ export class SyncManager extends SyncManagerBase {
             const content = await this.drive.downloadFile(driveFile.id);
             await atomicWrite(localPath, content);
             this.storage.json.invalidateCache(kvWidgetId);
+            this._pullHadChanges = true;
           }
           continue;
         }
@@ -176,6 +178,7 @@ export class SyncManager extends SyncManagerBase {
             const base64 = await this.drive.downloadFile(driveFile.id);
             await atomicWrite(localPath, Buffer.from(base64, "base64"));
             this.storage.sqlite.closeDb(dbWidgetId);
+            this._pullHadChanges = true;
           }
         }
       }

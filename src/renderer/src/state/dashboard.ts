@@ -27,6 +27,7 @@ interface DashboardStore {
   applyRemoteState(state: AppState): void;
 
   activeDashboard(): Dashboard;
+  activeInstances(): WidgetInstance[];
   setActiveDashboard(id: DashboardId): void;
 
   addDashboard(name: string): DashboardId;
@@ -158,6 +159,16 @@ export const useDashboard = create<DashboardStore>((set, get) => {
       const s = get().state;
       const activeId = resolveActiveId(s);
       return s.dashboards.find((d) => d.id === activeId) ?? s.dashboards[0];
+    },
+
+    activeInstances() {
+      const s = get().state;
+      const activeId = resolveActiveId(s);
+      return (
+        s.dashboards.find((d) => d.id === activeId)?.instances ??
+        s.dashboards[0]?.instances ??
+        []
+      );
     },
 
     setActiveDashboard(id) {
