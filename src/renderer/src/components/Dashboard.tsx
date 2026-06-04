@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
 import { useDashboard } from "@renderer/state/dashboard";
 import { getWidget } from "@renderer/plugins/registry";
 import { WidgetHost } from "./WidgetHost";
-import type { WidgetManifest } from "@shared/types";
+import type { WidgetInstance, WidgetManifest } from "@shared/types";
+import type { Widget } from "@renderer/plugins/registry";
 
 const COLS = 12;
 const ROW_HEIGHT = 60;
@@ -41,6 +42,31 @@ function ResizeHint({
     </div>
   );
 }
+
+const GridCell = memo(function GridCell({
+  instance,
+  widget,
+  isResizing,
+  resizeW,
+  resizeH,
+}: {
+  instance: WidgetInstance;
+  widget: Widget | undefined;
+  isResizing: boolean;
+  resizeW: number;
+  resizeH: number;
+}) {
+  return (
+    <div data-instance-id={instance.instanceId}>
+      <div className="widget-cell">
+        <WidgetHost instance={instance} widget={widget} />
+        {isResizing && (
+          <ResizeHint w={resizeW} h={resizeH} manifest={widget?.manifest} />
+        )}
+      </div>
+    </div>
+  );
+});
 
 export function Dashboard() {
   const dashboard = useDashboard((s) => s.activeDashboard());
@@ -228,18 +254,14 @@ export function Dashboard() {
         const widget = widgetMap.get(i.widgetId);
         const isResizing = resizingItem?.id === i.instanceId;
         return (
-          <div key={i.instanceId} data-instance-id={i.instanceId}>
-            <div className="widget-cell">
-              <WidgetHost instance={i} widget={widget} />
-              {isResizing && (
-                <ResizeHint
-                  w={resizingItem!.w}
-                  h={resizingItem!.h}
-                  manifest={widget?.manifest}
-                />
-              )}
-            </div>
-          </div>
+          <GridCell
+            key={i.instanceId}
+            instance={i}
+            widget={widget}
+            isResizing={isResizing}
+            resizeW={isResizing ? resizingItem!.w : 0}
+            resizeH={isResizing ? resizingItem!.h : 0}
+          />
         );
       }),
     [dashboard.instances, widgetMap, resizingItem],

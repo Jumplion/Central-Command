@@ -16,38 +16,44 @@ export interface Widget {
   Component: ComponentType<WidgetProps>;
 }
 
-const modules = import.meta.glob<{ default: Widget }>(
+const loaders = import.meta.glob<{ default: Widget }>(
   "../../../widgets/*/index.tsx",
-  {
-    eager: true,
-  },
+  { eager: false },
 );
 
 const registry = new Map<string, Widget>();
 const registeredIds = new Set<string>();
+let sortedWidgets: Widget[] = [];
 
-for (const filePath in modules) {
-  const mod = modules[filePath];
-  const error = getWidgetRegistrationError(
-    mod,
-    registeredIds,
-    CURRENT_PLATFORM,
-  );
-  if (error) {
-    if (error !== "unsupported platform") {
-      console.warn(`[plugins] skipping widget at ${filePath}: ${error}`);
-    }
-    continue;
-  }
+let _initPromise: Promise<void> | null = null;
 
-  const widget = mod!.default;
-  registeredIds.add(widget.manifest.id);
-  registry.set(widget.manifest.id, widget);
+export function initRegistry(): Promise<void> {
+  if (_initPromise) return _initPromise;
+  _initPromise = Promise.all(
+    Object.entries(loaders).map(async ([filePath, loader]) => {
+      const mod = await loader();
+      const error = getWidgetRegistrationError(
+        mod,
+        registeredIds,
+        CURRENT_PLATFORM,
+      );
+      if (error) {
+        if (error !== "unsupported platform") {
+          console.warn(`[plugins] skipping widget at ${filePath}: ${error}`);
+        }
+        return;
+      }
+      const widget = mod.default;
+      registeredIds.add(widget.manifest.id);
+      registry.set(widget.manifest.id, widget);
+    }),
+  ).then(() => {
+    sortedWidgets = Array.from(registry.values()).sort((a, b) =>
+      a.manifest.name.localeCompare(b.manifest.name),
+    );
+  });
+  return _initPromise;
 }
-
-const sortedWidgets: Widget[] = Array.from(registry.values()).sort((a, b) =>
-  a.manifest.name.localeCompare(b.manifest.name),
-);
 
 export function listWidgets(): Widget[] {
   return sortedWidgets;

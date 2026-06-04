@@ -107,6 +107,19 @@ export interface WidgetApi {
 
 const SCOPE_SEP = "::";
 
+// Renderer-side cache for the shared Google access token.
+// The main process refreshes tokens before they expire; this cache avoids
+// redundant IPC round-trips within a single refresh window.
+const _sharedTokenCache = new Map<
+  string,
+  { token: string; expiresAt: number }
+>();
+const SHARED_TOKEN_TTL_MS = 5 * 60_000; // 5 minutes — well within Google's 1-hour token lifetime
+
+function _sharedTokenKey(service?: string): string {
+  return service ?? "__default__";
+}
+
 function scoped(instanceId: InstanceId, key: string): string {
   return `${instanceId}${SCOPE_SEP}${key}`;
 }
@@ -153,12 +166,28 @@ export function createGoogleApi(widgetId: WidgetId): WidgetApi["google"] {
     shared: {
       connect: (options) =>
         window.cc.google.connect(SHARED_GOOGLE_WIDGET_ID, options),
-      getToken: (service) =>
-        window.cc.google.getToken(SHARED_GOOGLE_WIDGET_ID, service),
+      getToken: async (service) => {
+        const key = _sharedTokenKey(service);
+        const cached = _sharedTokenCache.get(key);
+        if (cached && Date.now() < cached.expiresAt) return cached.token;
+        const token = await window.cc.google.getToken(
+          SHARED_GOOGLE_WIDGET_ID,
+          service,
+        );
+        if (token) {
+          _sharedTokenCache.set(key, {
+            token,
+            expiresAt: Date.now() + SHARED_TOKEN_TTL_MS,
+          });
+        }
+        return token;
+      },
       isConnected: (service) =>
         window.cc.google.isConnected(SHARED_GOOGLE_WIDGET_ID, service),
-      disconnect: (service) =>
-        window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID, service),
+      disconnect: (service) => {
+        _sharedTokenCache.delete(_sharedTokenKey(service));
+        return window.cc.google.disconnect(SHARED_GOOGLE_WIDGET_ID, service);
+      },
       hasCreds: (service) =>
         window.cc.secrets.has(
           SHARED_GOOGLE_WIDGET_ID,

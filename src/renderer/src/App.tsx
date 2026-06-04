@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./components/Dashboard";
 import { WidgetPalette } from "./components/WidgetPalette";
 import { useDashboard } from "./state/dashboard";
+import { initRegistry } from "./plugins/registry";
 
 export default function App() {
   const load = useDashboard((s) => s.load);
@@ -10,9 +11,11 @@ export default function App() {
   const applyRemoteState = useDashboard((s) => s.applyRemoteState);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [widgetsReady, setWidgetsReady] = useState(false);
 
   useEffect(() => {
     void load();
+    void initRegistry().then(() => setWidgetsReady(true));
   }, [load]);
 
   useEffect(() => {
@@ -34,7 +37,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  if (!loaded) {
+  if (!loaded || !widgetsReady) {
     return <div className="loading">Loading…</div>;
   }
 
