@@ -29,6 +29,10 @@ export const INIT_SQL = `
     created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
     UNIQUE(item_id, linked_item_id)
   );
+
+  CREATE INDEX IF NOT EXISTS idx_media_items_pinned_updated ON media_items(pinned DESC, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_media_history_item_id      ON media_status_history(item_id);
+  CREATE INDEX IF NOT EXISTS idx_media_links_item_id        ON media_links(item_id);
 `;
 
 export const MIGRATIONS: SqlMigration[] = [];

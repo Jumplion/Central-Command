@@ -116,6 +116,22 @@ export abstract class SyncManagerBase {
     });
   }
 
+  protected async _withRetry<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (attempt >= maxAttempts - 1) throw err;
+        await new Promise<void>((r) =>
+          setTimeout(r, Math.min(1000 * 2 ** attempt, 30_000)),
+        );
+      }
+    }
+  }
+
   protected _enqueue(task: () => Promise<void>): void {
     this._queue = this._queue
       .then(() => {

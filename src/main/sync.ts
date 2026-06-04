@@ -52,10 +52,12 @@ export class SyncManager extends SyncManagerBase {
         const driveName = driveKvName(widgetId);
         try {
           const content = await fs.readFile(kvFile, "utf-8");
-          const newId = await this.drive.upsertFile(
-            driveName,
-            content,
-            this._driveIds.get(driveName),
+          const newId = await this._withRetry(() =>
+            this.drive.upsertFile(
+              driveName,
+              content,
+              this._driveIds.get(driveName),
+            ),
           );
           this._driveIds.set(driveName, newId);
         } catch (err) {
@@ -67,10 +69,12 @@ export class SyncManager extends SyncManagerBase {
         const stateFile = path.join(this.storage.root, "state.json");
         try {
           const content = await fs.readFile(stateFile, "utf-8");
-          const newId = await this.drive.upsertFile(
-            DRIVE_STATE_FILE,
-            content,
-            this._driveIds.get(DRIVE_STATE_FILE),
+          const newId = await this._withRetry(() =>
+            this.drive.upsertFile(
+              DRIVE_STATE_FILE,
+              content,
+              this._driveIds.get(DRIVE_STATE_FILE),
+            ),
           );
           this._driveIds.set(DRIVE_STATE_FILE, newId);
         } catch (err) {
@@ -112,7 +116,9 @@ export class SyncManager extends SyncManagerBase {
       const base64 = content.toString("base64");
       const driveName = driveDbName(widgetId);
       const knownId = this._driveIds.get(driveName);
-      const newId = await this.drive.upsertFile(driveName, base64, knownId);
+      const newId = await this._withRetry(() =>
+        this.drive.upsertFile(driveName, base64, knownId),
+      );
       this._driveIds.set(driveName, newId);
     } finally {
       fs.unlink(backupPath).catch(() => {});
@@ -125,7 +131,7 @@ export class SyncManager extends SyncManagerBase {
     let stateChangedByRemote = false;
 
     try {
-      const files = await this.drive.listFiles();
+      const files = await this._withRetry(() => this.drive.listFiles());
       for (const f of files) this._driveIds.set(f.name, f.id);
       this._driveIdsLoaded = true;
 

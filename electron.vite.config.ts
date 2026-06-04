@@ -33,6 +33,13 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: resolve(__dirname, "src/renderer/index.html"),
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom"],
+            "vendor-grid": ["react-grid-layout"],
+            "vendor-state": ["zustand"],
+          },
+        },
       },
     },
   },

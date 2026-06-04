@@ -18,6 +18,8 @@ export const INIT_SQL = `
   -- and status should always be a text value like 'Applied', never an integer.
   DELETE FROM applications WHERE last_updated IS NULL;
   DELETE FROM applications WHERE typeof(status) = 'integer';
+
+  CREATE INDEX IF NOT EXISTS idx_applications_last_updated ON applications(last_updated DESC);
 `;
 
 export const DEFAULT_GMAIL_QUERY = [
@@ -86,6 +88,9 @@ export const EMAIL_INIT_SQL = `
     enabled    INTEGER NOT NULL DEFAULT 1,
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE INDEX IF NOT EXISTS idx_email_jobs_received_at ON email_jobs(received_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_email_jobs_dismissed   ON email_jobs(dismissed);
 `;
 
 // Default ATS domains seeded on first run: [domain, company_hint]
