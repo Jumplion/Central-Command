@@ -2,6 +2,8 @@
 
 This guide teaches React using real code from this project (Central Command) as examples. No prior React knowledge is assumed, but basic JavaScript/TypeScript familiarity helps.
 
+Every code block is taken directly from a file in this repo. Line references are given so you can open the file and read the surrounding context.
+
 ---
 
 ## Table of Contents
@@ -11,18 +13,18 @@ This guide teaches React using real code from this project (Central Command) as 
 3. [JSX](#3-jsx)
 4. [Props](#4-props)
 5. [State — `useState`](#5-state--usestate)
-6. [Side Effects — `useEffect`](#6-side-effects--useeffect)
-7. [Event Handlers](#7-event-handlers)
-8. [Conditional Rendering](#8-conditional-rendering)
-9. [Lists and Keys](#9-lists-and-keys)
+6. [Event Handlers](#6-event-handlers)
+7. [Conditional Rendering](#7-conditional-rendering)
+8. [Lists and Keys](#8-lists-and-keys)
+9. [Side Effects — `useEffect`](#9-side-effects--useeffect)
 10. [Refs — `useRef`](#10-refs--useref)
 11. [Custom Hooks](#11-custom-hooks)
-12. [Performance — `useCallback` and `useMemo`](#12-performance--usecallback-and-usememo)
-13. [Component Composition](#13-component-composition)
-14. [Error Boundaries](#14-error-boundaries)
-15. [TypeScript and React](#15-typescript-and-react)
-16. [Global State — Zustand](#16-global-state--zustand)
-17. [Putting It All Together — A Widget Walkthrough](#17-putting-it-all-together--a-widget-walkthrough)
+12. [Memoization — `useMemo`, `useCallback`, `React.memo`](#12-memoization--usememo-usecallback-reactmemo)
+13. [Component Composition and `children`](#13-component-composition-and-children)
+14. [Class Components and Error Boundaries](#14-class-components-and-error-boundaries)
+15. [Global State — Zustand](#15-global-state--zustand)
+16. [TypeScript and React](#16-typescript-and-react)
+17. [Putting It All Together — The Widget Pattern](#17-putting-it-all-together--the-widget-pattern)
 
 ---
 
@@ -30,7 +32,7 @@ This guide teaches React using real code from this project (Central Command) as 
 
 React is a JavaScript library for building user interfaces. The central idea is simple: **your UI is a function of your data**. You describe what the screen should look like given the current state, and React takes care of updating the DOM to match.
 
-In this project every visible panel — the widget cards, the header, the settings drawer — is a React component. The renderer process (`src/renderer/`) is a React app; the main process (`src/main/`) is plain Node and never touches React.
+In this project every visible panel — the sidebar, each widget card, the settings drawer — is a React component. The renderer process (`src/renderer/`) is a React app. The main process (`src/main/`) is plain Node.js and never touches React.
 
 ```
 src/
@@ -45,9 +47,9 @@ src/
 
 ## 2. Components
 
-A **component** is a function that returns JSX (covered next). It is the fundamental unit of a React UI — like a reusable building block.
+A **component** is a function that returns JSX (covered next). It is the fundamental building block of a React UI.
 
-Here is the simplest possible React component:
+Here is the simplest possible component:
 
 ```tsx
 function Hello() {
@@ -55,281 +57,501 @@ function Hello() {
 }
 ```
 
-Every widget in this project is a component. The `QuickCopy` widget (`src/widgets/quick-copy/index.tsx`) looks like this at a high level:
+A real example from this project — a small helper component inside `Dashboard.tsx`:
 
 ```tsx
-function QuickCopy({ api }: WidgetProps) {
-  // ... state declarations
-  // ... effects
-  // ... event handlers
+// src/renderer/src/components/Dashboard.tsx (lines 20–43)
+
+function ResizeHint({
+  w,
+  h,
+  manifest,
+}: {
+  w: number;
+  h: number;
+  manifest?: WidgetManifest;
+}) {
+  const isGoodFit =
+    manifest?.defaultSize != null &&
+    w === manifest.defaultSize.w &&
+    h === manifest.defaultSize.h;
 
   return (
-    <div style={{ /* ... */ }}>
-      {/* ... JSX tree */}
+    <div className={`resize-hint${isGoodFit ? " resize-hint--good-fit" : ""}`}>
+      {isGoodFit && <span className="resize-hint__check">✓</span>}
+      <span>
+        {w} × {h}
+      </span>
+      {isGoodFit && <span className="resize-hint__label">Recommended</span>}
     </div>
   );
 }
-
-export default {
-  manifest: { id: "quick-copy", name: "Quick Copy", /* ... */ },
-  Component: QuickCopy,
-};
 ```
 
-A few rules:
-- Component names must start with a capital letter (`QuickCopy`, not `quickCopy`).
-- A component must return one root element (or a Fragment: `<>...</>`).
-- Components are composable — you place them inside other components like HTML tags.
+**What to notice:**
+- It is a plain JavaScript function — no class, no decorator, no special registration.
+- Its argument is destructured immediately: `{ w, h, manifest }`.
+- It returns what looks like HTML — that is JSX (next section).
+- Component names must start with a capital letter (`ResizeHint`, not `resizeHint`).
+- A component must return one root element (or a Fragment `<>...</>`).
 
 ---
 
 ## 3. JSX
 
-JSX is the syntax that looks like HTML inside JavaScript. It is not actually HTML — it compiles to `React.createElement(...)` calls. Here are the key differences from HTML:
-
-| HTML | JSX |
-|------|-----|
-| `class="..."` | `className="..."` |
-| `for="..."` | `htmlFor="..."` |
-| `style="color: red"` | `style={{ color: "red" }}` |
-| Self-closing optional | Must close all tags: `<input />` |
-| Comments `<!-- -->` | Comments `{/* */}` |
-
-Curly braces `{}` let you embed any JavaScript expression inside JSX:
+JSX is the syntax that lets you write HTML-like markup inside JavaScript. It compiles to plain `React.createElement(...)` calls before the browser ever sees it.
 
 ```tsx
-const name = "Alice";
-return <div>Hello, {name.toUpperCase()}!</div>;
+// This JSX:
+<div className="widget">
+  <span>{title}</span>
+</div>
+
+// Compiles to this JavaScript:
+React.createElement("div", { className: "widget" },
+  React.createElement("span", null, title)
+)
 ```
 
-From the `quick-copy` widget, this button uses a ternary expression inline:
+You never write the `React.createElement` form by hand.
+
+### Key JSX rules
+
+**`className` instead of `class`**
+
+Because JSX is JavaScript, `class` is a reserved word:
 
 ```tsx
-// src/widgets/quick-copy/index.tsx
-<button onClick={() => setComposerOpen((open) => !open)}>
-  {composerOpen ? "▾" : "▸"}
-</button>
+<div className="widget-header">
 ```
 
-When `composerOpen` is `true` the button shows `▾`; when `false` it shows `▸`. The logic lives inside `{}`, right in the markup.
+**Embed expressions with `{}`**
+
+Any JavaScript expression goes inside curly braces:
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (line 93)
+<span className="widget-title">{title}</span>
+```
+
+```tsx
+// Dimension display from Dashboard.tsx (line 38)
+<span>{w} × {h}</span>
+```
+
+**Self-closing tags need `/>` **
+
+```tsx
+<input value={filter} onChange={(e) => setFilter(e.target.value)} />
+```
+
+**Return a single root element**
+
+Wrap siblings in a Fragment when you need to return more than one element:
+
+```tsx
+<>
+  <input ... />
+  <button ... />
+</>
+```
+
+Fragments render nothing in the DOM — they exist solely to satisfy the single-root requirement.
 
 ---
 
 ## 4. Props
 
-**Props** (short for properties) are how you pass data into a component — like arguments to a function.
+**Props** (short for "properties") are how you pass data into a component — like arguments to a function. Props are read-only: a component never modifies its own props.
 
 ### Defining a component that accepts props
 
 ```tsx
-interface GreetingProps {
-  name: string;
-  age?: number; // optional
+// src/renderer/src/components/AddWidgetDialog.tsx (lines 5–9)
+
+interface Props {
+  onClose: () => void;
 }
 
-function Greeting({ name, age }: GreetingProps) {
-  return (
-    <div>
-      Hello, {name}! {age && <span>Age: {age}</span>}
-    </div>
-  );
+export function AddWidgetDialog({ onClose }: Props) {
+  // ...
 }
-
-// Usage:
-<Greeting name="Alice" age={30} />
-<Greeting name="Bob" />
 ```
 
-### Props in this project — `WidgetProps`
+`Props` is a TypeScript interface describing what the caller must supply. `onClose` is a function — this is how a child communicates back to its parent without touching parent state directly.
 
-Every widget receives the same three props, defined in `src/renderer/src/plugins/registry.ts`:
+### Passing props
+
+```tsx
+// src/renderer/src/App.tsx (line 50)
+{showPalette && <WidgetPalette onClose={() => setShowPalette(false)} />}
+```
+
+`App` owns `showPalette` and passes a function to reset it. `WidgetPalette` calls `onClose()` when dismissed, but never touches `showPalette` directly.
+
+### Optional props
+
+```tsx
+// src/renderer/src/components/Dashboard.tsx (lines 22–27)
+function ResizeHint({
+  w,
+  h,
+  manifest,      // optional — the ? makes it optional in TypeScript
+}: {
+  w: number;
+  h: number;
+  manifest?: WidgetManifest;
+}) {
+```
+
+### Props for every widget — `WidgetProps`
+
+Every widget component receives the same three props:
 
 ```tsx
 // src/renderer/src/plugins/registry.ts
 export interface WidgetProps {
-  api: WidgetApi;       // access to storage, network, secrets, etc.
-  settings: WidgetSettings; // per-instance config values
-  setTitle: (title: string | undefined) => void; // update the widget's header title
+  api: WidgetApi;                              // storage, network, secrets, etc.
+  settings: WidgetSettings;                   // per-instance config values
+  setTitle: (title: string | undefined) => void; // override the widget's header text
 }
 ```
-
-A widget destructures whichever props it needs:
-
-```tsx
-// Uses only api:
-function QuickCopy({ api }: WidgetProps) { /* ... */ }
-
-// Uses all three:
-function MediaTracker({ api, settings, setTitle }: WidgetProps) { /* ... */ }
-```
-
-`setTitle` in `MediaTracker` is called with a dynamic count so the header reflects how many items are actively being tracked:
-
-```tsx
-// src/widgets/media-tracker/index.tsx
-setTitle(
-  activeCount > 0 ? `Media Tracker (${activeCount} active)` : undefined,
-);
-```
-
-### Props are read-only
-
-A component must never mutate its own props. If you need to change a value, it must live in **state** (next section) and be passed down as a prop.
-
-### Children
-
-The special `children` prop lets you nest content between open and closing tags:
-
-```tsx
-function Card({ children }: { children: React.ReactNode }) {
-  return <div className="card">{children}</div>;
-}
-
-<Card>
-  <h2>Title</h2>
-  <p>Body text.</p>
-</Card>
-```
-
-The `ErrorBoundary` component in this project uses `children` exactly this way — it wraps any widget and catches its errors (see [Error Boundaries](#14-error-boundaries)).
 
 ---
 
 ## 5. State — `useState`
 
-State is data that belongs to a component and can change over time. When state changes, React re-renders the component and updates the UI.
-
-### Basic usage
+State is data that belongs to a component and can change over time. When state changes, React re-renders the component with the new value.
 
 ```tsx
-import { useState } from "react";
-
-function Counter() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <button onClick={() => setCount(count + 1)}>
-      Clicked {count} times
-    </button>
-  );
-}
+const [value, setValue] = useState(initialValue);
+//     ^        ^
+//     current  setter function
 ```
 
-`useState(0)` returns a pair: the current value and a setter function. The naming convention is `[value, setValue]`.
-
-### Initial value types
-
-The initial value can be anything:
+### Simple string state
 
 ```tsx
-const [text, setText] = useState("");                    // string
-const [open, setOpen] = useState(false);                 // boolean
-const [items, setItems] = useState<string[]>([]);        // array
-const [selected, setSelected] = useState<number | null>(null); // nullable
+// src/renderer/src/components/AddWidgetDialog.tsx (line 12)
+const [filter, setFilter] = useState("");
 ```
+
+`filter` starts as `""`. Calling `setFilter("hello")` schedules a re-render with `filter === "hello"`.
 
 ### Multiple state variables
 
-The `quick-copy` widget uses several pieces of state at once, each tracking a different concern:
-
 ```tsx
-// src/widgets/quick-copy/index.tsx
-const [entries, setEntries]         = useState<CopyEntry[]>([]);
-const [draftTitle, setDraftTitle]   = useState("");
-const [draftValue, setDraftValue]   = useState("");
-const [composerOpen, setComposerOpen] = useState(true);
-const [copiedId, setCopiedId]       = useState<string | null>(null);
-const [error, setError]             = useState<string | null>(null);
+// src/widgets/example-widget/index.tsx (lines 144–150)
+const [notes, setNotes]           = useState<Note[]>([]);
+const [draft, setDraft]           = useState("");
+const [fetching, setFetching]     = useState(false);
+const [fetchError, setFetchError] = useState<string | null>(null);
+const [authorName, setAuthorName] = useState("");
 ```
 
-Each `useState` call is independent. React tracks them by the order they are called, which is why hooks must always be called at the top level of a component — never inside loops, conditions, or nested functions.
+Each `useState` call manages one independent piece. Hooks must always be called at the top level — never inside loops, conditions, or nested functions — because React identifies them by their call order.
 
-### Functional updates
-
-When new state depends on old state, pass a function instead of a value:
+### Boolean state and toggling
 
 ```tsx
-// Toggle open/closed safely:
-setComposerOpen((open) => !open);
+// src/renderer/src/components/WidgetHost.tsx (line 32)
+const [showSettings, setShowSettings] = useState(false);
 
-// Clear the copied indicator only if it's still the same entry:
-setTimeout(() => {
-  setCopiedId((curr) => (curr === entry.id ? null : curr));
-}, 1200);
+// Toggle using the functional updater form — reads the current value, not a stale closure:
+onClick={() => setShowSettings((s) => !s)
 ```
 
-This form guarantees you're working with the latest value, which matters when multiple updates can happen in quick succession.
+Use the functional form `(prev) => next` whenever the next value depends on the previous one.
+
+### Complex state
+
+```tsx
+// src/renderer/src/components/Dashboard.tsx (lines 52–56)
+const [resizingItem, setResizingItem] = useState<{
+  id: string;
+  w: number;
+  h: number;
+} | null>(null);
+```
+
+React compares state by reference. Always create a new object rather than mutating in place:
+
+```tsx
+// Good — new object reference triggers a re-render
+setResizingItem({ id: "abc", w: 3, h: 2 });
+
+// Bad — mutating silently; React cannot see the change
+resizingItem.w = 3;
+```
 
 ---
 
-## 6. Side Effects — `useEffect`
+## 6. Event Handlers
 
-A **side effect** is anything that reaches outside the component: loading data, setting up a subscription, writing to storage, starting a timer. `useEffect` is where these belong.
+React event names are camelCase. Handlers are passed as JSX attributes.
 
-### Basic structure
+### `onClick`
 
 ```tsx
-import { useEffect } from "react";
-
-useEffect(() => {
-  // runs after every render (no dependency array)
-}, [dep1, dep2]); // only re-run when dep1 or dep2 change
+// src/renderer/src/components/AddWidgetDialog.tsx (line 47)
+<button className="ghost" onClick={onClose} aria-label="Close">
+  ✕
+</button>
 ```
 
-The dependency array `[]` controls *when* the effect re-runs:
+Pass the function reference (`onClick={onClose}`), not a call (`onClick={onClose()}`). The `()` version would execute immediately during render.
 
-| Dependency array | Effect runs when |
-|---|---|
-| Omitted | After every render |
-| `[]` (empty) | Once, after the first render |
-| `[a, b]` | After first render, and again any time `a` or `b` change |
-
-### Loading data on mount
-
-The `quick-copy` widget loads saved entries once when the component first mounts:
+### `onChange` — controlled inputs
 
 ```tsx
-// src/widgets/quick-copy/index.tsx
-useEffect(() => {
-  api.kv
-    .get<CopyEntry[]>("entries")
-    .then((saved) => {
-      setEntries(saved ?? []);
-    })
-    .catch((e: unknown) => {
-      setError((e as Error).message);
-    });
-}, [api]);
+// src/renderer/src/components/AddWidgetDialog.tsx (lines 52–58)
+<input
+  placeholder="Search widgets…"
+  value={filter}
+  onChange={(e) => setFilter(e.target.value)}
+/>
 ```
 
-The empty dependency `[api]` means "run once; re-run only if `api` changes" (it never does, so effectively once).
+`value={filter}` and `onChange` together make this a **controlled input**: the displayed text always matches the `filter` state. The input never has its own internal value.
 
-### Async effects
+### `onKeyDown`
 
-`useEffect` cannot be an `async` function directly. The pattern is to define an async function inside and call it immediately:
+```tsx
+// src/widgets/example-widget/index.tsx (lines 355–360)
+onKeyDown={(e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    void addNote(draft);
+  }
+}}
+```
+
+`e.preventDefault()` stops the browser inserting a newline. The `void` before `addNote(draft)` discards the returned `Promise` (since `addNote` is async).
+
+### Stopping event propagation
+
+```tsx
+// src/renderer/src/components/AddWidgetDialog.tsx (lines 38–42)
+<div className="modal-backdrop" onClick={onClose} role="presentation">
+  <div
+    className="modal"
+    onClick={(e) => e.stopPropagation()}  // Don't let clicks inside the modal close it
+  >
+```
+
+Without `stopPropagation`, a click anywhere inside the modal would bubble up to the backdrop and call `onClose`.
+
+### Async event handlers
+
+```tsx
+// src/widgets/example-widget/index.tsx (line 376)
+<button onClick={() => void addNote(draft)}>
+```
+
+`addNote` is `async`. The `void` tells TypeScript "I know this is async and I'm intentionally not awaiting it in this inline handler."
+
+---
+
+## 7. Conditional Rendering
+
+React has no special template syntax for conditionals — you use JavaScript.
+
+### `&&` short-circuit
+
+```tsx
+// src/widgets/example-widget/index.tsx (lines 422–434)
+{pinnedNotes.length > 0 && (
+  <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 600 }}>
+    Pinned
+  </div>
+)}
+```
+
+When the left side is `false`, nothing renders. When `true`, the element renders.
+
+> **Pitfall:** Never put a number on the left of `&&` in JSX. `0 && <Foo />` renders the text `"0"`.  
+> Fix: `count > 0 && <Foo />` or `Boolean(count) && <Foo />`.
+
+### Ternary: either/or
+
+```tsx
+// src/renderer/src/components/AddWidgetDialog.tsx (lines 60–99)
+{widgets.length === 0 ? (
+  <div className="empty">
+    <p>No widgets installed.</p>
+  </div>
+) : (
+  <ul className="widget-list">
+    {filtered.map((w) => ( /* ... */ ))}
+  </ul>
+)}
+```
+
+### Early return for loading/error states
+
+```tsx
+// src/renderer/src/App.tsx (lines 37–39)
+if (!loaded) {
+  return <div className="loading">Loading…</div>;
+}
+
+// Main render only runs once loaded is true:
+return (
+  <div className="app">
+    <Sidebar ... />
+    ...
+  </div>
+);
+```
+
+Early returns are the cleanest pattern for loading states. Everything after the guard can assume the data is present.
+
+### Conditional CSS classes
+
+```tsx
+// src/renderer/src/components/Dashboard.tsx (line 35)
+<div className={`resize-hint${isGoodFit ? " resize-hint--good-fit" : ""}`}>
+```
+
+---
+
+## 8. Lists and Keys
+
+Use `.map()` to render a list. Every item must have a unique, stable `key` prop. React uses keys to track which items were added, removed, or reordered.
+
+```tsx
+// src/renderer/src/components/AddWidgetDialog.tsx (lines 74–90)
+<ul className="widget-list">
+  {filtered.map((w) => (
+    <li key={w.manifest.id}>
+      <div className="widget-meta">
+        <span className="widget-icon">{w.manifest.icon ?? "◻"}</span>
+        <div>
+          <strong>{w.manifest.name}</strong>
+          {w.manifest.description && <p>{w.manifest.description}</p>}
+          <small>
+            v{w.manifest.version} · <code>{w.manifest.id}</code>
+          </small>
+        </div>
+      </div>
+      <button className="primary" onClick={() => add(w.manifest.id)}>
+        Add
+      </button>
+    </li>
+  ))}
+</ul>
+```
+
+**Key rules:**
+- Use stable, natural IDs (`w.manifest.id`) — not array indexes.
+- Array indexes as keys cause incorrect animations and stale state when items are removed or reordered.
+- Keys must be unique among siblings in the same list; they don't need to be globally unique.
+- The child component cannot read its own `key`.
+
+### Empty state inside a list
+
+```tsx
+// src/renderer/src/components/AddWidgetDialog.tsx (lines 91–97)
+{filtered.length === 0 && (
+  <li>
+    <em style={{ color: "var(--text-dim)" }}>
+      No widgets match "{filter}".
+    </em>
+  </li>
+)}
+```
+
+---
+
+## 9. Side Effects — `useEffect`
+
+A **side effect** is anything that reaches outside the component: fetching data, subscribing to events, writing to storage, starting a timer, measuring the DOM. `useEffect` is where these belong.
 
 ```tsx
 useEffect(() => {
-  const run = async () => {
-    const data = await someAsyncCall();
-    setState(data);
+  // effect code here
+
+  return () => {
+    // cleanup code (optional)
   };
-  void run(); // `void` suppresses the "floating promise" lint warning
+}, [dep1, dep2]); // dependency array
+```
+
+### Dependency array
+
+| Array form  | Effect runs when                                       |
+| ----------- | ------------------------------------------------------ |
+| `[]`        | Once, after the first render                           |
+| `[a, b]`    | After first render, and whenever `a` or `b` changes    |
+| *(omitted)* | After every render — almost never what you want        |
+
+### Load data once on mount
+
+```tsx
+// src/renderer/src/App.tsx (lines 14–16)
+useEffect(() => {
+  void load();
+}, [load]);
+```
+
+`load` comes from Zustand (it never changes), so this runs exactly once.
+
+### Effect with cleanup — event listener
+
+```tsx
+// src/renderer/src/App.tsx (lines 26–35)
+useEffect(() => {
+  const onKeyDown = (e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      e.preventDefault();
+      setShowPalette((v) => !v);
+    }
+  };
+  window.addEventListener("keydown", onKeyDown);
+  return () => window.removeEventListener("keydown", onKeyDown); // cleanup
 }, []);
 ```
 
-### Cleanup
+The returned function runs when the component unmounts (or before the effect re-runs). Without the cleanup, each re-render would add another listener.
 
-Effects can return a cleanup function that runs before the next effect execution or when the component unmounts. This is critical for subscriptions, timers, and event listeners.
+### Effect with cleanup — observer and animation frame
 
 ```tsx
-// src/renderer/src/components/WidgetHost.tsx
+// src/renderer/src/components/Dashboard.tsx (lines 60–81)
+useEffect(() => {
+  const el = containerRef.current;
+  if (!el) return;
+  let rafId: number | null = null;
+  const ro = new ResizeObserver((entries) => {
+    for (const e of entries) {
+      const w = e.contentRect.width;
+      if (w > 0) {
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          setWidth(w);
+        });
+      }
+    }
+  });
+  ro.observe(el);
+  return () => {
+    ro.disconnect();
+    if (rafId !== null) cancelAnimationFrame(rafId);
+  };
+}, []);
+```
+
+Both the `ResizeObserver` and any pending animation frame are cleaned up. The empty `[]` dependency array means this runs once.
+
+### Effect that tracks mount/unmount duration
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 48–56)
 useEffect(() => {
   if (!widget) return;
   mountedAtRef.current = Date.now();
   emitWidgetMount(instance.instanceId, instance.widgetId);
-
-  // This function runs when the component unmounts:
   return () => {
     const durationMs = Date.now() - mountedAtRef.current;
     emitWidgetUnmount(instance.instanceId, instance.widgetId, durationMs);
@@ -337,14 +559,94 @@ useEffect(() => {
 }, [instance.instanceId, instance.widgetId, widget]);
 ```
 
-Without the cleanup, the `emitWidgetUnmount` would never be called when a widget is removed from the dashboard.
+The cleanup function here is also the "unmount" handler — it measures how long the widget was visible.
 
-### The `useSqlInit` hook — effect in practice
-
-`src/renderer/src/hooks/useSqlInit.ts` is a custom hook that wraps an effect to initialize a SQLite database table. Here's the full implementation:
+### Effect that re-runs on state change
 
 ```tsx
-// src/renderer/src/hooks/useSqlInit.ts
+// src/widgets/example-widget/index.tsx (lines 193–195)
+useEffect(() => {
+  if (ready) void loadNotes();
+}, [ready, loadNotes]);
+```
+
+Re-fires whenever `ready` or `loadNotes` changes. The `if (ready)` guard prevents querying before the database is initialized.
+
+### Async effects
+
+`useEffect` cannot be marked `async`. The pattern is an inner async function:
+
+```tsx
+useEffect(() => {
+  const run = async () => {
+    const data = await someAsyncCall();
+    setState(data);
+  };
+  void run();
+}, []);
+```
+
+---
+
+## 10. Refs — `useRef`
+
+`useRef` gives you a mutable container that persists across renders without triggering re-renders when changed. It has two main uses.
+
+### 1. Accessing DOM elements
+
+```tsx
+// src/renderer/src/components/Dashboard.tsx (lines 49, 76–80)
+const containerRef = useRef<HTMLDivElement>(null);
+
+// Attach to an element:
+<div ref={containerRef}>
+
+// Read the DOM node later (inside an effect):
+const el = containerRef.current; // HTMLDivElement | null
+ro.observe(el);
+```
+
+`ref.current` is always `null` until the component mounts. Check for `null` before use.
+
+### 2. Mutable values that don't need to trigger re-renders
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 46–54)
+const mountedAtRef = useRef<number>(0);
+
+// Write directly — no setter, no re-render:
+mountedAtRef.current = Date.now();
+
+// Read in the cleanup:
+const durationMs = Date.now() - mountedAtRef.current;
+```
+
+```tsx
+// src/renderer/src/components/Dashboard.tsx (lines 57–58)
+const layoutHistoryRef = useRef<LayoutSnapshot[]>([]);
+const layoutFutureRef  = useRef<LayoutSnapshot[]>([]);
+```
+
+These store the undo/redo stacks. They must persist between renders, but changing them should not cause a re-render — `useRef` is the right choice.
+
+### `useState` vs `useRef`
+
+| Question                           | Use         |
+| ---------------------------------- | ----------- |
+| Changing this should update the UI | `useState`  |
+| Changing this should NOT update UI | `useRef`    |
+
+---
+
+## 11. Custom Hooks
+
+A **custom hook** is a function whose name starts with `use` that calls other hooks internally. Custom hooks let you extract and reuse stateful logic across components.
+
+### `useSqlInit` — async initialization hook
+
+```tsx
+// src/renderer/src/hooks/useSqlInit.ts (lines 10–37)
+
 export function useSqlInit(
   api: WidgetApi,
   initSql: string,
@@ -354,338 +656,42 @@ export function useSqlInit(
 
   useEffect(() => {
     const run = async () => {
-      await api.sql.exec(initSql);           // create tables if not exists
+      await api.sql.exec(initSql);         // Create tables (idempotent)
       if (migrations?.length) {
         for (const m of migrations) {
           const cols = await api.sql.all<{ name: string }>(
             `PRAGMA table_info(${m.table})`,
           );
           if (!cols.find((c) => c.name === m.column)) {
-            await api.sql.run(m.sql, []);    // apply new column
+            await api.sql.run(m.sql, []);  // Apply missing column migration
           }
         }
       }
-      setReady(true);                        // signal that the DB is ready
+      setReady(true);                      // Signal that the DB is ready
     };
     void run();
   }, []);
 
-  return ready; // widgets wait for this before querying
+  return ready;
 }
 ```
 
-Usage in a widget:
+This hook encapsulates a complex sequence — create tables, detect missing columns, apply migrations — behind a single `ready: boolean`. Every widget that uses SQLite calls this hook once:
 
 ```tsx
+// src/widgets/example-widget/index.tsx (line 166)
 const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
-if (!ready) return <div>Loading…</div>;
-// safe to query the DB from here
-```
-
----
-
-## 7. Event Handlers
-
-React uses camelCase event prop names: `onClick`, `onChange`, `onSubmit`, `onKeyDown`, etc.
-
-### Inline arrow functions
-
-```tsx
-<button onClick={() => setCount(count + 1)}>+</button>
-```
-
-### Handlers that take the event object
-
-```tsx
-<input
-  value={draftTitle}
-  onChange={(e) => setDraftTitle(e.target.value)}
-  placeholder="Optional label"
-/>
-<textarea
-  value={draftValue}
-  onChange={(e) => setDraftValue(e.target.value)}
-/>
-```
-
-Both from `src/widgets/quick-copy/index.tsx`. The `e.target.value` is the typed value of the input element.
-
-### Named handler functions
-
-For complex logic, extract handlers as named functions before the JSX:
-
-```tsx
-// src/widgets/file-shortcuts/index.tsx
-const handleDrop = (e: React.DragEvent) => {
-  e.preventDefault();            // stop the browser's default file-open behavior
-  setDragging(false);
-  const files = Array.from(e.dataTransfer.files) as ElectronFile[];
-  const added = files
-    .filter((f) => f.path)
-    .map((f) => makeShortcut(f.path!, guessKind(f)));
-  if (added.length > 0)
-    persist([...shortcuts, ...added]).catch(console.error);
-};
-
-// Then used in JSX:
-<div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-```
-
-Notice `e.preventDefault()` — this stops the default browser action (which would try to navigate to the dropped file).
-
-### Drag-and-drop events
-
-The `quick-copy` widget implements drag-to-reorder with three coordinated handlers:
-
-```tsx
-// src/widgets/quick-copy/index.tsx
-onDragOver={(e) => {
-  e.preventDefault();
-  if (draggingId && draggingId !== entry.id)
-    setDropTargetId(entry.id);
-}}
-onDragLeave={() => {
-  if (dropTargetId === entry.id) setDropTargetId(null);
-}}
-onDrop={(e) => {
-  e.preventDefault();
-  if (!draggingId || draggingId === entry.id) return;
-  void moveEntry(draggingId, entry.id).catch((err: unknown) => {
-    setError((err as Error).message);
-  });
-  setDraggingId(null);
-  setDropTargetId(null);
-}}
-```
-
-State (`draggingId`, `dropTargetId`) tracks which card is being dragged and which slot it's hovering over, so the UI can show visual feedback during the drag.
-
----
-
-## 8. Conditional Rendering
-
-React has no special template syntax for conditionals — you use JavaScript.
-
-### Ternary operator
-
-```tsx
-{isLoading ? <Spinner /> : <Content />}
-```
-
-From `quick-copy`, showing an empty state or the list:
-
-```tsx
-// src/widgets/quick-copy/index.tsx
-{ordered.length === 0 ? (
-  <div style={{ /* centeredEmptyState */ }}>
-    Add entries above, then click any card to copy.
-  </div>
-) : (
-  <div>
-    {ordered.map((entry) => { /* ... */ })}
-  </div>
-)}
-```
-
-### `&&` for optional rendering
-
-`condition && <Element />` renders `<Element />` only when the condition is truthy. Nothing is rendered when it's false.
-
-```tsx
-// Show "Drop to add" overlay only when dragging AND there are existing items:
-{dragging && shortcuts.length > 0 && (
-  <div style={{ /* overlay */ }}>Drop to add</div>
-)}
-```
-
-> **Pitfall:** `0 && <Thing />` renders the number `0`, not nothing. Use `count > 0 && <Thing />` or `Boolean(count) && <Thing />` to avoid this.
-
-### Early return
-
-The cleanest way to handle a loading/error state is to return early from the component before the main JSX:
-
-```tsx
-// src/widgets/media-tracker/index.tsx
-if (!ready)
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-      Loading…
-    </div>
-  );
-
-// Normal render continues here:
-return <div>{ /* actual content */ }</div>;
-```
-
-The `api-tracker` widget uses the shared `WidgetLoading` component for the same pattern:
-
-```tsx
-// src/widgets/api-tracker/index.tsx
-if (!ready) return <WidgetLoading />;
-```
-
-### Conditional styles
-
-You can apply styles conditionally inline:
-
-```tsx
-// src/widgets/api-tracker/index.tsx
-style={{
-  fontWeight: 600,
-  color: isOver500 ? "#ef4444" : isWarning ? "#f59e0b" : "var(--text)",
-}}
-```
-
----
-
-## 9. Lists and Keys
-
-To render a list, use JavaScript's `.map()` inside JSX. Each item **must** have a unique `key` prop — React uses it to efficiently update only the items that changed.
-
-### Basic example
-
-```tsx
-const fruits = ["Apple", "Banana", "Cherry"];
-
-return (
-  <ul>
-    {fruits.map((fruit) => (
-      <li key={fruit}>{fruit}</li>
-    ))}
-  </ul>
-);
-```
-
-### Using database IDs as keys
-
-Database IDs make ideal keys because they're unique and stable. From `file-shortcuts`:
-
-```tsx
-// src/widgets/file-shortcuts/index.tsx
-{shortcuts.map((s) => (
-  <ShortcutRow
-    key={s.id}
-    shortcut={s}
-    onOpen={handleOpen}
-    onReveal={handleReveal}
-    onRemove={handleRemove}
-  />
-))}
-```
-
-### Dynamic count badges with `.filter()` inside `.map()`
-
-The `media-tracker` shows how many items match each filter tab — computed inline:
-
-```tsx
-// src/widgets/media-tracker/index.tsx
-{STATUS_FILTERS.map((sf) => (
-  <button
-    key={sf.value}
-    style={{ ...tabStyle, ...(statusFilter === sf.value ? tabOnStyle : {}) }}
-    onClick={() => setStatusFilter(sf.value)}
-  >
-    {sf.label}
-    {sf.value !== "all" && (
-      <span style={{ marginLeft: 4, opacity: 0.5, fontSize: 10 }}>
-        {items.filter((i) => i.status === sf.value).length}
-      </span>
-    )}
-  </button>
-))}
-```
-
-`STATUS_FILTERS` is a constant array of `{ value, label }` objects. The tab for the currently active filter gets extra styles via the spread `...(condition ? activeStyle : {})` pattern.
-
-### Keys must be stable and unique
-
-- **Good:** database row IDs, UUIDs, slugs.
-- **Bad:** array index (causes bugs when items are reordered or removed).
-
----
-
-## 10. Refs — `useRef`
-
-`useRef` gives you a mutable box that persists across renders without causing re-renders when changed. It has two main uses.
-
-### 1. DOM element references
-
-Attach a ref to a JSX element with the `ref` prop to get direct access to the underlying DOM node:
-
-```tsx
-// src/widgets/file-shortcuts/index.tsx
-const containerRef = useRef<HTMLDivElement>(null);
-
-return (
-  <div
-    ref={containerRef}
-    onDragLeave={(e) => {
-      // Only clear dragging state if the cursor left the entire container,
-      // not just moved between child elements:
-      if (!containerRef.current?.contains(e.relatedTarget as Node))
-        setDragging(false);
-    }}
-  >
-```
-
-`containerRef.current` is `null` until the element mounts, then points to the real `<div>`.
-
-### 2. Storing mutable values without re-rendering
-
-`WidgetHost.tsx` records when a widget mounted, but this timestamp shouldn't trigger a re-render when written — a ref is perfect:
-
-```tsx
-// src/renderer/src/components/WidgetHost.tsx
-const mountedAtRef = useRef<number>(0);
 
 useEffect(() => {
-  mountedAtRef.current = Date.now(); // write — no re-render
-  return () => {
-    const durationMs = Date.now() - mountedAtRef.current; // read
-    emitWidgetUnmount(instance.instanceId, instance.widgetId, durationMs);
-  };
-}, [/* ... */]);
+  if (ready) void loadNotes();
+}, [ready, loadNotes]);
 ```
 
-### Scrolling to an element
-
-The `media-tracker` stores refs to each card in an object keyed by ID, then programmatically scrolls to a specific item:
-
-```tsx
-// src/widgets/media-tracker/index.tsx
-const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
-
-// Storing the ref on each card:
-<div ref={(el) => { cardRefs.current[item.id] = el; }}>
-
-// Scrolling to a specific card:
-const scrollToItem = useCallback((id: number) => {
-  setTimeout(() => {
-    cardRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, 50);
-}, []);
-```
-
-### Refs vs State
-
-| | `useState` | `useRef` |
-|---|---|---|
-| Triggers re-render on change | Yes | No |
-| Access | `value` | `ref.current` |
-| Use for | UI data | DOM nodes, timers, counters |
-
----
-
-## 11. Custom Hooks
-
-A **custom hook** is a function whose name starts with `use` and that calls other hooks inside it. Custom hooks let you extract and reuse stateful logic across multiple components.
-
-### Why custom hooks?
-
-Suppose two widgets both need to check whether Google is connected. Without a custom hook, you'd copy-paste the `useState` + `useEffect` combo in each one. With a custom hook:
+### `useGoogleConnection` — shared OAuth state
 
 ```tsx
 // src/widgets/_shared/useGoogleConnection.ts
+
 export function useGoogleConnection(
   api: WidgetApi,
 ): [boolean | null, (v: boolean | null) => void] {
@@ -702,158 +708,192 @@ export function useGoogleConnection(
 }
 ```
 
-Usage:
+Without this hook, every Google widget would repeat the same `useState` + `useEffect` pattern. The hook hides that setup:
 
 ```tsx
 const [connected, setConnected] = useGoogleConnection(api);
 
 if (connected === null) return <WidgetLoading />;
 if (!connected) return <NotConnected onConnect={handleConnect} />;
-// else render content
 ```
-
-### `useSqlInit` — a hook with an effect and state
-
-`src/renderer/src/hooks/useSqlInit.ts` wraps the "create DB tables and apply migrations" logic. Widgets call it as a single line instead of repeating the full setup:
-
-```tsx
-const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
-```
-
-Under the hood it:
-1. Runs the `CREATE TABLE IF NOT EXISTS` SQL.
-2. Loops through `MIGRATIONS` and applies any that haven't been applied yet.
-3. Sets `ready = true` when done.
-
-The widget only sees a boolean. The implementation detail is hidden inside the hook.
 
 ### Rules of hooks
 
-These rules exist because React identifies hooks by their call order:
+1. Only call hooks **at the top level** of a component or custom hook — never inside `if`, loops, or nested functions.
+2. Only call hooks **inside React function components or custom hooks**.
 
-1. Only call hooks **at the top level** — never inside `if`, loops, or nested functions.
-2. Only call hooks **inside React function components or other custom hooks** — never in plain JS functions.
-
-Breaking these rules causes bugs that are hard to trace.
+React identifies hooks by their call order across renders. Violating these rules produces subtle, hard-to-debug bugs.
 
 ---
 
-## 12. Performance — `useCallback` and `useMemo`
+## 12. Memoization — `useMemo`, `useCallback`, `React.memo`
 
-By default, React re-renders a component every time its state or props change, recreating functions and computed values from scratch. `useCallback` and `useMemo` let you cache these between renders.
+React re-renders a component whenever its parent re-renders. For expensive computations or components with stable props, you can opt into caching.
 
-> **Rule of thumb:** don't reach for these immediately. Profile first. Premature memoization adds noise without benefit. Use them when you have a measurable performance problem, or when a value is passed to a child component wrapped in `React.memo`.
+> **Don't reach for memoization by default.** It adds complexity and has its own overhead. Use it when you have a measurable problem, or when a value appears in a dependency array and needs a stable identity.
 
-### `useCallback` — memoize a function
+### `useMemo` — cache a computed value
 
 ```tsx
-// src/widgets/media-tracker/index.tsx
-const loadItems = useCallback(async () => {
-  const [rows, hist, linkRows] = await Promise.all([
-    api.sql.all<MediaItem>("SELECT * FROM media_items ORDER BY ..."),
-    // ...
-  ]);
-  setItems(rows);
-  setHistory(histMap);
-  setLinks(linkMap);
-  setTitle(activeCount > 0 ? `Media Tracker (${activeCount} active)` : undefined);
-}, [api.sql, setTitle]);
+// src/renderer/src/components/AddWidgetDialog.tsx (lines 14–23)
+const filtered = useMemo(() => {
+  const q = filter.trim().toLowerCase();
+  if (!q) return widgets;
+  return widgets.filter(
+    (w) =>
+      w.manifest.name.toLowerCase().includes(q) ||
+      w.manifest.id.toLowerCase().includes(q) ||
+      (w.manifest.description?.toLowerCase().includes(q) ?? false),
+  );
+}, [widgets, filter]);
 ```
 
-`loadItems` is recreated only when `api.sql` or `setTitle` change — not on every render. This is especially valuable here because `loadItems` is passed to `useEffect` as a dependency:
+`filtered` is recomputed only when `widgets` or `filter` changes. Without `useMemo`, the filter would run on every render, even on unrelated state changes.
+
+```tsx
+// src/renderer/src/components/Dashboard.tsx (lines 83–91)
+const widgetMap = useMemo(() => {
+  const map = new Map<string, ReturnType<typeof getWidget> | undefined>();
+  for (const instance of dashboard.instances) {
+    if (!map.has(instance.widgetId)) {
+      map.set(instance.widgetId, getWidget(instance.widgetId));
+    }
+  }
+  return map;
+}, [dashboard.instances]);
+```
+
+Building a `Map` from an array is O(n) on every render; `useMemo` makes it O(n) only when `instances` changes.
+
+### `useCallback` — cache a function
+
+```tsx
+// src/widgets/example-widget/index.tsx (lines 183–190)
+const loadNotes = useCallback(async () => {
+  const dir = sortNewest ? "DESC" : "ASC";
+  const rows = await api.sql.all<Note>(
+    `SELECT * FROM notes ORDER BY pinned DESC, created_at ${dir} LIMIT ?`,
+    [maxNotes],
+  );
+  setNotes(rows);
+}, [api, sortNewest, maxNotes]);
+```
+
+`loadNotes` only gets a new function identity when one of its dependencies changes. This matters because it appears in a `useEffect` dependency array:
 
 ```tsx
 useEffect(() => {
-  if (ready) void loadItems();
-}, [ready, loadItems]);
+  if (ready) void loadNotes();
+}, [ready, loadNotes]);
 ```
 
-If `loadItems` were redefined on every render, this effect would loop infinitely.
-
-### `useMemo` — memoize a computed value
+If `loadNotes` had a new identity on every render, the effect would loop forever.
 
 ```tsx
-// Derived list — only recomputed when `entries` changes:
-const ordered = useMemo(() => entries, [entries]);
+// src/renderer/src/components/WidgetHost.tsx (lines 39–44)
+const handleSetTitle = useCallback(
+  (title: string | undefined) => {
+    setTitle(instance.instanceId, title);
+  },
+  [instance.instanceId, setTitle],
+);
 ```
 
-A more meaningful example is filtering a large list — without `useMemo`, the filter runs on every render even when the filter criteria haven't changed:
+Passing a stable `handleSetTitle` reference prevents the child widget from re-rendering just because the parent re-rendered.
+
+### `React.memo` — skip re-rendering a component
 
 ```tsx
-const filtered = useMemo(() =>
-  items.filter((item) => {
-    if (statusFilter !== "all" && item.status !== statusFilter) return false;
-    if (typeFilter !== "all" && item.type !== typeFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return item.title.toLowerCase().includes(q) ||
-             item.author_creator?.toLowerCase().includes(q);
-    }
-    return true;
-  }),
-[items, statusFilter, typeFilter, search]);
+// src/renderer/src/components/WidgetHost.tsx (line 26)
+export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) {
+  // ...
+});
 ```
 
-### `useCallback` vs `useMemo`
-
-```
-useCallback(fn, deps)   ≡   useMemo(() => fn, deps)
-```
-
-They're the same mechanism. `useCallback` is syntactic sugar for memoizing a function specifically.
+`memo` wraps a component. React skips re-rendering it when its props are shallowly equal. Since `WidgetHost` is rendered for every widget on the dashboard, avoiding unnecessary re-renders matters.
 
 ---
 
-## 13. Component Composition
+## 13. Component Composition and `children`
 
-React encourages building UIs from small, focused components that you compose together.
+React components can accept other components or JSX as content through the `children` prop. This is how you build composable layout shells.
+
+### Passing children
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 115–123)
+
+<div className="widget-body">
+  <ErrorBoundary widgetName={widget.manifest.name}>
+    <Component
+      api={api}
+      settings={instance.settings}
+      setTitle={handleSetTitle}
+    />
+  </ErrorBoundary>
+</div>
+```
+
+`ErrorBoundary` wraps `<Component />` as its children. When nothing goes wrong, it renders them transparently. When the widget crashes, it renders a fallback instead.
+
+### Receiving children
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 135–138)
+interface BoundaryProps {
+  widgetName: string;
+  children: ReactNode;   // ReactNode: any valid React content
+}
+```
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 154–163)
+render() {
+  if (this.state.error) {
+    return (
+      <div className="widget-error">
+        <strong>Widget crashed.</strong>
+        <pre>{this.state.error.message}</pre>
+      </div>
+    );
+  }
+  return this.props.children;  // Render children normally
+}
+```
 
 ### Sub-components inside a file
 
-The `file-shortcuts` widget defines a `ShortcutRow` component inside the same file and uses it in the main component:
+Breaking a complex UI into sub-components keeps each piece readable. The `example-widget` defines `NoteRow` as a small component within the same file:
 
 ```tsx
-// src/widgets/file-shortcuts/index.tsx
-interface ShortcutRowProps {
-  shortcut: Shortcut;
-  onOpen: (path: string) => void;
-  onReveal: (path: string) => void;
-  onRemove: (id: string) => void;
-}
+// src/widgets/example-widget/index.tsx (lines 61–123)
 
-function ShortcutRow({ shortcut, onOpen, onReveal, onRemove }: ShortcutRowProps) {
+function NoteRow({
+  note,
+  showDate,
+  onPin,
+  onDelete,
+}: {
+  note: Note;
+  showDate: boolean;
+  onPin: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <div>
-      <span onClick={() => onOpen(shortcut.path)}>{shortcut.label}</span>
-      <button onClick={() => onReveal(shortcut.path)}>Reveal</button>
-      <button onClick={() => onRemove(shortcut.id)}>Remove</button>
-    </div>
-  );
-}
-
-function FileShortcuts({ api }: WidgetProps) {
-  // ...
-  return (
-    <div>
-      {shortcuts.map((s) => (
-        <ShortcutRow
-          key={s.id}
-          shortcut={s}
-          onOpen={handleOpen}
-          onReveal={handleReveal}
-          onRemove={handleRemove}
-        />
-      ))}
+    <div style={{ /* ... */ }}>
+      <div style={{ flex: 1, fontSize: 12 }}>{note.body}</div>
+      <button onClick={onPin} title={note.pinned ? "Unpin" : "Pin to top"}>📌</button>
+      <button onClick={onDelete} title="Delete note">✕</button>
     </div>
   );
 }
 ```
 
-`ShortcutRow` knows nothing about storage — it receives data via props and calls callbacks when the user interacts. `FileShortcuts` owns the data and handlers. This separation of concerns makes each piece easy to reason about.
+`NoteRow` knows nothing about SQL — it receives data and calls callbacks. The parent owns the data and handlers. This separation makes each piece easy to test and reason about.
 
-### Shared components library — `src/widgets/_shared/`
+### Shared component library — `src/widgets/_shared/`
 
-This project has a shared component library for patterns used across many widgets:
+Components and style utilities shared across many widgets:
 
 ```tsx
 import {
@@ -865,7 +905,7 @@ import {
 import { buttonDefault, inputBase, dimText } from "../_shared/styles";
 ```
 
-`TabBar` is a good example of a pure presentational component — it renders tabs and fires an `onSelect` callback, but has no idea what the tabs represent:
+`TabBar` is a pure presentational component — it renders a tab bar and fires `onSelect`, but has no idea what the tabs represent:
 
 ```tsx
 <TabBar
@@ -878,46 +918,27 @@ import { buttonDefault, inputBase, dimText } from "../_shared/styles";
 />
 ```
 
-### How WidgetHost composes widgets
-
-`src/renderer/src/components/WidgetHost.tsx` is itself a composition layer — it looks up the widget component from the registry, wraps it in an `ErrorBoundary`, and renders it:
-
-```tsx
-<div className="widget-body">
-  <ErrorBoundary widgetName={widget.manifest.name}>
-    <Component
-      api={api}
-      settings={instance.settings}
-      setTitle={handleSetTitle}
-    />
-  </ErrorBoundary>
-</div>
-```
-
-`Component` here is the function exported by each widget (e.g. `QuickCopy`, `MediaTracker`). The dashboard renders dozens of these; each is isolated by its own error boundary.
-
 ---
 
-## 14. Error Boundaries
+## 14. Class Components and Error Boundaries
 
-A normal `try/catch` doesn't work for errors that happen during React rendering. **Error boundaries** are special class components that catch rendering errors in their subtree.
-
-> Error boundaries are the one case in modern React where you still need a class component. There is no hook equivalent.
+Function components with hooks cover almost every use case in modern React. The one exception is **error boundaries** — components that catch rendering errors in their subtree. Only class components can implement them.
 
 ### Implementation
 
 ```tsx
-// src/renderer/src/components/WidgetHost.tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 143–165)
+
 class ErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   state: BoundaryState = { error: null };
 
   // Called when a descendant throws during render.
-  // Returns the new state derived from the error.
+  // Returns the new state that causes the fallback UI to show.
   static getDerivedStateFromError(error: Error): BoundaryState {
     return { error };
   }
 
-  // Called after rendering the fallback UI. Use for logging.
+  // Called after the fallback renders — use for logging.
   componentDidCatch(error: Error): void {
     console.error(`[widget:${this.props.widgetName}]`, error);
   }
@@ -938,76 +959,158 @@ class ErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 
 ### Why per-widget error boundaries matter
 
-Without error boundaries, one buggy widget would crash the entire dashboard. With them, only that widget shows an error; the rest keep working. Each widget gets its own `ErrorBoundary` in `WidgetHost`.
+Every widget runs inside its own `<ErrorBoundary>`. If a widget throws an unhandled error during rendering, React unwinds to the nearest error boundary, catches the error, and re-renders just that boundary — showing the crash message instead of the widget. The rest of the dashboard keeps working normally.
+
+```tsx
+// One boundary per widget in WidgetHost:
+<ErrorBoundary widgetName={widget.manifest.name}>
+  <Component api={api} settings={instance.settings} setTitle={handleSetTitle} />
+</ErrorBoundary>
+```
 
 ### What error boundaries do NOT catch
 
 - Errors in event handlers (use `try/catch` there)
-- Async errors (use `.catch()` or `try/catch` in `async` functions)
-- Errors in the error boundary itself
+- Errors in async functions (use `.catch()` or `try/catch`)
+- Errors inside the error boundary itself
 
 ---
 
-## 15. TypeScript and React
+## 15. Global State — Zustand
 
-TypeScript adds static types to JavaScript. In React, this means catching prop mismatches, missing required values, and typos at compile time rather than at runtime.
+Local component state (`useState`) only lives inside one component. When many unrelated components need to share the same data — without threading it through props — this project uses **Zustand**, a minimal global state library.
 
-### Typing props with interfaces
+### Defining the store
 
 ```tsx
-// src/widgets/file-shortcuts/index.tsx
-interface Shortcut {
-  id: string;
-  path: string;
-  label: string;
-  kind: "file" | "dir";  // union type — only these two string values are valid
+// src/renderer/src/state/dashboard.ts (lines 116–135)
+import { create } from "zustand";
+
+export const useDashboard = create<DashboardStore>((set, get) => {
+  function mutate(updater: (s: AppState) => AppState): void {
+    set((store) => ({ state: updater(store.state) }));
+    get().persist();   // debounced write to disk
+  }
+
+  return {
+    loaded: false,
+    state: DEFAULT_STATE,
+
+    async load() {
+      const s = await window.cc.state.load();
+      const normalized = normalizeState(s);
+      set({ state: normalized, loaded: true });
+    },
+
+    persist() {
+      if (persistTimer) clearTimeout(persistTimer);
+      persistTimer = setTimeout(() => {
+        void window.cc.state.save(get().state);
+      }, 150);
+    },
+
+    // ... more actions
+  };
+});
+```
+
+`create<DashboardStore>(...)` returns a React hook (`useDashboard`). `set` updates the store; `get` reads it synchronously from outside React.
+
+### Reading from the store with selectors
+
+```tsx
+// src/renderer/src/App.tsx (lines 8–10)
+const load             = useDashboard((s) => s.load);
+const loaded           = useDashboard((s) => s.loaded);
+const applyRemoteState = useDashboard((s) => s.applyRemoteState);
+```
+
+The argument to `useDashboard` is a **selector** — a function that picks the slice of store you care about. The component only re-renders when that slice changes. Selecting the entire store would cause re-renders on every unrelated state change.
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 30–31)
+const removeInstance = useDashboard((s) => s.removeInstance);
+const setTitle       = useDashboard((s) => s.setTitle);
+```
+
+### Calling actions
+
+```tsx
+// Call an action the same way as any other function:
+removeInstance(instance.instanceId);
+```
+
+Actions call `set(...)` internally, which triggers re-renders in all subscribed selectors.
+
+### Zustand vs `useState`
+
+| Question                                  | Answer        |
+| ----------------------------------------- | ------------- |
+| Data used by a single component           | `useState`    |
+| Data shared across many components        | Zustand store |
+| Data that needs to be persisted to disk   | Zustand store (with persist action) |
+
+---
+
+## 16. TypeScript and React
+
+TypeScript adds static types to JavaScript. In React, this catches prop mismatches and incorrect state shapes at compile time.
+
+### Typing props
+
+```tsx
+// src/renderer/src/components/WidgetHost.tsx (lines 21–24)
+interface Props {
+  instance: WidgetInstance;
+  widget: Widget | undefined;   // union — may or may not be installed
 }
+
+export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) {
 ```
 
-`"file" | "dir"` is a **union type**: TypeScript will error if you try to assign any other string.
+### Typing state generics
 
-### Generic state
-
-`useState` infers the type from the initial value when possible. For empty arrays or nullable values, provide the type explicitly:
+TypeScript infers the type from the initial value when possible. Provide it explicitly for empty arrays and nullable values:
 
 ```tsx
-const [entries, setEntries] = useState<CopyEntry[]>([]);    // array of CopyEntry
-const [copiedId, setCopiedId] = useState<string | null>(null); // string or null
+const [notes, setNotes]   = useState<Note[]>([]);
+const [error, setError]   = useState<string | null>(null);
+const [item, setItem]     = useState<SomeType | null>(null);
 ```
 
-### Generic API calls
-
-The `api.kv.get` method is generic — you tell it what type to expect back:
+### Typing refs
 
 ```tsx
-api.kv.get<CopyEntry[]>("entries")  // returns Promise<CopyEntry[] | null>
+const containerRef = useRef<HTMLDivElement>(null);   // DOM element
+const mountedAtRef = useRef<number>(0);              // Mutable value
 ```
 
-The `api.sql.all` method works the same way:
+### Typing custom hook return values
 
-```tsx
-api.sql.all<{ name: string }>(
-  `PRAGMA table_info(${m.table})`
-)
-// returns Promise<Array<{ name: string }>>
-```
-
-### Typing return values of custom hooks
-
-`useGoogleConnection` returns a tuple. TypeScript needs explicit typing here because inferred types for mixed-type arrays default to a union, not a tuple:
+When a hook returns a tuple, TypeScript needs an explicit type or `as const` to avoid inferring a broader union:
 
 ```tsx
 // src/widgets/_shared/useGoogleConnection.ts
 export function useGoogleConnection(
   api: WidgetApi,
 ): [boolean | null, (v: boolean | null) => void] {
-  //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  //  Explicitly typed as a 2-tuple, not an array
+  //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //  Explicitly typed as a 2-tuple
 ```
 
-### `ComponentType<P>` — storing a component in a variable
+### `ReactNode` — the type for `children`
 
-The widget registry stores each widget's component as `ComponentType<WidgetProps>`:
+```tsx
+import type { ReactNode } from "react";
+
+interface BoundaryProps {
+  children: ReactNode;   // accepts JSX, strings, arrays, null, undefined, false
+}
+```
+
+### `ComponentType<P>` — a component stored in a variable
+
+The widget registry stores each widget's component as a `ComponentType`:
 
 ```tsx
 // src/renderer/src/plugins/registry.ts
@@ -1019,235 +1122,140 @@ export interface Widget {
 }
 ```
 
-`ComponentType<P>` is React's type for "anything that can be used as a JSX element and accepts props of type `P`" — it covers both function components and class components.
-
-### Typing `unknown` errors
-
-TypeScript 4+ types `catch` clause variables as `unknown`. You must narrow the type before using it:
-
-```tsx
-.catch((e: unknown) => {
-  setError((e as Error).message);
-});
-```
-
-`e as Error` is a type assertion — you're telling TypeScript "trust me, this is an Error". Use this only when you're confident about the actual type.
+`ComponentType<P>` means "any React component (function or class) that accepts props of type `P`."
 
 ---
 
-## 16. Global State — Zustand
+## 17. Putting It All Together — The Widget Pattern
 
-Local component state (`useState`) only lives inside one component. To share state across many components without prop drilling, this project uses **Zustand** — a minimal global state library.
+Every widget in this project follows the same structure. Understanding it ties together all the concepts above. `src/widgets/example-widget/index.tsx` is a fully-annotated reference implementation — read it alongside this guide.
 
-### The problem Zustand solves
-
-Imagine `Dashboard.tsx` needs to know the active dashboard, `WidgetHost.tsx` needs to update a widget's title, and `AppSettings.tsx` needs to toggle drive sync. All of these touch the same shared `AppState`. Passing state down through props and callbacks would create long chains. Zustand lets any component directly read from and write to a central store.
-
-### Defining the store
-
-The dashboard store lives in `src/renderer/src/state/dashboard.ts`:
+### Minimal widget shape
 
 ```tsx
-// src/renderer/src/state/dashboard.ts
-import { create } from "zustand";
+// src/widgets/example-widget/index.tsx (lines 525–578)
 
-export const useDashboard = create<DashboardStore>((set, get) => {
-  function mutate(updater: (s: AppState) => AppState): void {
-    set((store) => ({ state: updater(store.state) }));
-    get().persist();  // debounced write to disk
-  }
+const widget: Widget = {
+  manifest: {
+    id: "example-widget",       // Must equal the folder name exactly
+    name: "Example Widget",
+    description: "...",
+    version: "0.1.0",
+    icon: "📓",
+    defaultSize: { w: 5, h: 7 },
+    minSize: { w: 3, h: 4 },
+    permissions: { sqlite: true },
+    settings: [ /* field definitions */ ],
+  },
+  Component: ExampleWidget,
+};
 
-  return {
-    loaded: false,
-    state: DEFAULT_STATE,
-
-    async load() {
-      const s = await window.cc.state.load();
-      set({ state: normalizeState(s), loaded: true });
-    },
-
-    removeInstance(instanceId) {
-      mutate((s) => ({
-        ...s,
-        dashboards: s.dashboards.map((d) => ({
-          ...d,
-          instances: d.instances.filter((i) => i.instanceId !== instanceId),
-        })),
-      }));
-    },
-
-    // ... more actions
-  };
-});
+export default widget;
 ```
 
-`create` takes a function that receives `set` and `get` and returns an object with state + actions.
+The registry (`src/renderer/src/plugins/registry.ts`) discovers this file automatically at build time via `import.meta.glob` — no manual registration needed.
 
-### Reading from the store (selectors)
-
-Components subscribe to only the slice of state they need. The component re-renders only when *that specific value* changes:
+### Widget component lifecycle
 
 ```tsx
-// src/renderer/src/components/WidgetHost.tsx
-const removeInstance = useDashboard((s) => s.removeInstance);
-const setTitle       = useDashboard((s) => s.setTitle);
+function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
+  // 1. Read settings (passed fresh every render — no need to cache in state)
+  const maxNotes = Number(settings.maxNotes ?? 50);
+  const showDates = settings.showDates !== false;
+
+  // 2. Declare component state
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [draft, setDraft] = useState("");
+
+  // 3. Initialize the database — returns true when the schema is ready
+  const ready = useSqlInit(api, INIT_SQL, MIGRATIONS);
+
+  // 4. Stable data-loading callback (useCallback so the effect below doesn't loop)
+  const loadNotes = useCallback(async () => {
+    const rows = await api.sql.all<Note>(
+      `SELECT * FROM notes ORDER BY pinned DESC, created_at DESC LIMIT ?`,
+      [maxNotes],
+    );
+    setNotes(rows);
+  }, [api, maxNotes]);
+
+  // 5. Load data when ready; reload when sort/limit settings change
+  useEffect(() => {
+    if (ready) void loadNotes();
+  }, [ready, loadNotes]);
+
+  // 6. Dynamic header title
+  useEffect(() => {
+    setTitle(notes.length > 0 ? `Notes (${notes.length})` : "Notes");
+  }, [notes.length, setTitle]);
+
+  // 7. Guard — don't render SQL-dependent UI until the DB is ready
+  if (!ready) return <div style={{ padding: 12 }}>Setting up database…</div>;
+
+  // 8. Render using data
+  return (
+    <div>
+      <textarea value={draft} onChange={(e) => setDraft(e.target.value)} />
+      <button onClick={() => void addNote(draft)}>Add</button>
+
+      {notes.map((note) => (
+        <NoteRow
+          key={note.id}
+          note={note}
+          showDate={showDates}
+          onPin={() => void togglePin(note)}
+          onDelete={() => void deleteNote(note.id)}
+        />
+      ))}
+    </div>
+  );
+}
 ```
 
-The `(s) => s.removeInstance` is a **selector** — a function from the full store state to the value you care about. Components that only read `removeInstance` won't re-render when unrelated parts of the store change.
+### Concept map
 
-### Writing to the store (calling actions)
+| React concept         | Where it appears in the widget pattern                     |
+| --------------------- | ---------------------------------------------------------- |
+| Function component    | `function ExampleWidget({ api, settings, setTitle })`      |
+| Props                 | `api`, `settings`, `setTitle` are passed by `WidgetHost`   |
+| `useState`            | `notes`, `draft`, and other local state                    |
+| `useEffect` (load)    | Load data when `ready` becomes `true`                      |
+| `useEffect` (derived) | Update the header title when `notes.length` changes        |
+| `useCallback`         | `loadNotes` — stable identity so the effect doesn't loop   |
+| Custom hook           | `useSqlInit` — hides DB init behind a boolean              |
+| Early return          | Guard against rendering before the DB is ready             |
+| Lists and keys        | `notes.map((note) => <NoteRow key={note.id} .../>)`        |
+| Sub-components        | `NoteRow` — focused, receives data and callbacks via props |
+| Error boundary        | Provided by `WidgetHost` — the widget doesn't manage it    |
+| Global state (Zustand)| `WidgetHost` reads `removeInstance`, `setTitle` from store |
 
-Actions are just functions on the store object. You call them directly:
+### The full data flow
 
-```tsx
-removeInstance(instance.instanceId);
 ```
-
-### Zustand vs `useState`
-
-| | `useState` | Zustand |
-|---|---|---|
-| Scope | Single component | Any component in the app |
-| Sharing state | Prop drilling | Direct store subscription |
-| Persistence | Manual | Hook into `set`/`get` |
-| Re-render control | All state in component | Selector-based |
-
----
-
-## 17. Putting It All Together — A Widget Walkthrough
-
-Let's trace through the `api-tracker` widget (`src/widgets/api-tracker/index.tsx`) from start to finish. It's a compact widget that illustrates almost every concept in this guide.
-
-### What it does
-
-`api-tracker` listens to an in-app event bus and displays a live log of every network call made by any widget.
-
-### Step 1: Component shell
-
-```tsx
-function ApiTracker({ api, settings, setTitle }: WidgetProps) {
+manifest.settings schema
+        ↓
+WidgetSettingsPanel (user edits) → AppState → Zustand store
+        ↓
+WidgetHost reads settings from store, passes as prop each render
+        ↓
+Widget reads settings → derives state → runs effects
+        ↓
+Effects call api.sql / api.kv / api.net (IPC → Electron main process)
+        ↓
+Async results flow back via setState → re-render → updated UI
 ```
-
-A function component receiving the standard `WidgetProps`. It destructures all three props.
-
-### Step 2: State declarations
-
-```tsx
-const [calls, setCalls] = useState<ApiCallRecord[]>([]);
-const [ready, setReady] = useState(false);
-```
-
-Two pieces of state: the list of recorded API calls, and a ready flag for DB initialization.
-
-### Step 3: DB initialization via custom hook
-
-```tsx
-const dbReady = useSqlInit(api, INIT_SQL, MIGRATIONS);
-```
-
-One line to initialize the widget's SQLite table and run any migrations. The hook encapsulates the async setup; the widget just waits for `dbReady`.
-
-### Step 4: Load historical calls from the DB
-
-```tsx
-useEffect(() => {
-  if (!dbReady) return;
-  api.sql
-    .all<ApiCallRecord>("SELECT * FROM api_calls ORDER BY timestamp DESC LIMIT 200")
-    .then((rows) => {
-      setCalls(rows);
-      setReady(true);
-    });
-}, [dbReady, api.sql]);
-```
-
-Runs once when `dbReady` becomes `true`. Loads the last 200 recorded calls from the DB.
-
-### Step 5: Subscribe to live events
-
-```tsx
-useEffect(() => {
-  const unsub = subscribeApiCalls((record) => {
-    // Persist new record to DB, then prepend to state:
-    void api.sql
-      .run("INSERT INTO api_calls (...) VALUES (...)", [...])
-      .then(() => setCalls((prev) => [record, ...prev].slice(0, 200)));
-  });
-  return unsub; // cleanup: unsubscribe when component unmounts
-}, [api.sql]);
-```
-
-Subscribes to the `apiEvents` bus. The cleanup function (`return unsub`) prevents memory leaks by unsubscribing when the widget is removed.
-
-### Step 6: Dynamic title
-
-```tsx
-useEffect(() => {
-  if (calls.length > 0) {
-    setTitle(`API Tracker (${calls.length})`);
-  }
-}, [calls.length, setTitle]);
-```
-
-Keeps the widget's header title in sync with the number of recorded calls.
-
-### Step 7: Early return
-
-```tsx
-if (!ready) return <WidgetLoading />;
-```
-
-Nothing renders until the DB is loaded.
-
-### Step 8: Render the list
-
-```tsx
-return (
-  <div style={{ /* scrollable container */ }}>
-    {calls.map((call) => (
-      <div key={call.id} style={{ /* row */ }}>
-        <span style={{
-          color: call.status >= 500 ? "#ef4444"
-               : call.status >= 400 ? "#f59e0b"
-               : "var(--text)",
-        }}>
-          {call.status}
-        </span>
-        <span>{call.method}</span>
-        <span>{call.url}</span>
-        <span>{call.duration}ms</span>
-      </div>
-    ))}
-  </div>
-);
-```
-
-A `map()` over the calls array. Each row has a `key`, and the status code is colored conditionally.
-
----
-
-### Concept checklist for this widget
-
-| Concept | Where it appears |
-|---|---|
-| Function component | `function ApiTracker(...)` |
-| Props | `{ api, settings, setTitle }` |
-| `useState` | `calls`, `ready` |
-| `useEffect` (data load) | Load from DB on mount |
-| `useEffect` (subscription + cleanup) | Subscribe to live events |
-| `useEffect` (derived state) | Dynamic `setTitle` |
-| Custom hook | `useSqlInit` |
-| Early return | `if (!ready) return <WidgetLoading />` |
-| Lists + keys | `calls.map((call) => <div key={call.id}>...)` |
-| Conditional styling | Status code color |
 
 ---
 
 ## Further Reading
 
-- **React docs:** https://react.dev — the official docs, with interactive examples.
-- **Zustand docs:** https://zustand.docs.pmnd.rs — concise and readable.
-- **TypeScript handbook:** https://typescriptlang.org/docs — especially "Everyday Types" and "Generics".
-- **Widgetauthor guide:** `src/widgets/README.md` — how to build a widget in this project.
-- **SQL schema pattern:** `src/renderer/src/hooks/SCHEMA_PATTERN.md` — the full guide for SQLite in widgets.
-- **Example widget:** `src/widgets/example-widget/index.tsx` — a fully-annotated widget exercising all major APIs.
+| Topic                      | Location                                        |
+| -------------------------- | ----------------------------------------------- |
+| Widget authoring guide     | `src/widgets/README.md`                         |
+| SQL schema pattern         | `src/renderer/src/hooks/SCHEMA_PATTERN.md`      |
+| WidgetApi surface          | `src/renderer/src/plugins/api.ts`               |
+| Shared component catalogue | `src/widgets/_shared/`                          |
+| Architecture overview      | `CLAUDE.md`                                     |
+| Official React docs        | https://react.dev                               |
+| Zustand docs               | https://zustand.docs.pmnd.rs                    |
+| TypeScript handbook        | https://typescriptlang.org/docs                 |
