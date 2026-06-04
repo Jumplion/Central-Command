@@ -130,6 +130,21 @@ export function registerIpc(
     (widgetId: string, items: { sql: string; params?: unknown[] }[]) =>
       storage.sqlite.runBatch(widgetId, items),
   );
+  registerHandler(
+    IPC.SQL_ALL_BATCH,
+    [isString, Array.isArray],
+    (widgetId: string, items: { sql: string; params?: unknown[] }[]) =>
+      storage.sqlite.allBatch(widgetId, items),
+  );
+  registerHandler(
+    IPC.SQL_INIT,
+    [isString, isString, Array.isArray],
+    (
+      widgetId: string,
+      initSql: string,
+      migrations: { table: string; column: string; sql: string }[],
+    ) => storage.sqlite.init(widgetId, initSql, migrations),
+  );
 
   registerHandler(IPC.SHELL_OPEN_EXTERNAL, [isString], (url: string) => {
     if (!/^(https?|mailto):/.test(url))

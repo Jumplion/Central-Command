@@ -21,6 +21,8 @@ const mockWindowCc = {
     get: vi.fn(),
     exec: vi.fn(),
     runBatch: vi.fn(),
+    allBatch: vi.fn(),
+    init: vi.fn(),
   },
   shell: {
     openExternal: vi.fn(),

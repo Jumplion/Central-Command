@@ -13,6 +13,8 @@ export const IPC = {
   SQL_GET: "cc:sql:get",
   SQL_EXEC: "cc:sql:exec",
   SQL_RUN_BATCH: "cc:sql:runBatch",
+  SQL_ALL_BATCH: "cc:sql:allBatch",
+  SQL_INIT: "cc:sql:init",
 
   SHELL_OPEN_EXTERNAL: "cc:shell:openExternal",
   SHELL_OPEN_PATH: "cc:shell:openPath",

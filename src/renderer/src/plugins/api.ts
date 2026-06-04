@@ -40,6 +40,13 @@ export interface WidgetApi {
     runBatch(
       items: { sql: string; params?: unknown[] }[],
     ): Promise<SqlRunResult[]>;
+    allBatch<T = unknown>(
+      items: { sql: string; params?: unknown[] }[],
+    ): Promise<T[][]>;
+    init(
+      initSql: string,
+      migrations: { table: string; column: string; sql: string }[],
+    ): Promise<void>;
   };
   shell: {
     openExternal(url: string): Promise<void>;
@@ -153,6 +160,10 @@ export function createSqlApi(widgetId: WidgetId): WidgetApi["sql"] {
       window.cc.sql.get(widgetId, sql, params) as Promise<T | undefined>,
     exec: (sql) => window.cc.sql.exec(widgetId, sql),
     runBatch: (items) => window.cc.sql.runBatch(widgetId, items),
+    allBatch: <T>(items: { sql: string; params?: unknown[] }[]) =>
+      window.cc.sql.allBatch(widgetId, items) as Promise<T[][]>,
+    init: (initSql, migrations) =>
+      window.cc.sql.init(widgetId, initSql, migrations),
   };
 }
 
