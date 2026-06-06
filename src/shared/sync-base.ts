@@ -116,7 +116,15 @@ export abstract class SyncManagerBase {
       if (this._pendingDbUploads.size === 0) return;
       const ids = [...this._pendingDbUploads];
       this._pendingDbUploads.clear();
-      await Promise.all(ids.map((wId) => this._uploadDb(wId)));
+      const results = await Promise.allSettled(
+        ids.map((wId) => this._uploadDb(wId)),
+      );
+      // Re-queue any failed uploads for retry
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          this._pendingDbUploads.add(ids[index]);
+        }
+      });
     });
   }
 

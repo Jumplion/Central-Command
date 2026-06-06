@@ -31,27 +31,36 @@ export function initRegistry(): Promise<void> {
   if (_initPromise) return _initPromise;
   _initPromise = Promise.all(
     Object.entries(loaders).map(async ([filePath, loader]) => {
-      const mod = await loader();
-      const error = getWidgetRegistrationError(
-        mod,
-        registeredIds,
-        CURRENT_PLATFORM,
-      );
-      if (error) {
-        if (error !== "unsupported platform") {
-          console.warn(`[plugins] skipping widget at ${filePath}: ${error}`);
+      try {
+        const mod = await loader();
+        const error = getWidgetRegistrationError(
+          mod,
+          registeredIds,
+          CURRENT_PLATFORM,
+        );
+        if (error) {
+          if (error !== "unsupported platform") {
+            console.warn(`[plugins] skipping widget at ${filePath}: ${error}`);
+          }
+          return;
         }
-        return;
+        const widget = mod.default;
+        registeredIds.add(widget.manifest.id);
+        registry.set(widget.manifest.id, widget);
+      } catch (err) {
+        console.warn(`[plugins] failed to load widget at ${filePath}:`, err);
       }
-      const widget = mod.default;
-      registeredIds.add(widget.manifest.id);
-      registry.set(widget.manifest.id, widget);
     }),
-  ).then(() => {
-    sortedWidgets = Array.from(registry.values()).sort((a, b) =>
-      a.manifest.name.localeCompare(b.manifest.name),
-    );
-  });
+  )
+    .then(() => {
+      sortedWidgets = Array.from(registry.values()).sort((a, b) =>
+        a.manifest.name.localeCompare(b.manifest.name),
+      );
+    })
+    .catch((err) => {
+      _initPromise = null;
+      throw err;
+    });
   return _initPromise;
 }
 

@@ -44,7 +44,7 @@ function ResizeHint({
   );
 }
 
-const GridCell = memo(function GridCell({
+const GridCellInner = memo(function GridCellInner({
   instance,
   widget,
   isResizing,
@@ -58,13 +58,11 @@ const GridCell = memo(function GridCell({
   resizeH: number;
 }) {
   return (
-    <div data-instance-id={instance.instanceId}>
-      <div className="widget-cell">
-        <WidgetHost instance={instance} widget={widget} />
-        {isResizing && (
-          <ResizeHint w={resizeW} h={resizeH} manifest={widget?.manifest} />
-        )}
-      </div>
+    <div className="widget-cell">
+      <WidgetHost instance={instance} widget={widget} />
+      {isResizing && (
+        <ResizeHint w={resizeW} h={resizeH} manifest={widget?.manifest} />
+      )}
     </div>
   );
 });
@@ -255,14 +253,15 @@ export function Dashboard() {
         const widget = widgetMap.get(i.widgetId);
         const isResizing = resizingItem?.id === i.instanceId;
         return (
-          <GridCell
-            key={i.instanceId}
-            instance={i}
-            widget={widget}
-            isResizing={isResizing}
-            resizeW={isResizing ? resizingItem!.w : 0}
-            resizeH={isResizing ? resizingItem!.h : 0}
-          />
+          <div key={i.instanceId} data-instance-id={i.instanceId}>
+            <GridCellInner
+              instance={i}
+              widget={widget}
+              isResizing={isResizing}
+              resizeW={isResizing ? resizingItem!.w : 0}
+              resizeH={isResizing ? resizingItem!.h : 0}
+            />
+          </div>
         );
       }),
     [instances, widgetMap, resizingItem],

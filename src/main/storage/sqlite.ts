@@ -103,8 +103,9 @@ export class SqliteStore {
   ): Promise<unknown[][]> {
     await ensureWidgetDir(this.root, widgetId);
     const db = this.dbFor(widgetId);
-    return items.map(({ sql, params = [] }) =>
-      db.prepare(sql).all(...(params as SQLInputValue[])) as unknown[],
+    return items.map(
+      ({ sql, params = [] }) =>
+        db.prepare(sql).all(...(params as SQLInputValue[])) as unknown[],
     );
   }
 
@@ -117,13 +118,14 @@ export class SqliteStore {
     const db = this.dbFor(widgetId);
     db.exec(initSql);
     for (const m of migrations) {
-      const cols = db
-        .prepare(`PRAGMA table_info(${m.table})`)
-        .all() as { name: string }[];
+      const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as {
+        name: string;
+      }[];
       if (!cols.find((c) => c.name === m.column)) {
         db.exec(m.sql);
       }
     }
+    this.onWritten(widgetId);
   }
 
   /** Creates a consistent copy of the database at the destination path. */

@@ -32,6 +32,23 @@ export class SyncManager extends SyncManagerBase {
     return this.drive;
   }
 
+  protected override async _withRetry<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (err instanceof DriveError) throw err;
+        if (attempt >= maxAttempts - 1) throw err;
+        await new Promise<void>((r) =>
+          setTimeout(r, Math.min(1000 * 2 ** attempt, 30_000)),
+        );
+      }
+    }
+  }
+
   protected async _doUploadAll(): Promise<void> {
     this._syncing = true;
     this._setState("uploading");

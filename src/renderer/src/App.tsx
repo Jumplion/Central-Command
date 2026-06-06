@@ -14,8 +14,25 @@ export default function App() {
   const [widgetsReady, setWidgetsReady] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     void load();
-    void initRegistry().then(() => setWidgetsReady(true));
+    void initRegistry()
+      .then(() => {
+        if (isMounted) {
+          setWidgetsReady(true);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to initialize widget registry:", error);
+        if (isMounted) {
+          setWidgetsReady(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [load]);
 
   useEffect(() => {
