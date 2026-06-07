@@ -54,7 +54,7 @@ export function StarRating({
   );
 }
 
-export function StarDisplay({ value }: { value: number }) {
+function StarDisplay({ value }: { value: number }) {
   return (
     <span style={{ color: "var(--warning)", fontSize: 11, letterSpacing: 1 }}>
       {"★".repeat(value)}
@@ -65,7 +65,7 @@ export function StarDisplay({ value }: { value: number }) {
 
 // ─── StatusTimeline ───────────────────────────────────────────────────────────
 
-export function StatusTimeline({ history }: { history: HistoryEntry[] }) {
+function StatusTimeline({ history }: { history: HistoryEntry[] }) {
   if (history.length === 0) return null;
   return (
     <div
@@ -103,7 +103,7 @@ export function StatusTimeline({ history }: { history: HistoryEntry[] }) {
 
 // ─── LinkedItemPill ───────────────────────────────────────────────────────────
 
-export function LinkedItemPill({
+function LinkedItemPill({
   label,
   onClick,
   onRemove,

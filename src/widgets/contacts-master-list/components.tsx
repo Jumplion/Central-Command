@@ -5,7 +5,7 @@ import { inp, buttonSmall } from "../_shared/styles";
 
 // ─── Avatar ────────────────────────────────────────────────────────────────
 
-export function Avatar({ contact }: { contact: Contact }) {
+function Avatar({ contact }: { contact: Contact }) {
   const [imgFailed, setImgFailed] = useState(false);
 
   if (contact.photoUrl && !imgFailed) {
@@ -49,7 +49,7 @@ export function Avatar({ contact }: { contact: Contact }) {
 
 // ─── DetailRow ─────────────────────────────────────────────────────────────
 
-export function DetailRow({
+function DetailRow({
   label,
   value,
   sub,
@@ -77,7 +77,7 @@ export function DetailRow({
 
 // ─── EditContactForm ───────────────────────────────────────────────────────
 
-export function EditContactForm({
+function EditContactForm({
   contact,
   onSave,
   onCancel,

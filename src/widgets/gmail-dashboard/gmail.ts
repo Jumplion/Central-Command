@@ -13,7 +13,7 @@ import { getHeader } from "../_shared/gmail";
 
 // ─── Rule evaluation ──────────────────────────────────────────────────────
 
-export function applyRules(
+function applyRules(
   subject: string,
   from: string,
   snippet: string,
@@ -102,12 +102,12 @@ export function extractDisplayName(from: string): string {
   return dm ? dm[1] : from;
 }
 
-export function extractDomain(from: string): string {
+function extractDomain(from: string): string {
   const m = from.match(/@([\w.-]+)/);
   return m ? m[1].toLowerCase() : "";
 }
 
-export function extractSource(from: string): string {
+function extractSource(from: string): string {
   const domain = extractDomain(from);
   for (const [key, name] of Object.entries(JOB_PLATFORM_DOMAINS)) {
     if (domain.endsWith(key)) return name;
@@ -118,7 +118,7 @@ export function extractSource(from: string): string {
   return main.charAt(0).toUpperCase() + main.slice(1);
 }
 
-export function getRecencyBucket(receivedAt: string): string {
+function getRecencyBucket(receivedAt: string): string {
   const d = new Date(receivedAt);
   const receivedTime = d.getTime();
   if (Number.isNaN(receivedTime)) return "Unknown";

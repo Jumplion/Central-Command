@@ -12,7 +12,7 @@ import type {
   Status,
 } from "../types";
 import { STATUSES, STATUS_COLOR } from "../types";
-import { AppForm, StatusBadge } from "./components";
+import { StatusBadge } from "./components";
 import { fetchJobEmails, buildSuggestion } from "../gmail";
 import {
   INSERT_APPLICATION,
@@ -787,6 +787,3 @@ export function EmailsTab({
     </div>
   );
 }
-
-// Unused re-export to keep AppForm available if needed in the same chunk
-export { AppForm };

@@ -8,7 +8,7 @@ export const PRIORITY_COLOR: Record<number, string> = {
   1: "var(--text-dim)",
 };
 
-export const PRIORITY_LABEL: Record<number, string> = {
+const PRIORITY_LABEL: Record<number, string> = {
   4: "Urgent",
   3: "High",
   2: "Medium",

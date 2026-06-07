@@ -49,7 +49,7 @@ export function SourceBadge({ source }: { source: string }) {
 
 // ─── FeedTypeBadge ────────────────────────────────────────────────────────────
 
-export function FeedTypeBadge({ type }: { type: FeedType }) {
+function FeedTypeBadge({ type }: { type: FeedType }) {
   const color = FEED_COLORS[type];
   return (
     <span
