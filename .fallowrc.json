@@ -1,10 +1,36 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "entry": ["src/index.{ts,tsx,js,jsx}", "src/main.{ts,tsx,js,jsx}"],
+  "entry": [
+    "src/main/index.ts",
+    "src/preload/index.ts",
+    "src/renderer/src/main.tsx"
+  ],
+  "dynamicallyLoaded": [
+    "src/widgets/*/index.tsx",
+    "src/widgets/_shared/index.ts"
+  ],
   "duplicates": {
     "minOccurrences": 3
   },
   "rules": {
     "unused-dependencies": "warn"
-  }
+  },
+  "ignoreExports": [
+    {
+      "file": "src/widgets/example-widget/constants.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/widgets/gmail-dashboard/schema.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/widgets/job-tracker/schema.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/widgets/media-tracker/schema.ts",
+      "exports": ["*"]
+    }
+  ]
 }
