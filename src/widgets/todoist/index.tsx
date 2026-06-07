@@ -1,12 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import type { Widget, WidgetProps } from "@renderer/plugins/registry";
-import { buttonDefault, buttonSmall, dimText, inputBase } from "../_shared/styles";
-import { PRIORITY_COLOR, SECRET_TOKEN_KEY, TODOIST_API_BASE } from "./constants";
+import {
+  buttonDefault,
+  buttonSmall,
+  dimText,
+  inputBase,
+} from "../_shared/styles";
+import {
+  PRIORITY_COLOR,
+  SECRET_TOKEN_KEY,
+  TODOIST_API_BASE,
+} from "./constants";
 import type { TodoistProject, TodoistTask } from "./types";
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 
-async function apiGet<T>(api: WidgetProps["api"], token: string, path: string): Promise<T> {
+async function apiGet<T>(
+  api: WidgetProps["api"],
+  token: string,
+  path: string,
+): Promise<T> {
   const res = await api.net.fetch(`${TODOIST_API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -33,7 +46,11 @@ async function apiPost<T>(
   return undefined as T;
 }
 
-async function apiDelete(api: WidgetProps["api"], token: string, path: string): Promise<void> {
+async function apiDelete(
+  api: WidgetProps["api"],
+  token: string,
+  path: string,
+): Promise<void> {
   const res = await api.net.fetch(`${TODOIST_API_BASE}${path}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
@@ -43,7 +60,9 @@ async function apiDelete(api: WidgetProps["api"], token: string, path: string): 
 
 // ── Due date display ─────────────────────────────────────────────────────────
 
-function formatDue(due: TodoistTask["due"]): { label: string; overdue: boolean } | null {
+function formatDue(
+  due: TodoistTask["due"],
+): { label: string; overdue: boolean } | null {
   if (!due) return null;
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -96,12 +115,21 @@ function TokenSetup({
     >
       <div style={{ fontSize: 28 }}>✅</div>
       <div style={{ fontSize: 13, fontWeight: 600 }}>Connect Todoist</div>
-      <div style={{ fontSize: 11, color: "var(--text-dim)", textAlign: "center", maxWidth: 240 }}>
+      <div
+        style={{
+          fontSize: 11,
+          color: "var(--text-dim)",
+          textAlign: "center",
+          maxWidth: 240,
+        }}
+      >
         Enter your Todoist API token from{" "}
         <span
           style={{ color: "var(--accent)", cursor: "pointer" }}
           onClick={() =>
-            onOpenLink("https://app.todoist.com/app/settings/integrations/developer")
+            onOpenLink(
+              "https://app.todoist.com/app/settings/integrations/developer",
+            )
           }
         >
           Settings → Integrations → Developer
@@ -114,9 +142,16 @@ function TokenSetup({
         onKeyDown={(e) => e.key === "Enter" && void handleConnect()}
         placeholder="API token"
         autoFocus
-        style={{ ...inputBase, width: "100%", maxWidth: 280, background: "var(--panel-2)" }}
+        style={{
+          ...inputBase,
+          width: "100%",
+          maxWidth: 280,
+          background: "var(--panel-2)",
+        }}
       />
-      {error && <div style={{ fontSize: 11, color: "var(--danger)" }}>{error}</div>}
+      {error && (
+        <div style={{ fontSize: 11, color: "var(--danger)" }}>{error}</div>
+      )}
       <button
         className="primary"
         style={{ ...buttonDefault, minWidth: 100 }}
@@ -203,7 +238,13 @@ function TaskRow({
       >
         {task.is_completed && (
           <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-            <path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M1 3l2 2 4-4"
+              stroke="#fff"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         )}
       </button>
@@ -370,7 +411,9 @@ function TodoistWidget({ api }: WidgetProps) {
     const wasCompleted = task.is_completed;
     // Optimistic update
     setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, is_completed: !wasCompleted } : t)),
+      prev.map((t) =>
+        t.id === task.id ? { ...t, is_completed: !wasCompleted } : t,
+      ),
     );
     try {
       if (wasCompleted) {
@@ -381,18 +424,24 @@ function TodoistWidget({ api }: WidgetProps) {
     } catch {
       // Rollback
       setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, is_completed: wasCompleted } : t)),
+        prev.map((t) =>
+          t.id === task.id ? { ...t, is_completed: wasCompleted } : t,
+        ),
       );
     }
   };
 
   const handleSave = async (task: TodoistTask, content: string) => {
     const oldContent = task.content;
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, content } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, content } : t)),
+    );
     try {
       await apiPost(api, token!, `/tasks/${task.id}`, { content });
     } catch {
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, content: oldContent } : t)));
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, content: oldContent } : t)),
+      );
     }
   };
 
@@ -426,7 +475,14 @@ function TodoistWidget({ api }: WidgetProps) {
 
   if (!token) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
+        }}
+      >
         {error && (
           <div
             style={{
@@ -465,7 +521,8 @@ function TodoistWidget({ api }: WidgetProps) {
 
   const visibleTasks = tasks
     .filter((t) => {
-      if (selectedProject !== "all" && t.project_id !== selectedProject) return false;
+      if (selectedProject !== "all" && t.project_id !== selectedProject)
+        return false;
       return showCompleted ? true : !t.is_completed;
     })
     .sort((a, b) => {
@@ -477,12 +534,21 @@ function TodoistWidget({ api }: WidgetProps) {
       return a.order - b.order;
     });
 
-  const completedCount = tasks.filter(
-    (t) => selectedProject === "all" ? t.is_completed : t.project_id === selectedProject && t.is_completed,
+  const completedCount = tasks.filter((t) =>
+    selectedProject === "all"
+      ? t.is_completed
+      : t.project_id === selectedProject && t.is_completed,
   ).length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
       {/* Header */}
       <div
         style={{

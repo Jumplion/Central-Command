@@ -89,6 +89,7 @@ function ResizeHint({
 ```
 
 **What to notice:**
+
 - It is a plain JavaScript function — no class, no decorator, no special registration.
 - Its argument is destructured immediately: `{ w, h, manifest }`.
 - It returns what looks like HTML — that is JSX (next section).
@@ -105,12 +106,14 @@ JSX is the syntax that lets you write HTML-like markup inside JavaScript. It com
 // This JSX:
 <div className="widget">
   <span>{title}</span>
-</div>
+</div>;
 
 // Compiles to this JavaScript:
-React.createElement("div", { className: "widget" },
-  React.createElement("span", null, title)
-)
+React.createElement(
+  "div",
+  { className: "widget" },
+  React.createElement("span", null, title),
+);
 ```
 
 You never write the `React.createElement` form by hand.
@@ -136,7 +139,9 @@ Any JavaScript expression goes inside curly braces:
 
 ```tsx
 // Dimension display from Dashboard.tsx (line 38)
-<span>{w} × {h}</span>
+<span>
+  {w} × {h}
+</span>
 ```
 
 **Self-closing tags need `/>` **
@@ -184,7 +189,9 @@ export function AddWidgetDialog({ onClose }: Props) {
 
 ```tsx
 // src/renderer/src/App.tsx (line 50)
-{showPalette && <WidgetPalette onClose={() => setShowPalette(false)} />}
+{
+  showPalette && <WidgetPalette onClose={() => setShowPalette(false)} />;
+}
 ```
 
 `App` owns `showPalette` and passes a function to reset it. `WidgetPalette` calls `onClose()` when dismissed, but never touches `showPalette` directly.
@@ -211,8 +218,8 @@ Every widget component receives the same three props:
 ```tsx
 // src/renderer/src/plugins/registry.ts
 export interface WidgetProps {
-  api: WidgetApi;                              // storage, network, secrets, etc.
-  settings: WidgetSettings;                   // per-instance config values
+  api: WidgetApi; // storage, network, secrets, etc.
+  settings: WidgetSettings; // per-instance config values
   setTitle: (title: string | undefined) => void; // override the widget's header text
 }
 ```
@@ -242,9 +249,9 @@ const [filter, setFilter] = useState("");
 
 ```tsx
 // src/widgets/example-widget/index.tsx (lines 144–150)
-const [notes, setNotes]           = useState<Note[]>([]);
-const [draft, setDraft]           = useState("");
-const [fetching, setFetching]     = useState(false);
+const [notes, setNotes] = useState<Note[]>([]);
+const [draft, setDraft] = useState("");
+const [fetching, setFetching] = useState(false);
 const [fetchError, setFetchError] = useState<string | null>(null);
 const [authorName, setAuthorName] = useState("");
 ```
@@ -360,11 +367,13 @@ React has no special template syntax for conditionals — you use JavaScript.
 
 ```tsx
 // src/widgets/example-widget/index.tsx (lines 422–434)
-{pinnedNotes.length > 0 && (
-  <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 600 }}>
-    Pinned
-  </div>
-)}
+{
+  pinnedNotes.length > 0 && (
+    <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 600 }}>
+      Pinned
+    </div>
+  );
+}
 ```
 
 When the left side is `false`, nothing renders. When `true`, the element renders.
@@ -443,6 +452,7 @@ Use `.map()` to render a list. Every item must have a unique, stable `key` prop.
 ```
 
 **Key rules:**
+
 - Use stable, natural IDs (`w.manifest.id`) — not array indexes.
 - Array indexes as keys cause incorrect animations and stale state when items are removed or reordered.
 - Keys must be unique among siblings in the same list; they don't need to be globally unique.
@@ -452,13 +462,13 @@ Use `.map()` to render a list. Every item must have a unique, stable `key` prop.
 
 ```tsx
 // src/renderer/src/components/AddWidgetDialog.tsx (lines 91–97)
-{filtered.length === 0 && (
-  <li>
-    <em style={{ color: "var(--text-dim)" }}>
-      No widgets match "{filter}".
-    </em>
-  </li>
-)}
+{
+  filtered.length === 0 && (
+    <li>
+      <em style={{ color: "var(--text-dim)" }}>No widgets match "{filter}".</em>
+    </li>
+  );
+}
 ```
 
 ---
@@ -479,11 +489,11 @@ useEffect(() => {
 
 ### Dependency array
 
-| Array form  | Effect runs when                                       |
-| ----------- | ------------------------------------------------------ |
-| `[]`        | Once, after the first render                           |
-| `[a, b]`    | After first render, and whenever `a` or `b` changes    |
-| *(omitted)* | After every render — almost never what you want        |
+| Array form  | Effect runs when                                    |
+| ----------- | --------------------------------------------------- |
+| `[]`        | Once, after the first render                        |
+| `[a, b]`    | After first render, and whenever `a` or `b` changes |
+| _(omitted)_ | After every render — almost never what you want     |
 
 ### Load data once on mount
 
@@ -624,17 +634,17 @@ const durationMs = Date.now() - mountedAtRef.current;
 ```tsx
 // src/renderer/src/components/Dashboard.tsx (lines 57–58)
 const layoutHistoryRef = useRef<LayoutSnapshot[]>([]);
-const layoutFutureRef  = useRef<LayoutSnapshot[]>([]);
+const layoutFutureRef = useRef<LayoutSnapshot[]>([]);
 ```
 
 These store the undo/redo stacks. They must persist between renders, but changing them should not cause a re-render — `useRef` is the right choice.
 
 ### `useState` vs `useRef`
 
-| Question                           | Use         |
-| ---------------------------------- | ----------- |
-| Changing this should update the UI | `useState`  |
-| Changing this should NOT update UI | `useRef`    |
+| Question                           | Use        |
+| ---------------------------------- | ---------- |
+| Changing this should update the UI | `useState` |
+| Changing this should NOT update UI | `useRef`   |
 
 ---
 
@@ -656,18 +666,18 @@ export function useSqlInit(
 
   useEffect(() => {
     const run = async () => {
-      await api.sql.exec(initSql);         // Create tables (idempotent)
+      await api.sql.exec(initSql); // Create tables (idempotent)
       if (migrations?.length) {
         for (const m of migrations) {
           const cols = await api.sql.all<{ name: string }>(
             `PRAGMA table_info(${m.table})`,
           );
           if (!cols.find((c) => c.name === m.column)) {
-            await api.sql.run(m.sql, []);  // Apply missing column migration
+            await api.sql.run(m.sql, []); // Apply missing column migration
           }
         }
       }
-      setReady(true);                      // Signal that the DB is ready
+      setReady(true); // Signal that the DB is ready
     };
     void run();
   }, []);
@@ -805,7 +815,10 @@ Passing a stable `handleSetTitle` reference prevents the child widget from re-re
 
 ```tsx
 // src/renderer/src/components/WidgetHost.tsx (line 26)
-export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) {
+export const WidgetHost = memo(function WidgetHost({
+  instance,
+  widget,
+}: Props) {
   // ...
 });
 ```
@@ -842,7 +855,7 @@ React components can accept other components or JSX as content through the `chil
 // src/renderer/src/components/WidgetHost.tsx (lines 135–138)
 interface BoundaryProps {
   widgetName: string;
-  children: ReactNode;   // ReactNode: any valid React content
+  children: ReactNode; // ReactNode: any valid React content
 }
 ```
 
@@ -880,10 +893,20 @@ function NoteRow({
   onDelete: () => void;
 }) {
   return (
-    <div style={{ /* ... */ }}>
+    <div
+      style={
+        {
+          /* ... */
+        }
+      }
+    >
       <div style={{ flex: 1, fontSize: 12 }}>{note.body}</div>
-      <button onClick={onPin} title={note.pinned ? "Unpin" : "Pin to top"}>📌</button>
-      <button onClick={onDelete} title="Delete note">✕</button>
+      <button onClick={onPin} title={note.pinned ? "Unpin" : "Pin to top"}>
+        📌
+      </button>
+      <button onClick={onDelete} title="Delete note">
+        ✕
+      </button>
     </div>
   );
 }
@@ -896,12 +919,7 @@ function NoteRow({
 Components and style utilities shared across many widgets:
 
 ```tsx
-import {
-  TabBar,
-  LineChart,
-  WidgetLoading,
-  NotConnected,
-} from "../_shared";
+import { TabBar, LineChart, WidgetLoading, NotConnected } from "../_shared";
 import { buttonDefault, inputBase, dimText } from "../_shared/styles";
 ```
 
@@ -989,7 +1007,7 @@ import { create } from "zustand";
 export const useDashboard = create<DashboardStore>((set, get) => {
   function mutate(updater: (s: AppState) => AppState): void {
     set((store) => ({ state: updater(store.state) }));
-    get().persist();   // debounced write to disk
+    get().persist(); // debounced write to disk
   }
 
   return {
@@ -1020,8 +1038,8 @@ export const useDashboard = create<DashboardStore>((set, get) => {
 
 ```tsx
 // src/renderer/src/App.tsx (lines 8–10)
-const load             = useDashboard((s) => s.load);
-const loaded           = useDashboard((s) => s.loaded);
+const load = useDashboard((s) => s.load);
+const loaded = useDashboard((s) => s.loaded);
 const applyRemoteState = useDashboard((s) => s.applyRemoteState);
 ```
 
@@ -1030,7 +1048,7 @@ The argument to `useDashboard` is a **selector** — a function that picks the s
 ```tsx
 // src/renderer/src/components/WidgetHost.tsx (lines 30–31)
 const removeInstance = useDashboard((s) => s.removeInstance);
-const setTitle       = useDashboard((s) => s.setTitle);
+const setTitle = useDashboard((s) => s.setTitle);
 ```
 
 ### Calling actions
@@ -1044,11 +1062,11 @@ Actions call `set(...)` internally, which triggers re-renders in all subscribed 
 
 ### Zustand vs `useState`
 
-| Question                                  | Answer        |
-| ----------------------------------------- | ------------- |
-| Data used by a single component           | `useState`    |
-| Data shared across many components        | Zustand store |
-| Data that needs to be persisted to disk   | Zustand store (with persist action) |
+| Question                                | Answer                              |
+| --------------------------------------- | ----------------------------------- |
+| Data used by a single component         | `useState`                          |
+| Data shared across many components      | Zustand store                       |
+| Data that needs to be persisted to disk | Zustand store (with persist action) |
 
 ---
 
@@ -1073,16 +1091,16 @@ export const WidgetHost = memo(function WidgetHost({ instance, widget }: Props) 
 TypeScript infers the type from the initial value when possible. Provide it explicitly for empty arrays and nullable values:
 
 ```tsx
-const [notes, setNotes]   = useState<Note[]>([]);
-const [error, setError]   = useState<string | null>(null);
-const [item, setItem]     = useState<SomeType | null>(null);
+const [notes, setNotes] = useState<Note[]>([]);
+const [error, setError] = useState<string | null>(null);
+const [item, setItem] = useState<SomeType | null>(null);
 ```
 
 ### Typing refs
 
 ```tsx
-const containerRef = useRef<HTMLDivElement>(null);   // DOM element
-const mountedAtRef = useRef<number>(0);              // Mutable value
+const containerRef = useRef<HTMLDivElement>(null); // DOM element
+const mountedAtRef = useRef<number>(0); // Mutable value
 ```
 
 ### Typing custom hook return values
@@ -1104,7 +1122,7 @@ export function useGoogleConnection(
 import type { ReactNode } from "react";
 
 interface BoundaryProps {
-  children: ReactNode;   // accepts JSX, strings, arrays, null, undefined, false
+  children: ReactNode; // accepts JSX, strings, arrays, null, undefined, false
 }
 ```
 
@@ -1137,7 +1155,7 @@ Every widget in this project follows the same structure. Understanding it ties t
 
 const widget: Widget = {
   manifest: {
-    id: "example-widget",       // Must equal the folder name exactly
+    id: "example-widget", // Must equal the folder name exactly
     name: "Example Widget",
     description: "...",
     version: "0.1.0",
@@ -1145,7 +1163,9 @@ const widget: Widget = {
     defaultSize: { w: 5, h: 7 },
     minSize: { w: 3, h: 4 },
     permissions: { sqlite: true },
-    settings: [ /* field definitions */ ],
+    settings: [
+      /* field definitions */
+    ],
   },
   Component: ExampleWidget,
 };
@@ -1214,20 +1234,20 @@ function ExampleWidget({ api, settings, setTitle }: WidgetProps) {
 
 ### Concept map
 
-| React concept         | Where it appears in the widget pattern                     |
-| --------------------- | ---------------------------------------------------------- |
-| Function component    | `function ExampleWidget({ api, settings, setTitle })`      |
-| Props                 | `api`, `settings`, `setTitle` are passed by `WidgetHost`   |
-| `useState`            | `notes`, `draft`, and other local state                    |
-| `useEffect` (load)    | Load data when `ready` becomes `true`                      |
-| `useEffect` (derived) | Update the header title when `notes.length` changes        |
-| `useCallback`         | `loadNotes` — stable identity so the effect doesn't loop   |
-| Custom hook           | `useSqlInit` — hides DB init behind a boolean              |
-| Early return          | Guard against rendering before the DB is ready             |
-| Lists and keys        | `notes.map((note) => <NoteRow key={note.id} .../>)`        |
-| Sub-components        | `NoteRow` — focused, receives data and callbacks via props |
-| Error boundary        | Provided by `WidgetHost` — the widget doesn't manage it    |
-| Global state (Zustand)| `WidgetHost` reads `removeInstance`, `setTitle` from store |
+| React concept          | Where it appears in the widget pattern                     |
+| ---------------------- | ---------------------------------------------------------- |
+| Function component     | `function ExampleWidget({ api, settings, setTitle })`      |
+| Props                  | `api`, `settings`, `setTitle` are passed by `WidgetHost`   |
+| `useState`             | `notes`, `draft`, and other local state                    |
+| `useEffect` (load)     | Load data when `ready` becomes `true`                      |
+| `useEffect` (derived)  | Update the header title when `notes.length` changes        |
+| `useCallback`          | `loadNotes` — stable identity so the effect doesn't loop   |
+| Custom hook            | `useSqlInit` — hides DB init behind a boolean              |
+| Early return           | Guard against rendering before the DB is ready             |
+| Lists and keys         | `notes.map((note) => <NoteRow key={note.id} .../>)`        |
+| Sub-components         | `NoteRow` — focused, receives data and callbacks via props |
+| Error boundary         | Provided by `WidgetHost` — the widget doesn't manage it    |
+| Global state (Zustand) | `WidgetHost` reads `removeInstance`, `setTitle` from store |
 
 ### The full data flow
 
@@ -1249,13 +1269,13 @@ Async results flow back via setState → re-render → updated UI
 
 ## Further Reading
 
-| Topic                      | Location                                        |
-| -------------------------- | ----------------------------------------------- |
-| Widget authoring guide     | `src/widgets/README.md`                         |
-| SQL schema pattern         | `src/renderer/src/hooks/SCHEMA_PATTERN.md`      |
-| WidgetApi surface          | `src/renderer/src/plugins/api.ts`               |
-| Shared component catalogue | `src/widgets/_shared/`                          |
-| Architecture overview      | `CLAUDE.md`                                     |
-| Official React docs        | https://react.dev                               |
-| Zustand docs               | https://zustand.docs.pmnd.rs                    |
-| TypeScript handbook        | https://typescriptlang.org/docs                 |
+| Topic                      | Location                                   |
+| -------------------------- | ------------------------------------------ |
+| Widget authoring guide     | `src/widgets/README.md`                    |
+| SQL schema pattern         | `src/renderer/src/hooks/SCHEMA_PATTERN.md` |
+| WidgetApi surface          | `src/renderer/src/plugins/api.ts`          |
+| Shared component catalogue | `src/widgets/_shared/`                     |
+| Architecture overview      | `CLAUDE.md`                                |
+| Official React docs        | https://react.dev                          |
+| Zustand docs               | https://zustand.docs.pmnd.rs               |
+| TypeScript handbook        | https://typescriptlang.org/docs            |
