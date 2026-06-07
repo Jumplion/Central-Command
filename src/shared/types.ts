@@ -141,6 +141,15 @@ export interface CCApi {
       widgetId: string,
       items: { sql: string; params?: unknown[] }[],
     ): Promise<SqlRunResult[]>;
+    allBatch(
+      widgetId: string,
+      items: { sql: string; params?: unknown[] }[],
+    ): Promise<unknown[][]>;
+    init(
+      widgetId: string,
+      initSql: string,
+      migrations: { table: string; column: string; sql: string }[],
+    ): Promise<void>;
   };
   shell: {
     openExternal(url: string): Promise<void>;

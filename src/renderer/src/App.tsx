@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./components/Dashboard";
 import { WidgetPalette } from "./components/WidgetPalette";
 import { useDashboard } from "./state/dashboard";
+import { initRegistry } from "./plugins/registry";
 
 export default function App() {
   const load = useDashboard((s) => s.load);
@@ -10,9 +11,28 @@ export default function App() {
   const applyRemoteState = useDashboard((s) => s.applyRemoteState);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [widgetsReady, setWidgetsReady] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     void load();
+    void initRegistry()
+      .then(() => {
+        if (isMounted) {
+          setWidgetsReady(true);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to initialize widget registry:", error);
+        if (isMounted) {
+          setWidgetsReady(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [load]);
 
   useEffect(() => {
@@ -34,7 +54,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  if (!loaded) {
+  if (!loaded || !widgetsReady) {
     return <div className="loading">Loading…</div>;
   }
 

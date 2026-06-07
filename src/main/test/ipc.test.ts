@@ -55,6 +55,8 @@ const mockStorage = {
     get: vi.fn().mockReturnValue(undefined),
     exec: vi.fn(),
     runBatch: vi.fn().mockReturnValue([]),
+    allBatch: vi.fn().mockReturnValue([]),
+    init: vi.fn().mockResolvedValue(undefined),
   },
   loadState: vi.fn(),
   saveState: vi.fn(),

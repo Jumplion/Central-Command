@@ -32,6 +32,23 @@ export class SyncManager extends SyncManagerBase {
     return this.drive;
   }
 
+  protected override async _withRetry<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (err instanceof DriveError) throw err;
+        if (attempt >= maxAttempts - 1) throw err;
+        await new Promise<void>((r) =>
+          setTimeout(r, Math.min(1000 * 2 ** attempt, 30_000)),
+        );
+      }
+    }
+  }
+
   protected async _doUploadAll(): Promise<void> {
     this._syncing = true;
     this._setState("uploading");
@@ -52,10 +69,12 @@ export class SyncManager extends SyncManagerBase {
         const driveName = driveKvName(widgetId);
         try {
           const content = await fs.readFile(kvFile, "utf-8");
-          const newId = await this.drive.upsertFile(
-            driveName,
-            content,
-            this._driveIds.get(driveName),
+          const newId = await this._withRetry(() =>
+            this.drive.upsertFile(
+              driveName,
+              content,
+              this._driveIds.get(driveName),
+            ),
           );
           this._driveIds.set(driveName, newId);
         } catch (err) {
@@ -67,10 +86,12 @@ export class SyncManager extends SyncManagerBase {
         const stateFile = path.join(this.storage.root, "state.json");
         try {
           const content = await fs.readFile(stateFile, "utf-8");
-          const newId = await this.drive.upsertFile(
-            DRIVE_STATE_FILE,
-            content,
-            this._driveIds.get(DRIVE_STATE_FILE),
+          const newId = await this._withRetry(() =>
+            this.drive.upsertFile(
+              DRIVE_STATE_FILE,
+              content,
+              this._driveIds.get(DRIVE_STATE_FILE),
+            ),
           );
           this._driveIds.set(DRIVE_STATE_FILE, newId);
         } catch (err) {
@@ -112,7 +133,9 @@ export class SyncManager extends SyncManagerBase {
       const base64 = content.toString("base64");
       const driveName = driveDbName(widgetId);
       const knownId = this._driveIds.get(driveName);
-      const newId = await this.drive.upsertFile(driveName, base64, knownId);
+      const newId = await this._withRetry(() =>
+        this.drive.upsertFile(driveName, base64, knownId),
+      );
       this._driveIds.set(driveName, newId);
     } finally {
       fs.unlink(backupPath).catch(() => {});
@@ -125,7 +148,7 @@ export class SyncManager extends SyncManagerBase {
     let stateChangedByRemote = false;
 
     try {
-      const files = await this.drive.listFiles();
+      const files = await this._withRetry(() => this.drive.listFiles());
       for (const f of files) this._driveIds.set(f.name, f.id);
       this._driveIdsLoaded = true;
 
@@ -138,6 +161,7 @@ export class SyncManager extends SyncManagerBase {
             const content = await this.drive.downloadFile(driveFile.id);
             await atomicWrite(localPath, content);
             stateChangedByRemote = true;
+            this._pullHadChanges = true;
           }
           continue;
         }
@@ -154,6 +178,7 @@ export class SyncManager extends SyncManagerBase {
             const content = await this.drive.downloadFile(driveFile.id);
             await atomicWrite(localPath, content);
             this.storage.json.invalidateCache(kvWidgetId);
+            this._pullHadChanges = true;
           }
           continue;
         }
@@ -170,6 +195,7 @@ export class SyncManager extends SyncManagerBase {
             const base64 = await this.drive.downloadFile(driveFile.id);
             await atomicWrite(localPath, Buffer.from(base64, "base64"));
             this.storage.sqlite.closeDb(dbWidgetId);
+            this._pullHadChanges = true;
           }
         }
       }

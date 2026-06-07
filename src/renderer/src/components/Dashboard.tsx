@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
+import { useShallow } from "zustand/react/shallow";
 import { useDashboard } from "@renderer/state/dashboard";
 import { getWidget } from "@renderer/plugins/registry";
 import { WidgetHost } from "./WidgetHost";
-import type { WidgetManifest } from "@shared/types";
+import type { WidgetInstance, WidgetManifest } from "@shared/types";
+import type { Widget } from "@renderer/plugins/registry";
 
 const COLS = 12;
 const ROW_HEIGHT = 60;
@@ -42,8 +44,31 @@ function ResizeHint({
   );
 }
 
+const GridCellInner = memo(function GridCellInner({
+  instance,
+  widget,
+  isResizing,
+  resizeW,
+  resizeH,
+}: {
+  instance: WidgetInstance;
+  widget: Widget | undefined;
+  isResizing: boolean;
+  resizeW: number;
+  resizeH: number;
+}) {
+  return (
+    <div className="widget-cell">
+      <WidgetHost instance={instance} widget={widget} />
+      {isResizing && (
+        <ResizeHint w={resizeW} h={resizeH} manifest={widget?.manifest} />
+      )}
+    </div>
+  );
+});
+
 export function Dashboard() {
-  const dashboard = useDashboard((s) => s.activeDashboard());
+  const instances = useDashboard(useShallow((s) => s.activeInstances()));
   const updateLayout = useDashboard((s) => s.updateLayout);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,17 +107,17 @@ export function Dashboard() {
 
   const widgetMap = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getWidget> | undefined>();
-    for (const instance of dashboard.instances) {
+    for (const instance of instances) {
       if (!map.has(instance.widgetId)) {
         map.set(instance.widgetId, getWidget(instance.widgetId));
       }
     }
     return map;
-  }, [dashboard.instances]);
+  }, [instances]);
 
   const layout = useMemo<Layout[]>(
     () =>
-      dashboard.instances.map((i) => {
+      instances.map((i) => {
         const min = widgetMap.get(i.widgetId)?.manifest.minSize;
         return {
           i: i.instanceId,
@@ -104,12 +129,12 @@ export function Dashboard() {
           minH: min?.h ?? 2,
         };
       }),
-    [dashboard.instances, widgetMap],
+    [instances, widgetMap],
   );
 
   useEffect(() => {
     const currentIds = new Set(
-      dashboard.instances.map((instance) => instance.instanceId),
+      instances.map((instance) => instance.instanceId),
     );
     const previousIds = previousInstanceIdsRef.current;
     const newInstanceIds = Array.from(currentIds).filter(
@@ -133,15 +158,15 @@ export function Dashboard() {
       block: "nearest",
       inline: "nearest",
     });
-  }, [dashboard.instances]);
+  }, [instances]);
 
   const snapshotCurrentLayout = useCallback(
     (): LayoutSnapshot =>
-      dashboard.instances.map((i) => ({
+      instances.map((i) => ({
         instanceId: i.instanceId,
         ...i.layout,
       })),
-    [dashboard.instances],
+    [instances],
   );
 
   const handleChange = useCallback(
@@ -224,30 +249,27 @@ export function Dashboard() {
 
   const gridItems = useMemo(
     () =>
-      dashboard.instances.map((i) => {
+      instances.map((i) => {
         const widget = widgetMap.get(i.widgetId);
         const isResizing = resizingItem?.id === i.instanceId;
         return (
           <div key={i.instanceId} data-instance-id={i.instanceId}>
-            <div className="widget-cell">
-              <WidgetHost instance={i} widget={widget} />
-              {isResizing && (
-                <ResizeHint
-                  w={resizingItem!.w}
-                  h={resizingItem!.h}
-                  manifest={widget?.manifest}
-                />
-              )}
-            </div>
+            <GridCellInner
+              instance={i}
+              widget={widget}
+              isResizing={isResizing}
+              resizeW={isResizing ? resizingItem!.w : 0}
+              resizeH={isResizing ? resizingItem!.h : 0}
+            />
           </div>
         );
       }),
-    [dashboard.instances, widgetMap, resizingItem],
+    [instances, widgetMap, resizingItem],
   );
 
   return (
     <div className="dashboard" ref={containerRef}>
-      {dashboard.instances.length === 0 ? (
+      {instances.length === 0 ? (
         <div className="empty">
           <h2>No widgets yet</h2>
           <p>

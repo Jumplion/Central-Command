@@ -1,6 +1,8 @@
 import type { DriveSyncState, DriveSyncStatus } from "./types";
 
 export const SYNC_POLL_INTERVAL_MS = 5 * 60 * 1000;
+// Poll interval doubles after each idle pull, capped here
+const MAX_POLL_MS = 30 * 60 * 1000;
 export const DRIVE_STATE_FILE = "cc-state.json";
 
 export function driveKvName(widgetId: string): string {
@@ -39,7 +41,9 @@ export abstract class SyncManagerBase {
   protected _pendingDbUploads = new Set<string>();
   protected _driveIds = new Map<string, string>();
   protected _driveIdsLoaded = false;
-  protected _pollTimer: ReturnType<typeof setInterval> | null = null;
+  protected _pollTimer: ReturnType<typeof setTimeout> | null = null;
+  protected _idlePullCount = 0;
+  protected _pullHadChanges = false;
   protected _queue: Promise<void> = Promise.resolve();
   protected _status: DriveSyncStatus = {
     state: "disabled",
@@ -112,10 +116,32 @@ export abstract class SyncManagerBase {
       if (this._pendingDbUploads.size === 0) return;
       const ids = [...this._pendingDbUploads];
       this._pendingDbUploads.clear();
-      for (const wId of ids) {
-        await this._uploadDb(wId);
-      }
+      const results = await Promise.allSettled(
+        ids.map((wId) => this._uploadDb(wId)),
+      );
+      // Re-queue any failed uploads for retry
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          this._pendingDbUploads.add(ids[index]);
+        }
+      });
     });
+  }
+
+  protected async _withRetry<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (attempt >= maxAttempts - 1) throw err;
+        await new Promise<void>((r) =>
+          setTimeout(r, Math.min(1000 * 2 ** attempt, 30_000)),
+        );
+      }
+    }
   }
 
   protected _enqueue(task: () => Promise<void>): void {
@@ -154,14 +180,35 @@ export abstract class SyncManagerBase {
 
   protected _schedulePolling(): void {
     this._stopPolling();
-    this._pollTimer = setInterval(() => {
-      this._enqueue(() => this._doPull());
-    }, SYNC_POLL_INTERVAL_MS);
+    this._idlePullCount = 0;
+    this._armPollTimer();
+  }
+
+  private _armPollTimer(): void {
+    const delay = Math.min(
+      SYNC_POLL_INTERVAL_MS * 2 ** this._idlePullCount,
+      MAX_POLL_MS,
+    );
+    this._pollTimer = setTimeout(() => {
+      this._pollTimer = null;
+      this._enqueue(async () => {
+        this._pullHadChanges = false;
+        await this._doPull();
+        if (!this._disposed) {
+          if (this._pullHadChanges) {
+            this._idlePullCount = 0;
+          } else {
+            this._idlePullCount++;
+          }
+          this._armPollTimer();
+        }
+      });
+    }, delay);
   }
 
   protected _stopPolling(): void {
     if (this._pollTimer) {
-      clearInterval(this._pollTimer);
+      clearTimeout(this._pollTimer);
       this._pollTimer = null;
     }
   }

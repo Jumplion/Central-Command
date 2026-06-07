@@ -97,6 +97,37 @@ export class SqliteStore {
     return results;
   }
 
+  async allBatch(
+    widgetId: string,
+    items: { sql: string; params?: unknown[] }[],
+  ): Promise<unknown[][]> {
+    await ensureWidgetDir(this.root, widgetId);
+    const db = this.dbFor(widgetId);
+    return items.map(
+      ({ sql, params = [] }) =>
+        db.prepare(sql).all(...(params as SQLInputValue[])) as unknown[],
+    );
+  }
+
+  async init(
+    widgetId: string,
+    initSql: string,
+    migrations: { table: string; column: string; sql: string }[],
+  ): Promise<void> {
+    await ensureWidgetDir(this.root, widgetId);
+    const db = this.dbFor(widgetId);
+    db.exec(initSql);
+    for (const m of migrations) {
+      const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as {
+        name: string;
+      }[];
+      if (!cols.find((c) => c.name === m.column)) {
+        db.exec(m.sql);
+      }
+    }
+    this.onWritten(widgetId);
+  }
+
   /** Creates a consistent copy of the database at the destination path. */
   async backup(widgetId: string, destPath: string): Promise<void> {
     await ensureWidgetDir(this.root, widgetId);

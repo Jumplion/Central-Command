@@ -50,7 +50,7 @@ export class JsonStore {
         this.flush(widgetId).catch((err) =>
           console.error(`[json] flush ${widgetId} failed:`, err),
         );
-      }, 200),
+      }, 1000),
     );
   }
 
