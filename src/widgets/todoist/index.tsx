@@ -52,10 +52,7 @@ function formatDue(due: TodoistTask["due"]): { label: string; overdue: boolean }
   let label: string;
   if (dueDate === today) label = "Today";
   else if (dueDate === tomorrow) label = "Tomorrow";
-  else if (overdue) {
-    const d = new Date(dueDate + "T00:00:00");
-    label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  } else {
+  else {
     const d = new Date(dueDate + "T00:00:00");
     label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
@@ -353,8 +350,12 @@ function TodoistWidget({ api }: WidgetProps) {
       await api.secrets.set(SECRET_TOKEN_KEY, t);
       setToken(t);
       return null;
-    } catch {
-      return "Invalid token. Please check and try again.";
+    } catch (err) {
+      const errorMessage = String(err);
+      if (errorMessage.includes("401") || errorMessage.includes("403")) {
+        return "Invalid token. Please check and try again.";
+      }
+      return "Failed to connect. Please check your network and try again.";
     }
   };
 
@@ -425,10 +426,40 @@ function TodoistWidget({ api }: WidgetProps) {
 
   if (!token) {
     return (
-      <TokenSetup
-        onConnect={handleConnect}
-        onOpenLink={(url) => void api.shell.openExternal(url)}
-      />
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        {error && (
+          <div
+            style={{
+              background: "var(--danger)",
+              color: "white",
+              padding: "8px 12px",
+              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                fontSize: 16,
+                padding: 0,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        <TokenSetup
+          onConnect={handleConnect}
+          onOpenLink={(url) => void api.shell.openExternal(url)}
+        />
+      </div>
     );
   }
 
