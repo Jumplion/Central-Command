@@ -32,11 +32,6 @@ export interface GmailEmail {
   fetched_at: number;
 }
 
-// Computed effective folder: override takes priority over rule-assigned
-export type EmailWithFolder = GmailEmail & {
-  effective_folder_id: number | null;
-};
-
 export type GroupBy = "none" | "company" | "source" | "recency";
 
 export interface FolderTreeNode extends GmailFolder {

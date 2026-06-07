@@ -352,6 +352,3 @@ export function ChartView({ apps }: { apps: Application[] }) {
     </div>
   );
 }
-
-// Keep WeeklyChart as alias for backwards compatibility
-export { ChartView as WeeklyChart };

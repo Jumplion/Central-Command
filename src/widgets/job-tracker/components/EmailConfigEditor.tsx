@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { WidgetApi } from "@renderer/plugins/api";
 import type { JtAtsDomain, JtEmailRule, JtQueryRule, Status } from "../types";
 import { STATUSES } from "../types";
+import { AddItemCard } from "../../_shared/AddItemCard";
 import {
   buttonDefault,
   buttonSmall,
@@ -282,22 +283,7 @@ function AddRuleForm({
   };
 
   return (
-    <div
-      style={{
-        background: "var(--panel-2)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: 8,
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        fontSize: 12,
-        marginTop: 8,
-      }}
-    >
-      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--text-dim)" }}>
-        Add rule
-      </div>
+    <AddItemCard title="Add rule">
       <div
         style={{
           display: "grid",
@@ -368,7 +354,7 @@ function AddRuleForm({
           {saving ? "…" : "+ Add Rule"}
         </button>
       </div>
-    </div>
+    </AddItemCard>
   );
 }
 
@@ -628,22 +614,7 @@ function AddAtsDomainForm({
   };
 
   return (
-    <div
-      style={{
-        background: "var(--panel-2)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: 8,
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        fontSize: 12,
-        marginTop: 8,
-      }}
-    >
-      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--text-dim)" }}>
-        Add ATS domain
-      </div>
+    <AddItemCard title="Add ATS domain">
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <input
           style={{ ...inp, width: "100%", boxSizing: "border-box" }}
@@ -671,7 +642,7 @@ function AddAtsDomainForm({
           {saving ? "…" : "+ Add Domain"}
         </button>
       </div>
-    </div>
+    </AddItemCard>
   );
 }
 
@@ -976,22 +947,7 @@ function AddQueryRuleForm({
   };
 
   return (
-    <div
-      style={{
-        background: "var(--panel-2)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: 8,
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        fontSize: 12,
-        marginTop: 8,
-      }}
-    >
-      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--text-dim)" }}>
-        Add query rule
-      </div>
+    <AddItemCard title="Add query rule">
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 6 }}>
         <input
           style={{ ...inp, width: "100%", boxSizing: "border-box" }}
@@ -1024,7 +980,7 @@ function AddQueryRuleForm({
           {saving ? "…" : "+ Add Rule"}
         </button>
       </div>
-    </div>
+    </AddItemCard>
   );
 }
 

@@ -1,3 +1,4 @@
+export { AddItemCard } from "./AddItemCard";
 export * from "./autocomplete";
 export * from "./form";
 export * from "./gmail";

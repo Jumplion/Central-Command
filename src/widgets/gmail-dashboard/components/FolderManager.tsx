@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { GmailFolder } from "../types";
+import { AddItemCard } from "../../_shared/AddItemCard";
 import {
   buttonDefault,
   buttonSmall,
@@ -211,22 +212,7 @@ function AddFolderForm({ folders, api, onAdded }: AddFolderFormProps) {
   };
 
   return (
-    <div
-      style={{
-        background: "var(--panel-2)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: 8,
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        fontSize: 12,
-        marginTop: 8,
-      }}
-    >
-      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--text-dim)" }}>
-        Add folder
-      </div>
+    <AddItemCard title="Add folder">
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         {ICONS.map((ic) => (
           <button
@@ -278,7 +264,7 @@ function AddFolderForm({ folders, api, onAdded }: AddFolderFormProps) {
       >
         {saving ? "…" : "+ Add Folder"}
       </button>
-    </div>
+    </AddItemCard>
   );
 }
 

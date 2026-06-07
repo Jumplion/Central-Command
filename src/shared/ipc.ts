@@ -43,5 +43,3 @@ export const IPC = {
 
   CLIPBOARD_READ: "cc:clipboard:read",
 } as const;
-
-export type IpcChannel = (typeof IPC)[keyof typeof IPC];
