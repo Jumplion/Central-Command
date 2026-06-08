@@ -72,15 +72,11 @@ function generateBucketKeys(
   return keys;
 }
 
-function buildTimeSeriesData(
+function computeRangeStart(
   apps: Application[],
   timeRange: TimeRange,
-  grouping: Grouping,
-  dataMode: DataMode,
-): Array<Record<string, string | number>> {
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-
+  today: Date,
+): Date {
   let start: Date;
   if (timeRange === "all") {
     const earliest = apps.reduce<number | null>((min, a) => {
@@ -93,6 +89,57 @@ function buildTimeSeriesData(
     start.setDate(today.getDate() - TIME_RANGE_DAYS[timeRange]);
   }
   start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+function bumpBucket(
+  buckets: Record<string, Record<string, number>>,
+  key: string,
+  status: string,
+): void {
+  if (key in buckets) buckets[key][status] = (buckets[key][status] ?? 0) + 1;
+}
+
+function applyCohortEvent(
+  buckets: Record<string, Record<string, number>>,
+  app: Application,
+  start: Date,
+  today: Date,
+  grouping: Grouping,
+): void {
+  const appDate = new Date(app.applied_at);
+  if (appDate < start || appDate > today) return;
+  bumpBucket(buckets, bucketKey(appDate, grouping), app.status);
+}
+
+function applyTimelineEvents(
+  buckets: Record<string, Record<string, number>>,
+  app: Application,
+  start: Date,
+  today: Date,
+  grouping: Grouping,
+): void {
+  const appDate = new Date(app.applied_at);
+  if (appDate >= start && appDate <= today) {
+    bumpBucket(buckets, bucketKey(appDate, grouping), "Applied");
+  }
+  if (app.status !== "Applied") {
+    const eventDate = new Date(app.last_updated); // ms timestamp
+    if (eventDate >= start && eventDate <= today) {
+      bumpBucket(buckets, bucketKey(eventDate, grouping), app.status);
+    }
+  }
+}
+
+function buildTimeSeriesData(
+  apps: Application[],
+  timeRange: TimeRange,
+  grouping: Grouping,
+  dataMode: DataMode,
+): Array<Record<string, string | number>> {
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  const start = computeRangeStart(apps, timeRange, today);
 
   const buckets: Record<string, Record<string, number>> = {};
   const keys = generateBucketKeys(start, today, grouping);
@@ -101,32 +148,9 @@ function buildTimeSeriesData(
     for (const s of STATUSES) buckets[k][s] = 0;
   }
 
-  for (const app of apps) {
-    if (dataMode === "applied") {
-      // Cohort view: bucket by applied_at, count by current status
-      const appDate = new Date(app.applied_at);
-      if (appDate < start || appDate > today) continue;
-      const k = bucketKey(appDate, grouping);
-      if (k in buckets)
-        buckets[k][app.status] = (buckets[k][app.status] ?? 0) + 1;
-    } else {
-      // Event view: "Applied" event at applied_at; status-change event at last_updated
-      const appDate = new Date(app.applied_at);
-      if (appDate >= start && appDate <= today) {
-        const k = bucketKey(appDate, grouping);
-        if (k in buckets)
-          buckets[k]["Applied"] = (buckets[k]["Applied"] ?? 0) + 1;
-      }
-      if (app.status !== "Applied") {
-        const eventDate = new Date(app.last_updated); // ms timestamp
-        if (eventDate >= start && eventDate <= today) {
-          const k = bucketKey(eventDate, grouping);
-          if (k in buckets)
-            buckets[k][app.status] = (buckets[k][app.status] ?? 0) + 1;
-        }
-      }
-    }
-  }
+  const applyEvent =
+    dataMode === "applied" ? applyCohortEvent : applyTimelineEvents;
+  for (const app of apps) applyEvent(buckets, app, start, today, grouping);
 
   return keys.map((k) => ({
     label: bucketLabel(k, grouping),

@@ -2,6 +2,22 @@ import { EMP_TYPES, MONTH_NAMES } from "./constants";
 
 // ─── Pure formatting helpers ──────────────────────────────────────────────────
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  GBP: "£",
+  EUR: "€",
+};
+
+const PERIOD_SUFFIXES: Record<string, string> = {
+  YEAR: "/yr",
+  HOUR: "/hr",
+  MONTH: "/mo",
+};
+
+function formatSalaryAmount(n: number): string {
+  return n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
+}
+
 export function formatSalary(
   min?: number | null,
   max?: number | null,
@@ -9,27 +25,12 @@ export function formatSalary(
   period = "YEAR",
 ): string {
   if (!min && !max) return "";
-  const fmt = (n: number) =>
-    n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
-  const sym =
-    currency === "USD"
-      ? "$"
-      : currency === "GBP"
-        ? "£"
-        : currency === "EUR"
-          ? "€"
-          : `${currency} `;
-  const sfx =
-    period === "YEAR"
-      ? "/yr"
-      : period === "HOUR"
-        ? "/hr"
-        : period === "MONTH"
-          ? "/mo"
-          : "";
-  if (min && max) return `${sym}${fmt(min)}–${fmt(max)}${sfx}`;
-  if (min) return `${sym}${fmt(min)}+${sfx}`;
-  return `Up to ${sym}${fmt(max!)}${sfx}`;
+  const sym = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
+  const sfx = PERIOD_SUFFIXES[period] ?? "";
+  if (min && max)
+    return `${sym}${formatSalaryAmount(min)}–${formatSalaryAmount(max)}${sfx}`;
+  if (min) return `${sym}${formatSalaryAmount(min)}+${sfx}`;
+  return `Up to ${sym}${formatSalaryAmount(max!)}${sfx}`;
 }
 
 export function relativeDate(dateStr: string): string {

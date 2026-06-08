@@ -10,6 +10,64 @@ function formatSyncTime(ts: number | null): string {
   return new Date(ts).toLocaleTimeString();
 }
 
+const STATE_LABELS: Record<string, string> = {
+  uploading: "Uploading…",
+  downloading: "Downloading…",
+  idle: "Connected",
+  error: "Error",
+};
+
+function statusDotClass(state: DriveSyncStatus["state"] | undefined): string {
+  if (state === "error") return "status-dot error";
+  if (state === "idle") return "status-dot ok";
+  return "status-dot busy";
+}
+
+function isSyncBusy(status: DriveSyncStatus | null): boolean {
+  return status?.state === "uploading" || status?.state === "downloading";
+}
+
+function ConnectedStatus({
+  status,
+  onDisconnect,
+}: {
+  status: DriveSyncStatus | null;
+  onDisconnect: () => void;
+}) {
+  const busy = isSyncBusy(status);
+  return (
+    <div className="drive-sync-status">
+      <div className="status-row">
+        <span className={statusDotClass(status?.state)} />
+        <span>{status?.state ? STATE_LABELS[status.state] : null}</span>
+        <span className="muted">
+          Last synced: {formatSyncTime(status?.lastSyncedAt ?? null)}
+        </span>
+      </div>
+      {status?.lastError && <p className="error-text">{status.lastError}</p>}
+      <div className="button-row">
+        <button
+          className="ghost"
+          onClick={() => void window.cc.driveSync.forcePush()}
+          disabled={busy}
+        >
+          Push to Drive
+        </button>
+        <button
+          className="ghost"
+          onClick={() => void window.cc.driveSync.forcePull()}
+          disabled={busy}
+        >
+          Pull from Drive
+        </button>
+        <button className="ghost danger" onClick={onDisconnect}>
+          Disconnect
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   googleConnected: boolean | null;
   status: DriveSyncStatus | null;
@@ -100,51 +158,10 @@ export function DriveSyncSection({
           </button>
         </div>
       ) : (
-        <div className="drive-sync-status">
-          <div className="status-row">
-            <span
-              className={`status-dot ${status?.state === "error" ? "error" : status?.state === "idle" ? "ok" : "busy"}`}
-            />
-            <span>
-              {status?.state === "uploading" && "Uploading…"}
-              {status?.state === "downloading" && "Downloading…"}
-              {status?.state === "idle" && "Connected"}
-              {status?.state === "error" && "Error"}
-            </span>
-            <span className="muted">
-              Last synced: {formatSyncTime(status?.lastSyncedAt ?? null)}
-            </span>
-          </div>
-          {status?.lastError && (
-            <p className="error-text">{status.lastError}</p>
-          )}
-          <div className="button-row">
-            <button
-              className="ghost"
-              onClick={() => void window.cc.driveSync.forcePush()}
-              disabled={
-                status?.state === "uploading" || status?.state === "downloading"
-              }
-            >
-              Push to Drive
-            </button>
-            <button
-              className="ghost"
-              onClick={() => void window.cc.driveSync.forcePull()}
-              disabled={
-                status?.state === "uploading" || status?.state === "downloading"
-              }
-            >
-              Pull from Drive
-            </button>
-            <button
-              className="ghost danger"
-              onClick={() => void handleDisconnect()}
-            >
-              Disconnect
-            </button>
-          </div>
-        </div>
+        <ConnectedStatus
+          status={status}
+          onDisconnect={() => void handleDisconnect()}
+        />
       )}
     </section>
   );

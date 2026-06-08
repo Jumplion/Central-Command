@@ -13,6 +13,49 @@ import { getHeader } from "../_shared/gmail";
 
 // ─── Rule evaluation ──────────────────────────────────────────────────────
 
+function fieldSource(
+  field: string,
+  sources: { subject: string; from: string; snippet: string; label: string },
+): string {
+  switch (field) {
+    case "subject":
+      return sources.subject;
+    case "from":
+      return sources.from;
+    case "snippet":
+      return sources.snippet;
+    case "label":
+      return sources.label;
+    default:
+      return "";
+  }
+}
+
+function evaluateOperator(
+  operator: GmailRule["operator"],
+  source: string,
+  value: string,
+): boolean {
+  switch (operator) {
+    case "contains":
+      return source.includes(value);
+    case "not_contains":
+      return !source.includes(value);
+    case "starts_with":
+      return source.startsWith(value);
+    case "ends_with":
+      return source.endsWith(value);
+    case "regex":
+      try {
+        return new RegExp(value, "i").test(source);
+      } catch {
+        return false;
+      }
+    default:
+      return false;
+  }
+}
+
 function applyRules(
   subject: string,
   from: string,
@@ -20,49 +63,21 @@ function applyRules(
   labelNames: string[],
   rules: GmailRule[],
 ): number | null {
-  const lsubject = subject.toLowerCase();
-  const lfrom = from.toLowerCase();
-  const lsnippet = snippet.toLowerCase();
+  const sources = {
+    subject: subject.toLowerCase(),
+    from: from.toLowerCase(),
+    snippet: snippet.toLowerCase(),
+    label: labelNames.join(" ").toLowerCase(),
+  };
 
   for (const rule of rules) {
-    const rawField = rule.field as string;
-    const source: string =
-      rawField === "subject"
-        ? lsubject
-        : rawField === "from"
-          ? lfrom
-          : rawField === "snippet"
-            ? lsnippet
-            : rawField === "label"
-              ? labelNames.join(" ").toLowerCase()
-              : "";
-
-    const val = rule.value.toLowerCase();
-    let match = false;
-
-    switch (rule.operator) {
-      case "contains":
-        match = source.includes(val);
-        break;
-      case "not_contains":
-        match = !source.includes(val);
-        break;
-      case "starts_with":
-        match = source.startsWith(val);
-        break;
-      case "ends_with":
-        match = source.endsWith(val);
-        break;
-      case "regex":
-        try {
-          match = new RegExp(rule.value, "i").test(source);
-        } catch {
-          match = false;
-        }
-        break;
-    }
-
-    if (match) return rule.folder_id;
+    const source = fieldSource(rule.field as string, sources);
+    const matches = evaluateOperator(
+      rule.operator,
+      source,
+      rule.value.toLowerCase(),
+    );
+    if (matches) return rule.folder_id;
   }
 
   return null;
