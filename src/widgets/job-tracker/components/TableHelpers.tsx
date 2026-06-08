@@ -1,5 +1,28 @@
 // ─── Table helpers ────────────────────────────────────────────────────────
 
+export function SortableTh<Column extends string>({
+  column,
+  sortBy,
+  sortAsc,
+  onSort,
+  children,
+}: {
+  column: Column;
+  sortBy: Column;
+  sortAsc: boolean;
+  onSort: (column: Column) => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <Th
+      onClick={() => onSort(column)}
+      sortIndicator={sortBy === column ? (sortAsc ? "asc" : "desc") : null}
+    >
+      {children}
+    </Th>
+  );
+}
+
 export function Th({
   children,
   onClick,

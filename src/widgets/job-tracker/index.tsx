@@ -14,8 +14,9 @@ import {
   AppForm,
   ChartView,
   Th,
+  SortableTh,
   Td,
-  StatusBadge,
+  EditableCell,
 } from "./components/components";
 import { EmailsTab } from "./components/EmailsTab";
 import {
@@ -180,6 +181,26 @@ function JobTracker({ api }: WidgetProps) {
     await load();
     setInlineEditing(null);
   };
+
+  const renderEditableCell = (
+    app: Application,
+    field: "company" | "role" | "status" | "applied_at",
+  ) => (
+    <EditableCell
+      key={field}
+      app={app}
+      field={field}
+      isEditing={inlineEditing?.appId === app.id && inlineEditing?.field === field}
+      value={inlineValue}
+      onChangeValue={setInlineValue}
+      onStartEdit={(value) => {
+        setInlineEditing({ appId: app.id, field });
+        setInlineValue(value);
+      }}
+      onCommit={(value) => void handleInlineEdit(app, field, value)}
+      onCancel={() => setInlineEditing(null)}
+    />
+  );
 
   const handleExportCSV = () => {
     const headers = [
@@ -375,62 +396,24 @@ function JobTracker({ api }: WidgetProps) {
             >
               <thead>
                 <tr style={{ color: "var(--text-dim)" }}>
-                  <Th
-                    onClick={() => handleSortColumn("company")}
-                    sortIndicator={
-                      sortBy === "company" ? (sortAsc ? "asc" : "desc") : null
-                    }
-                  >
+                  <SortableTh column="company" sortBy={sortBy} sortAsc={sortAsc} onSort={handleSortColumn}>
                     Company
-                  </Th>
-                  <Th
-                    onClick={() => handleSortColumn("role")}
-                    sortIndicator={
-                      sortBy === "role" ? (sortAsc ? "asc" : "desc") : null
-                    }
-                  >
+                  </SortableTh>
+                  <SortableTh column="role" sortBy={sortBy} sortAsc={sortAsc} onSort={handleSortColumn}>
                     Role
-                  </Th>
-                  <Th
-                    onClick={() => handleSortColumn("location")}
-                    sortIndicator={
-                      sortBy === "location" ? (sortAsc ? "asc" : "desc") : null
-                    }
-                  >
+                  </SortableTh>
+                  <SortableTh column="location" sortBy={sortBy} sortAsc={sortAsc} onSort={handleSortColumn}>
                     Location
-                  </Th>
-                  <Th
-                    onClick={() => handleSortColumn("status")}
-                    sortIndicator={
-                      sortBy === "status" ? (sortAsc ? "asc" : "desc") : null
-                    }
-                  >
+                  </SortableTh>
+                  <SortableTh column="status" sortBy={sortBy} sortAsc={sortAsc} onSort={handleSortColumn}>
                     Status
-                  </Th>
-                  <Th
-                    onClick={() => handleSortColumn("applied_at")}
-                    sortIndicator={
-                      sortBy === "applied_at"
-                        ? sortAsc
-                          ? "asc"
-                          : "desc"
-                        : null
-                    }
-                  >
+                  </SortableTh>
+                  <SortableTh column="applied_at" sortBy={sortBy} sortAsc={sortAsc} onSort={handleSortColumn}>
                     Applied
-                  </Th>
-                  <Th
-                    onClick={() => handleSortColumn("req_number")}
-                    sortIndicator={
-                      sortBy === "req_number"
-                        ? sortAsc
-                          ? "asc"
-                          : "desc"
-                        : null
-                    }
-                  >
+                  </SortableTh>
+                  <SortableTh column="req_number" sortBy={sortBy} sortAsc={sortAsc} onSort={handleSortColumn}>
                     Req #
-                  </Th>
+                  </SortableTh>
                   <Th />
                 </tr>
               </thead>
@@ -464,185 +447,11 @@ function JobTracker({ api }: WidgetProps) {
                         (e.currentTarget.style.backgroundColor = "")
                       }
                     >
-                      {/* Company */}
-                      <Td>
-                        {inlineEditing?.appId === app.id &&
-                        inlineEditing?.field === "company" ? (
-                          <input
-                            type="text"
-                            value={inlineValue}
-                            onChange={(e) => setInlineValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                void handleInlineEdit(
-                                  app,
-                                  "company",
-                                  inlineValue,
-                                );
-                              } else if (e.key === "Escape") {
-                                setInlineEditing(null);
-                              }
-                            }}
-                            onBlur={() =>
-                              void handleInlineEdit(app, "company", inlineValue)
-                            }
-                            autoFocus
-                            style={{
-                              width: "100%",
-                              padding: "2px 4px",
-                              border: "1px solid var(--border)",
-                              borderRadius: 2,
-                              fontSize: 12,
-                            }}
-                          />
-                        ) : (
-                          <span
-                            onClick={() => {
-                              setInlineEditing({
-                                appId: app.id,
-                                field: "company",
-                              });
-                              setInlineValue(app.company);
-                            }}
-                            style={{ cursor: "pointer", padding: "2px 4px" }}
-                            title="Click to edit"
-                          >
-                            {app.company}
-                          </span>
-                        )}
-                      </Td>
-
-                      {/* Role (Job Title) */}
-                      <Td>
-                        {inlineEditing?.appId === app.id &&
-                        inlineEditing?.field === "role" ? (
-                          <input
-                            type="text"
-                            value={inlineValue}
-                            onChange={(e) => setInlineValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                void handleInlineEdit(app, "role", inlineValue);
-                              } else if (e.key === "Escape") {
-                                setInlineEditing(null);
-                              }
-                            }}
-                            onBlur={() =>
-                              void handleInlineEdit(app, "role", inlineValue)
-                            }
-                            autoFocus
-                            style={{
-                              width: "100%",
-                              padding: "2px 4px",
-                              border: "1px solid var(--border)",
-                              borderRadius: 2,
-                              fontSize: 12,
-                            }}
-                          />
-                        ) : (
-                          <span
-                            onClick={() => {
-                              setInlineEditing({
-                                appId: app.id,
-                                field: "role",
-                              });
-                              setInlineValue(app.role);
-                            }}
-                            style={{ cursor: "pointer", padding: "2px 4px" }}
-                            title="Click to edit"
-                          >
-                            {app.role}
-                          </span>
-                        )}
-                      </Td>
-
+                      {renderEditableCell(app, "company")}
+                      {renderEditableCell(app, "role")}
                       <Td>{app.location}</Td>
-
-                      {/* Status */}
-                      <Td>
-                        {inlineEditing?.appId === app.id &&
-                        inlineEditing?.field === "status" ? (
-                          <select
-                            value={inlineValue}
-                            onChange={(e) => {
-                              void handleInlineEdit(
-                                app,
-                                "status",
-                                e.target.value,
-                              );
-                            }}
-                            autoFocus
-                            style={{
-                              padding: "2px 4px",
-                              border: "1px solid var(--border)",
-                              borderRadius: 2,
-                              fontSize: 12,
-                            }}
-                          >
-                            {STATUSES.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span
-                            onClick={() => {
-                              setInlineEditing({
-                                appId: app.id,
-                                field: "status",
-                              });
-                              setInlineValue(app.status);
-                            }}
-                            style={{ cursor: "pointer" }}
-                            title="Click to edit"
-                          >
-                            <StatusBadge
-                              label={app.status}
-                              color={STATUS_COLOR[app.status]}
-                            />
-                          </span>
-                        )}
-                      </Td>
-
-                      {/* Applied At */}
-                      <Td>
-                        {inlineEditing?.appId === app.id &&
-                        inlineEditing?.field === "applied_at" ? (
-                          <input
-                            type="date"
-                            value={inlineValue}
-                            onChange={(e) => {
-                              void handleInlineEdit(
-                                app,
-                                "applied_at",
-                                e.target.value,
-                              );
-                            }}
-                            autoFocus
-                            style={{
-                              padding: "2px 4px",
-                              border: "1px solid var(--border)",
-                              borderRadius: 2,
-                              fontSize: 12,
-                            }}
-                          />
-                        ) : (
-                          <span
-                            onClick={() => {
-                              setInlineEditing({
-                                appId: app.id,
-                                field: "applied_at",
-                              });
-                              setInlineValue(app.applied_at);
-                            }}
-                            style={{ cursor: "pointer", padding: "2px 4px" }}
-                            title="Click to edit"
-                          >
-                            {app.applied_at}
-                          </span>
-                        )}
-                      </Td>
+                      {renderEditableCell(app, "status")}
+                      {renderEditableCell(app, "applied_at")}
 
                       <Td>{app.req_number}</Td>
                       <td
